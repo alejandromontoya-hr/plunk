@@ -54,6 +54,7 @@ import useSWR from 'swr';
 import dayjs from 'dayjs';
 import {useColumnVisibility} from '../../lib/hooks/useColumnVisibility';
 import {usePersistentState} from '../../lib/hooks/usePersistentState';
+import {useTranslation} from '../../lib/i18n';
 
 type StatusFilter = 'ALL' | 'DRAFT' | 'SCHEDULED' | 'SENDING' | 'SENT' | 'CANCELLED';
 
@@ -82,25 +83,26 @@ const STATUS_OPTIONS: ReadonlyArray<Exclude<StatusFilter, 'ALL'>> = [
   'CANCELLED',
 ];
 
-const statusBadgeConfig: Record<CampaignStatus, {label: string; variant: 'neutral' | 'default' | 'success'}> = {
-  DRAFT: {label: 'Draft', variant: 'neutral'},
-  SCHEDULED: {label: 'Scheduled', variant: 'default'},
-  SENDING: {label: 'Sending', variant: 'default'},
-  SENT: {label: 'Sent', variant: 'success'},
-  CANCELLED: {label: 'Cancelled', variant: 'neutral'},
-};
-
-const getStatusBadge = (status: CampaignStatus) => {
-  const {label, variant} = statusBadgeConfig[status];
-  return (
-    <Badge variant={variant} className="shrink-0">
-      {label}
-    </Badge>
-  );
+const statusBadgeVariant: Record<CampaignStatus, 'neutral' | 'default' | 'success'> = {
+  DRAFT: 'neutral',
+  SCHEDULED: 'default',
+  SENDING: 'default',
+  SENT: 'success',
+  CANCELLED: 'neutral',
 };
 
 export default function CampaignsPage() {
+  const {t} = useTranslation();
   const router = useRouter();
+
+  const statusLabel = (status: CampaignStatus) => t(`campaigns.status.${status}`);
+
+  const getStatusBadge = (status: CampaignStatus) => (
+    <Badge variant={statusBadgeVariant[status]} className="shrink-0">
+      {statusLabel(status)}
+    </Badge>
+  );
+
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -155,10 +157,10 @@ export default function CampaignsPage() {
 
     try {
       await network.fetch('POST', `/campaigns/${campaignToCancel}/cancel`);
-      toast.success('Campaign cancelled successfully');
+      toast.success(t('campaigns.toast.cancelled'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to cancel campaign');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.cancelFailed'));
     } finally {
       setCampaignToCancel(null);
     }
@@ -167,10 +169,10 @@ export default function CampaignsPage() {
   const handleDuplicate = async (campaignId: string) => {
     try {
       await network.fetch('POST', `/campaigns/${campaignId}/duplicate`);
-      toast.success('Campaign duplicated successfully');
+      toast.success(t('campaigns.toast.duplicated'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to duplicate campaign');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.duplicateFailed'));
     }
   };
 
@@ -179,10 +181,10 @@ export default function CampaignsPage() {
 
     try {
       await network.fetch('DELETE', `/campaigns/${campaignToDelete}`);
-      toast.success('Campaign deleted successfully');
+      toast.success(t('campaigns.toast.deleted'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete campaign');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.deleteFailed'));
     } finally {
       setCampaignToDelete(null);
     }
@@ -203,11 +205,11 @@ export default function CampaignsPage() {
         },
       );
       const count = result?.deleted ?? selectedIds.length;
-      toast.success(`${count} campaign${count === 1 ? '' : 's'} deleted`);
+      toast.success(count === 1 ? t('campaigns.toast.bulkDeleted', {count}) : t('campaigns.toast.bulkDeletedPlural', {count}));
       setRowSelection({});
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete campaigns');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.bulkDeleteFailed'));
     } finally {
       // ConfirmDialog closes itself after onConfirm resolves.
       setBulkDeleteStatus('idle');
@@ -313,24 +315,24 @@ export default function CampaignsPage() {
         return (
           <span className="text-sm text-neutral-700">
             <strong className="font-semibold text-neutral-900">{campaign.sentCount.toLocaleString()}</strong>
-            <span className="text-neutral-400 ml-1 text-xs">sent</span>
+            <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.sent')}</span>
             <span className="text-neutral-300 mx-1.5">·</span>
             <strong className="font-semibold text-neutral-900">{openRate.toFixed(1)}%</strong>
-            <span className="text-neutral-400 ml-1 text-xs">opens</span>
+            <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.opens')}</span>
           </span>
         );
       case 'SENDING':
         return (
           <span className="text-sm text-neutral-700">
             <strong className="font-semibold text-neutral-900">{deliveryPct.toFixed(0)}%</strong>
-            <span className="text-neutral-400 ml-1 text-xs">delivered</span>
+            <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.delivered')}</span>
           </span>
         );
       default:
         return (
           <span className="text-sm text-neutral-700">
             <strong className="font-semibold text-neutral-900">{campaign.totalRecipients.toLocaleString()}</strong>
-            <span className="text-neutral-400 ml-1 text-xs">recipients</span>
+            <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.recipients')}</span>
           </span>
         );
     }
@@ -342,10 +344,10 @@ export default function CampaignsPage() {
         id: 'select',
         enableSorting: false,
         enableHiding: false, // Selection column is locked-visible.
-        meta: {label: 'Select', headClassName: 'w-10', cellClassName: 'w-10'} satisfies DataTableColumnMeta,
+        meta: {label: t('campaigns.columns.select'), headClassName: 'w-10', cellClassName: 'w-10'} satisfies DataTableColumnMeta,
         header: ({table}) => (
           <Checkbox
-            aria-label="Select all rows on this page"
+            aria-label={t('campaigns.selectAllRows')}
             checked={
               table.getIsAllPageRowsSelected()
                 ? true
@@ -358,7 +360,7 @@ export default function CampaignsPage() {
         ),
         cell: ({row}) => (
           <Checkbox
-            aria-label={`Select ${row.original.name}`}
+            aria-label={t('campaigns.selectRow', {name: row.original.name})}
             checked={row.getIsSelected()}
             // Capture shift-key state before the toggle, then apply range
             // selection on change (see useShiftClickSelection below).
@@ -374,8 +376,8 @@ export default function CampaignsPage() {
         id: 'name',
         accessorKey: 'name',
         enableHiding: false, // Name column is locked-visible.
-        meta: {label: 'Name'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Name</DataTableColumnHeader>,
+        meta: {label: t('campaigns.columns.name')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('campaigns.columns.name')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <Link
             href={`/campaigns/${row.original.id}`}
@@ -389,8 +391,8 @@ export default function CampaignsPage() {
         id: 'subject',
         accessorKey: 'subject',
         enableSorting: false, // No backend sort field for subject.
-        meta: {label: 'Subject', cellClassName: 'max-w-xs'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Subject</DataTableColumnHeader>,
+        meta: {label: t('campaigns.columns.subject'), cellClassName: 'max-w-xs'} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('campaigns.columns.subject')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <p className="text-sm text-neutral-700 truncate" title={row.original.subject}>
             {row.original.subject}
@@ -401,15 +403,15 @@ export default function CampaignsPage() {
         id: 'status',
         accessorKey: 'status',
         enableSorting: false, // Status is faceted-filtered, not sorted.
-        meta: {label: 'Status'} satisfies DataTableColumnMeta,
+        meta: {label: t('campaigns.columns.status')} satisfies DataTableColumnMeta,
         header: ({column}) => (
           <DataTableColumnHeader
             column={column}
             filter={
               <DataTableFacetedFilter
-                title="Status"
+                title={t('campaigns.statusLabel')}
                 multiple={false}
-                options={STATUS_OPTIONS.map(s => ({value: s, label: statusBadgeConfig[s].label}))}
+                options={STATUS_OPTIONS.map(s => ({value: s, label: statusLabel(s)}))}
                 selected={statusFilter === 'ALL' ? [] : [statusFilter]}
                 onChange={next => {
                   setStatusFilter((next[0] as StatusFilter) ?? 'ALL');
@@ -418,7 +420,7 @@ export default function CampaignsPage() {
               />
             }
           >
-            Status
+            {t('campaigns.columns.status')}
           </DataTableColumnHeader>
         ),
         cell: ({row}) => getStatusBadge(row.original.status),
@@ -426,8 +428,8 @@ export default function CampaignsPage() {
       {
         id: 'recipients',
         enableSorting: false, // No backend sort field for computed counts.
-        meta: {label: 'Recipients'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Recipients</DataTableColumnHeader>,
+        meta: {label: t('campaigns.columns.recipients')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('campaigns.columns.recipients')}</DataTableColumnHeader>,
         cell: ({row}) => recipientSummary(row.original),
       },
       {
@@ -436,8 +438,8 @@ export default function CampaignsPage() {
         // ISO-string values sort ascending on first click by default; flip so
         // the first click on "Updated" surfaces the most recently edited rows.
         sortDescFirst: true,
-        meta: {label: 'Updated'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Updated</DataTableColumnHeader>,
+        meta: {label: t('campaigns.columns.updated')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('campaigns.columns.updated')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <div className="group relative inline-block cursor-help text-sm text-neutral-500 whitespace-nowrap">
             {formatRelativeTime(row.original.updatedAt)}
@@ -451,19 +453,19 @@ export default function CampaignsPage() {
         id: 'actions',
         enableSorting: false,
         enableHiding: false, // Actions column is locked-visible.
-        meta: {label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right'} satisfies DataTableColumnMeta,
-        header: () => <span className="flex justify-end">Actions</span>,
+        meta: {label: t('campaigns.columns.actions'), headClassName: 'text-right', cellClassName: 'text-right'} satisfies DataTableColumnMeta,
+        header: () => <span className="flex justify-end">{t('campaigns.columns.actions')}</span>,
         cell: ({row}) => (
           <div className="flex items-center justify-end gap-1">
             <Button
               asChild
               variant="ghost"
               size="sm"
-              title={row.original.status === 'DRAFT' ? 'Edit campaign' : 'View campaign'}
+              title={row.original.status === 'DRAFT' ? t('campaigns.actions.edit') : t('campaigns.actions.view')}
             >
               <Link
                 href={`/campaigns/${row.original.id}`}
-                aria-label={row.original.status === 'DRAFT' ? 'Edit campaign' : 'View campaign'}
+                aria-label={row.original.status === 'DRAFT' ? t('campaigns.actions.edit') : t('campaigns.actions.view')}
               >
                 <Edit className="h-4 w-4" />
               </Link>
@@ -471,8 +473,8 @@ export default function CampaignsPage() {
             <Button
               variant="ghost"
               size="sm"
-              title="Duplicate campaign"
-              aria-label="Duplicate campaign"
+              title={t('campaigns.actions.duplicate')}
+              aria-label={t('campaigns.actions.duplicate')}
               onClick={() => handleDuplicate(row.original.id)}
             >
               <Copy className="h-4 w-4" />
@@ -481,8 +483,8 @@ export default function CampaignsPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                title="Delete campaign"
-                aria-label="Delete campaign"
+                title={t('campaigns.actions.delete')}
+                aria-label={t('campaigns.actions.delete')}
                 onClick={() => {
                   setCampaignToDelete(row.original.id);
                   setShowDeleteDialog(true);
@@ -495,8 +497,8 @@ export default function CampaignsPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                title="Cancel campaign"
-                aria-label="Cancel campaign"
+                title={t('campaigns.actions.cancel')}
+                aria-label={t('campaigns.actions.cancel')}
                 onClick={() => {
                   setCampaignToCancel(row.original.id);
                   setShowCancelDialog(true);
@@ -512,7 +514,7 @@ export default function CampaignsPage() {
     // Re-creating columns on every render is cheap and avoids stale-closure bugs
     // for the statusFilter-driven facet and cancel/delete/duplicate handlers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [statusFilter],
+    [statusFilter, t],
   );
 
   const table = useReactTable<Campaign>({
@@ -549,23 +551,23 @@ export default function CampaignsPage() {
 
   return (
     <>
-      <NextSeo title="Campaigns" />
+      <NextSeo title={t('campaigns.seoTitle')} />
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Campaigns</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('campaigns.heading')}</h1>
               <p className="text-neutral-500 mt-2 text-sm sm:text-base">
-                Send one-time email broadcasts to your contacts. {data?.total ? `${data.total} total campaigns` : ''}
+                {t('campaigns.subtitle')} {data?.total ? t('campaigns.totalCount', {count: data.total}) : ''}
               </p>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="w-full sm:w-auto">
                   <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Create Campaign</span>
-                  <span className="sm:hidden">Create</span>
+                  <span className="hidden sm:inline">{t('campaigns.createCampaign')}</span>
+                  <span className="sm:hidden">{t('campaigns.createShort')}</span>
                   <ChevronDown className="h-4 w-4 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
@@ -574,9 +576,9 @@ export default function CampaignsPage() {
                   <Link href="/campaigns/create" className="flex items-start gap-3">
                     <Mail className="h-4 w-4 mt-0.5 text-neutral-700" />
                     <div className="flex flex-col gap-0.5 flex-1">
-                      <span className="font-medium text-sm">Empty Campaign</span>
+                      <span className="font-medium text-sm">{t('campaigns.createOptions.empty')}</span>
                       <span className="text-xs text-neutral-500 leading-snug">
-                        Start from scratch with a blank canvas
+                        {t('campaigns.createOptions.emptyDescription')}
                       </span>
                     </div>
                   </Link>
@@ -585,9 +587,9 @@ export default function CampaignsPage() {
                   <div className="flex items-start gap-3">
                     <FileText className="h-4 w-4 mt-0.5 text-neutral-700" />
                     <div className="flex flex-col gap-0.5 flex-1">
-                      <span className="font-medium text-sm">From Template</span>
+                      <span className="font-medium text-sm">{t('campaigns.createOptions.fromTemplate')}</span>
                       <span className="text-xs text-neutral-500 leading-snug">
-                        Use an existing template as a starting point
+                        {t('campaigns.createOptions.fromTemplateDescription')}
                       </span>
                     </div>
                   </div>
@@ -596,9 +598,9 @@ export default function CampaignsPage() {
                   <div className="flex items-start gap-3">
                     <RefreshCw className="h-4 w-4 mt-0.5 text-neutral-700" />
                     <div className="flex flex-col gap-0.5 flex-1">
-                      <span className="font-medium text-sm">From Previous Campaign</span>
+                      <span className="font-medium text-sm">{t('campaigns.createOptions.fromCampaign')}</span>
                       <span className="text-xs text-neutral-500 leading-snug">
-                        Copy content and settings from an existing campaign
+                        {t('campaigns.createOptions.fromCampaignDescription')}
                       </span>
                     </div>
                   </div>
@@ -620,7 +622,7 @@ export default function CampaignsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
               <Input
                 type="text"
-                placeholder="Search campaigns..."
+                placeholder={t('campaigns.searchPlaceholder')}
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 className="pl-10 pr-10 h-8 text-xs"
@@ -628,7 +630,7 @@ export default function CampaignsPage() {
               {searchInput && (
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t('campaigns.clearSearch')}
                   onClick={() => {
                     setSearchInput('');
                     setSearch('');
@@ -643,9 +645,9 @@ export default function CampaignsPage() {
             <div className="flex items-center gap-2 shrink-0">
               {view === 'card' && (
                 <DataTableFilter
-                  title="Status"
+                  title={t('campaigns.statusLabel')}
                   multiple={false}
-                  options={STATUS_OPTIONS.map(s => ({value: s, label: statusBadgeConfig[s].label}))}
+                  options={STATUS_OPTIONS.map(s => ({value: s, label: statusLabel(s)}))}
                   selected={statusFilter === 'ALL' ? [] : [statusFilter]}
                   onChange={next => {
                     setStatusFilter((next[0] as StatusFilter) ?? 'ALL');
@@ -674,7 +676,7 @@ export default function CampaignsPage() {
                 disabled={bulkDeleteStatus === 'loading'}
               >
                 <Trash2 className="h-4 w-4" />
-                Delete selected
+                {t('campaigns.deleteSelected')}
               </Button>
             </BulkActionBar>
           )}
@@ -700,14 +702,14 @@ export default function CampaignsPage() {
                     // Genuinely empty project — first-run state.
                     <EmptyState
                       icon={Mail}
-                      title="No campaigns yet"
-                      description="Send one-off emails to groups of contacts."
+                      title={t('campaigns.empty.title')}
+                      description={t('campaigns.empty.description')}
                       action={
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button>
                               <Plus className="h-4 w-4" />
-                              Create Campaign
+                              {t('campaigns.createCampaign')}
                               <ChevronDown className="h-4 w-4 ml-1" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -716,9 +718,9 @@ export default function CampaignsPage() {
                               <Link href="/campaigns/create" className="flex items-start gap-3">
                                 <Mail className="h-4 w-4 mt-0.5 text-neutral-700" />
                                 <div className="flex flex-col gap-0.5 flex-1">
-                                  <span className="font-medium text-sm">Empty Campaign</span>
+                                  <span className="font-medium text-sm">{t('campaigns.createOptions.empty')}</span>
                                   <span className="text-xs text-neutral-500 leading-snug">
-                                    Start from scratch with a blank canvas
+                                    {t('campaigns.createOptions.emptyDescription')}
                                   </span>
                                 </div>
                               </Link>
@@ -727,9 +729,9 @@ export default function CampaignsPage() {
                               <div className="flex items-start gap-3">
                                 <FileText className="h-4 w-4 mt-0.5 text-neutral-700" />
                                 <div className="flex flex-col gap-0.5 flex-1">
-                                  <span className="font-medium text-sm">From Template</span>
+                                  <span className="font-medium text-sm">{t('campaigns.createOptions.fromTemplate')}</span>
                                   <span className="text-xs text-neutral-500 leading-snug">
-                                    Use an existing template as a starting point
+                                    {t('campaigns.createOptions.fromTemplateDescription')}
                                   </span>
                                 </div>
                               </div>
@@ -738,9 +740,9 @@ export default function CampaignsPage() {
                               <div className="flex items-start gap-3">
                                 <RefreshCw className="h-4 w-4 mt-0.5 text-neutral-700" />
                                 <div className="flex flex-col gap-0.5 flex-1">
-                                  <span className="font-medium text-sm">From Previous Campaign</span>
+                                  <span className="font-medium text-sm">{t('campaigns.createOptions.fromCampaign')}</span>
                                   <span className="text-xs text-neutral-500 leading-snug">
-                                    Copy content and settings from an existing campaign
+                                    {t('campaigns.createOptions.fromCampaignDescription')}
                                   </span>
                                 </div>
                               </div>
@@ -767,7 +769,7 @@ export default function CampaignsPage() {
                         href={`/campaigns/${campaign.id}`}
                         data-card-link=""
                         className="flex-1 block p-6 pb-4 hover:bg-neutral-50/50 transition-colors rounded-t-xl focus-visible:outline-none"
-                        aria-label={`Open ${campaign.name}`}
+                        aria-label={t('campaigns.openCampaign', {name: campaign.name})}
                       >
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <h3 className="font-semibold text-neutral-900 leading-snug truncate">{campaign.name}</h3>
@@ -779,7 +781,7 @@ export default function CampaignsPage() {
                             <>
                               <span>
                                 <strong className="font-semibold text-neutral-900">{campaign.totalRecipients.toLocaleString()}</strong>
-                                <span className="text-neutral-400 ml-1 text-xs">estimated recipients</span>
+                                <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.estimatedRecipients')}</span>
                               </span>
                             </>
                           )}
@@ -787,13 +789,13 @@ export default function CampaignsPage() {
                             <>
                               <span>
                                 <strong className="font-semibold text-neutral-900">{campaign.totalRecipients.toLocaleString()}</strong>
-                                <span className="text-neutral-400 ml-1 text-xs">recipients</span>
+                                <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.recipients')}</span>
                               </span>
                               {campaign.scheduledFor && (
                                 <>
                                   <span className="h-3 w-px bg-neutral-200" />
                                   <span className="text-xs text-neutral-500">
-                                    Sending {dayjs(campaign.scheduledFor).format('MMM D, YYYY [at] h:mm A')}
+                                    {t('campaigns.sendingOn', {date: dayjs(campaign.scheduledFor).format('MMM D, YYYY [at] h:mm A')})}
                                   </span>
                                 </>
                               )}
@@ -803,12 +805,12 @@ export default function CampaignsPage() {
                             <>
                               <span>
                                 <strong className="font-semibold text-neutral-900">{deliveryPct.toFixed(0)}%</strong>
-                                <span className="text-neutral-400 ml-1 text-xs">delivered</span>
+                                <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.delivered')}</span>
                               </span>
                               <span className="h-3 w-px bg-neutral-200" />
                               <span>
                                 <strong className="font-semibold text-neutral-900">{openRate.toFixed(1)}%</strong>
-                                <span className="text-neutral-400 ml-1 text-xs">opens</span>
+                                <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.opens')}</span>
                               </span>
                             </>
                           )}
@@ -816,19 +818,19 @@ export default function CampaignsPage() {
                             <>
                               <span>
                                 <strong className="font-semibold text-neutral-900">{campaign.sentCount.toLocaleString()}</strong>
-                                <span className="text-neutral-400 ml-1 text-xs">sent</span>
+                                <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.sent')}</span>
                               </span>
                               <span className="h-3 w-px bg-neutral-200" />
                               <span>
                                 <strong className="font-semibold text-neutral-900">{openRate.toFixed(1)}%</strong>
-                                <span className="text-neutral-400 ml-1 text-xs">opens</span>
+                                <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.opens')}</span>
                               </span>
                               {clickRate > 0 && (
                                 <>
                                   <span className="h-3 w-px bg-neutral-200" />
                                   <span>
                                     <strong className="font-semibold text-neutral-900">{clickRate.toFixed(1)}%</strong>
-                                    <span className="text-neutral-400 ml-1 text-xs">clicks</span>
+                                    <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.clicks')}</span>
                                   </span>
                                 </>
                               )}
@@ -837,7 +839,7 @@ export default function CampaignsPage() {
                           {campaign.status === 'CANCELLED' && (
                             <span>
                               <strong className="font-semibold text-neutral-900">{campaign.totalRecipients.toLocaleString()}</strong>
-                              <span className="text-neutral-400 ml-1 text-xs">recipients</span>
+                              <span className="text-neutral-400 ml-1 text-xs">{t('campaigns.metrics.recipients')}</span>
                             </span>
                           )}
                         </div>
@@ -847,24 +849,24 @@ export default function CampaignsPage() {
                         <div className="flex items-center gap-1.5 text-xs text-neutral-400">
                           <Calendar className="h-3 w-3" />
                           <div className="group relative inline-block cursor-help">
-                            <span>Updated {formatRelativeTime(campaign.updatedAt)}</span>
+                            <span>{t('campaigns.updatedAt', {time: formatRelativeTime(campaign.updatedAt)})}</span>
                             <div className="hidden group-hover:block absolute z-10 w-48 p-2 bg-neutral-900 text-white text-xs rounded shadow-md bottom-full left-0 mb-1 whitespace-nowrap">
                               {dayjs(campaign.updatedAt).format('DD MMMM YYYY, hh:mm')}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Button asChild variant="ghost" size="sm" title={campaign.status === 'DRAFT' ? 'Edit campaign' : 'View campaign'}>
-                            <Link href={`/campaigns/${campaign.id}`} aria-label={campaign.status === 'DRAFT' ? 'Edit campaign' : 'View campaign'}><Edit className="h-4 w-4" /></Link>
+                          <Button asChild variant="ghost" size="sm" title={campaign.status === 'DRAFT' ? t('campaigns.actions.edit') : t('campaigns.actions.view')}>
+                            <Link href={`/campaigns/${campaign.id}`} aria-label={campaign.status === 'DRAFT' ? t('campaigns.actions.edit') : t('campaigns.actions.view')}><Edit className="h-4 w-4" /></Link>
                           </Button>
-                          <Button variant="ghost" size="sm" title="Duplicate campaign" onClick={() => handleDuplicate(campaign.id)}>
+                          <Button variant="ghost" size="sm" title={t('campaigns.actions.duplicate')} onClick={() => handleDuplicate(campaign.id)}>
                             <Copy className="h-4 w-4" />
                           </Button>
                           {campaign.status === 'DRAFT' && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              title="Delete campaign"
+                              title={t('campaigns.actions.delete')}
                               onClick={() => {
                                 setCampaignToDelete(campaign.id);
                                 setShowDeleteDialog(true);
@@ -877,7 +879,7 @@ export default function CampaignsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              title="Cancel campaign"
+                              title={t('campaigns.actions.cancel')}
                               onClick={() => {
                                 setCampaignToCancel(campaign.id);
                                 setShowCancelDialog(true);
@@ -896,17 +898,17 @@ export default function CampaignsPage() {
                 {data && data.totalPages > 1 && (
                   <div className="flex justify-center gap-2">
                     <Button variant="outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
-                      Previous
+                      {t('common.previous')}
                     </Button>
                     <span className="flex items-center px-4 text-sm text-neutral-600">
-                      Page {page} of {data.totalPages}
+                      {t('campaigns.pagination.page', {page, total: data.totalPages})}
                     </span>
                     <Button
                       variant="outline"
                       onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
                       disabled={page === data.totalPages}
                     >
-                      Next
+                      {t('common.next')}
                     </Button>
                   </div>
                 )}
@@ -924,17 +926,17 @@ export default function CampaignsPage() {
                 {data && data.totalPages > 1 && (
                   <div className="flex justify-center gap-2">
                     <Button variant="outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
-                      Previous
+                      {t('common.previous')}
                     </Button>
                     <span className="flex items-center px-4 text-sm text-neutral-600">
-                      Page {page} of {data.totalPages}
+                      {t('campaigns.pagination.page', {page, total: data.totalPages})}
                     </span>
                     <Button
                       variant="outline"
                       onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
                       disabled={page === data.totalPages}
                     >
-                      Next
+                      {t('common.next')}
                     </Button>
                   </div>
                 )}
@@ -947,9 +949,9 @@ export default function CampaignsPage() {
           open={showCancelDialog}
           onOpenChange={setShowCancelDialog}
           onConfirm={handleCancel}
-          title="Cancel Campaign"
-          description="Are you sure you want to cancel this campaign?"
-          confirmText="Cancel Campaign"
+          title={t('campaigns.dialogs.cancelTitle')}
+          description={t('campaigns.dialogs.cancelDescription')}
+          confirmText={t('campaigns.dialogs.cancelConfirm')}
           variant="destructive"
         />
 
@@ -957,9 +959,9 @@ export default function CampaignsPage() {
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           onConfirm={handleDelete}
-          title="Delete Campaign"
-          description="Are you sure you want to delete this draft campaign? This action cannot be undone."
-          confirmText="Delete Campaign"
+          title={t('campaigns.dialogs.deleteTitle')}
+          description={t('campaigns.dialogs.deleteDescription')}
+          confirmText={t('campaigns.dialogs.deleteConfirm')}
           variant="destructive"
         />
 
@@ -967,9 +969,13 @@ export default function CampaignsPage() {
           open={showBulkDeleteDialog}
           onOpenChange={setShowBulkDeleteDialog}
           onConfirm={handleBulkDelete}
-          title={`Delete ${selectedIds.length} campaign${selectedIds.length === 1 ? '' : 's'}`}
-          description="Are you sure you want to delete the selected campaigns? This action cannot be undone. Only draft campaigns can be deleted — selecting a non-draft campaign will block the operation."
-          confirmText="Delete"
+          title={
+            selectedIds.length === 1
+              ? t('campaigns.dialogs.bulkDeleteTitle', {count: selectedIds.length})
+              : t('campaigns.dialogs.bulkDeleteTitlePlural', {count: selectedIds.length})
+          }
+          description={t('campaigns.dialogs.bulkDeleteDescription')}
+          confirmText={t('campaigns.dialogs.bulkDeleteConfirm')}
           variant="destructive"
           status={bulkDeleteStatus}
         />

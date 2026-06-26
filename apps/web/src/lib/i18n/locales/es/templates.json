@@ -1,0 +1,104 @@
+{
+  "list": {
+    "seoTitle": "Plantillas",
+    "title": "Plantillas de correo",
+    "description": "Cree y administre plantillas de correo reutilizables para sus campañas y flujos de trabajo.",
+    "totalCount": "{count} plantillas en total",
+    "createTemplate": "Crear plantilla",
+    "searchPlaceholder": "Buscar plantillas...",
+    "clearSearch": "Borrar búsqueda",
+    "selectAllRows": "Seleccionar todas las filas de esta página",
+    "selectRow": "Seleccionar {name}",
+    "deleteSelected": "Eliminar seleccionadas",
+    "emptyTitle": "Aún no hay plantillas",
+    "emptyDescription": "Cree diseños de correo reutilizables para sus campañas.",
+    "updatedAt": "Actualizado {time}",
+    "pagination": {
+      "showing": "Mostrando {from} a {to} de {total} plantillas",
+      "page": "Página {page} de {totalPages}"
+    },
+    "columns": {
+      "name": "Nombre",
+      "type": "Tipo",
+      "subject": "Asunto",
+      "updated": "Actualizado",
+      "actions": "Acciones"
+    },
+    "actions": {
+      "edit": "Editar plantilla",
+      "duplicate": "Duplicar plantilla",
+      "delete": "Eliminar plantilla"
+    }
+  },
+  "types": {
+    "marketing": "Marketing",
+    "transactional": "Transaccional",
+    "headless": "Headless",
+    "descriptions": {
+      "marketing": "Contactos suscritos, incluye enlace para cancelar la suscripción",
+      "transactional": "Todos los contactos, sin verificación de suscripción ni pie de página",
+      "headless": "Contactos suscritos, sin pie de página de Plunk"
+    }
+  },
+  "create": {
+    "seoTitle": "Crear plantilla",
+    "title": "Crear plantilla",
+    "description": "Cree una plantilla de correo reutilizable para campañas y flujos de trabajo"
+  },
+  "edit": {
+    "title": "Editar plantilla",
+    "savingStatus": "Guardando...",
+    "unsavedChanges": "Cambios sin guardar",
+    "allChangesSaved": "Todos los cambios guardados"
+  },
+  "form": {
+    "basicInfoTitle": "Información básica",
+    "basicInfoDescription": "Asigne un nombre y describa su plantilla",
+    "nameLabel": "Nombre de la plantilla",
+    "namePlaceholder": "Correo de bienvenida",
+    "descriptionLabel": "Descripción",
+    "descriptionPlaceholder": "Enviado a nuevos suscriptores",
+    "typeTitle": "Tipo de plantilla",
+    "typeDescription": "Elija cómo debe tratarse esta plantilla",
+    "emailSettingsTitle": "Configuración del correo",
+    "emailSettingsDescription": "Configure la información del remitente y el asunto",
+    "subjectLabel": "Línea de asunto",
+    "subjectPlaceholder": "¡Bienvenido a nuestra plataforma!",
+    "variableHint": "Use {variable} para contenido dinámico",
+    "bodyTitle": "Cuerpo del correo",
+    "bodyDescription": "Cree su correo con el editor visual o pegue HTML personalizado",
+    "fromNamePlaceholder": "Su empresa",
+    "createButton": "Crear plantilla",
+    "creatingButton": "Creando...",
+    "saveButton": "Guardar cambios",
+    "savingButton": "Guardando...",
+    "deleteButton": "Eliminar plantilla"
+  },
+  "unsubscribeWarning": {
+    "title": "No se detectó un enlace para cancelar la suscripción",
+    "body": "Usted es responsable de ofrecer a los destinatarios una forma de cancelar la suscripción. Use las variables de Plunk a continuación para crear su propio pie de página."
+  },
+  "deleteDialog": {
+    "title": "Eliminar plantilla",
+    "description": "¿Está seguro de que desea eliminar esta plantilla? Esta acción no se puede deshacer.",
+    "confirm": "Eliminar"
+  },
+  "bulkDeleteDialog": {
+    "title": "Eliminar {count} plantilla",
+    "title_plural": "Eliminar {count} plantillas",
+    "description": "¿Está seguro de que desea eliminar las plantillas seleccionadas? Esta acción no se puede deshacer. Las plantillas referenciadas por un paso de un flujo de trabajo bloquearán la operación.",
+    "confirm": "Eliminar"
+  },
+  "toast": {
+    "deleted": "Plantilla eliminada correctamente",
+    "deleteFailed": "No se pudo eliminar la plantilla",
+    "duplicated": "Plantilla duplicada correctamente",
+    "duplicateFailed": "No se pudo duplicar la plantilla",
+    "bulkDeleted": "{count} plantilla eliminada",
+    "bulkDeleted_plural": "{count} plantillas eliminadas",
+    "bulkDeleteFailed": "No se pudieron eliminar las plantillas",
+    "created": "Plantilla creada correctamente",
+    "createFailed": "No se pudo crear la plantilla",
+    "saveFailed": "No se pudo guardar la plantilla"
+  }
+}

@@ -31,8 +31,10 @@ import {toast} from 'sonner';
 import useSWR from 'swr';
 import {detectUnsubscribeSignal} from '@plunk/shared';
 import {useActiveProject} from '../../lib/contexts/ActiveProjectProvider';
+import {useTranslation} from '../../lib/i18n';
 
 export default function CreateCampaignPage() {
+  const {t} = useTranslation();
   const router = useRouter();
   const {activeProject} = useActiveProject();
   const [name, setName] = useState('');
@@ -74,9 +76,9 @@ export default function CreateCampaignPage() {
           if (queryFromName && typeof queryFromName === 'string') setFromName(queryFromName);
           if (queryReplyTo && typeof queryReplyTo === 'string') setReplyTo(queryReplyTo);
           setBody(template.body);
-          toast.success('Template loaded successfully');
+          toast.success(t('campaigns.toast.templateLoaded'));
         } catch {
-          toast.error('Failed to load template');
+          toast.error(t('campaigns.toast.templateLoadFailed'));
         } finally {
           setLoadingTemplate(false);
         }
@@ -94,9 +96,9 @@ export default function CreateCampaignPage() {
           }
           if (querySegmentId && typeof querySegmentId === 'string') setSegmentId(querySegmentId);
           setBody(campaign.data.body);
-          toast.success('Campaign loaded successfully');
+          toast.success(t('campaigns.toast.campaignLoaded'));
         } catch {
-          toast.error('Failed to load campaign');
+          toast.error(t('campaigns.toast.campaignLoadFailed'));
         } finally {
           setLoadingTemplate(false);
         }
@@ -144,10 +146,10 @@ export default function CreateCampaignPage() {
         audienceFilter: audienceType === CampaignAudienceType.FILTERED ? [] : undefined,
       } as any);
 
-      toast.success('Campaign created successfully');
+      toast.success(t('campaigns.toast.created'));
       void router.push(`/campaigns/${response.data.id}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create campaign');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.createFailed'));
       setSaving(false);
     }
   };
@@ -164,13 +166,13 @@ export default function CreateCampaignPage() {
 
   return (
     <>
-      <NextSeo title="Create Campaign" />
+      <NextSeo title={t('campaigns.create.seoTitle')} />
       <DashboardLayout>
         {loadingTemplate && (
           <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
             <div className="bg-white rounded-lg p-5 flex items-center gap-3">
               <IconSpinner />
-              <p className="text-sm text-neutral-700">Loading template...</p>
+              <p className="text-sm text-neutral-700">{t('campaigns.create.loadingTemplate')}</p>
             </div>
           </div>
         )}
@@ -181,9 +183,9 @@ export default function CreateCampaignPage() {
               <Link href="/campaigns"><ArrowLeft className="h-4 w-4" /></Link>
             </Button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Create Campaign</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('campaigns.create.heading')}</h1>
               <p className="text-neutral-500 mt-1 text-sm sm:text-base">
-                Create a new email campaign to send to your contacts
+                {t('campaigns.create.subtitle')}
               </p>
             </div>
           </div>
@@ -195,17 +197,17 @@ export default function CreateCampaignPage() {
                 {/* Basic Information */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Basic Information</CardTitle>
-                    <CardDescription>Name and describe your campaign</CardDescription>
+                    <CardTitle>{t('campaigns.basicInfo.title')}</CardTitle>
+                    <CardDescription>{t('campaigns.basicInfo.description')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">
-                        Campaign Name <span className="text-red-500">*</span>
+                        {t('campaigns.basicInfo.nameLabel')} <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="name"
-                        placeholder="e.g., Spring Sale Announcement"
+                        placeholder={t('campaigns.basicInfo.namePlaceholder')}
                         value={name}
                         onChange={e => setName(e.target.value)}
                         required
@@ -213,10 +215,10 @@ export default function CreateCampaignPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
+                      <Label htmlFor="description">{t('campaigns.basicInfo.descriptionLabel')}</Label>
                       <Input
                         id="description"
-                        placeholder="Internal notes about this campaign"
+                        placeholder={t('campaigns.basicInfo.descriptionPlaceholder')}
                         value={description}
                         onChange={e => setDescription(e.target.value)}
                       />
@@ -227,15 +229,15 @@ export default function CreateCampaignPage() {
                 {/* Campaign Type */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Campaign Type</CardTitle>
-                    <CardDescription>Choose how this campaign should be treated</CardDescription>
+                    <CardTitle>{t('campaigns.campaignType.title')}</CardTitle>
+                    <CardDescription>{t('campaigns.campaignType.description')}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col gap-2">
                       {([
-                        {value: TemplateType.MARKETING, label: 'Marketing', description: 'Subscribed contacts, includes unsubscribe link'},
-                        {value: TemplateType.TRANSACTIONAL, label: 'Transactional', description: 'All contacts, no subscription check or footer'},
-                        {value: TemplateType.HEADLESS, label: 'Headless', description: 'Subscribed contacts, no Plunk footer'},
+                        {value: TemplateType.MARKETING, label: t('campaigns.campaignType.marketing'), description: t('campaigns.campaignType.marketingDescription')},
+                        {value: TemplateType.TRANSACTIONAL, label: t('campaigns.campaignType.transactional'), description: t('campaigns.campaignType.transactionalDescription')},
+                        {value: TemplateType.HEADLESS, label: t('campaigns.campaignType.headless'), description: t('campaigns.campaignType.headlessDescription')},
                       ] as const).map(({value, label, description}) => (
                         <button
                           key={value}
@@ -256,11 +258,11 @@ export default function CreateCampaignPage() {
                       <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 overflow-hidden">
                         <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-100/60 px-3 py-2">
                           <TriangleAlert className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                          <p className="text-xs font-semibold text-amber-900">No unsubscribe link detected</p>
+                          <p className="text-xs font-semibold text-amber-900">{t('campaigns.campaignType.noUnsubscribeTitle')}</p>
                         </div>
                         <div className="px-3 py-2.5 space-y-2">
                           <p className="text-xs text-amber-800 leading-relaxed">
-                            You are responsible for providing recipients a way to opt out. Use the Plunk variables below to build your own footer.
+                            {t('campaigns.campaignType.noUnsubscribeBody')}
                           </p>
                           <div className="flex flex-wrap gap-1.5">
                             <code className="inline-flex items-center rounded bg-amber-100 border border-amber-200 px-1.5 py-0.5 font-mono text-[11px] text-amber-900">

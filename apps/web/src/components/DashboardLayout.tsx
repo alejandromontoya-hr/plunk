@@ -2,13 +2,16 @@ import {useActiveProject} from '../lib/contexts/ActiveProjectProvider';
 import {useUser} from '../lib/hooks/useUser';
 import {WIKI_URI} from '../lib/constants';
 import {network} from '../lib/network';
+import {UI_LANGUAGES, useTranslation} from '../lib/i18n';
 import {OnboardingBanner} from './onboarding/OnboardingBanner';
 import {
   Activity,
   BarChart3,
   BookOpen,
+  Check,
   ChevronDown,
   FileText,
+  Globe,
   Layers,
   LayoutDashboard,
   LogOut,
@@ -37,35 +40,35 @@ interface DashboardLayoutProps {
 }
 
 interface NavItem {
-  name: string;
+  nameKey: string;
   href: string;
   icon: React.ComponentType<{className?: string}>;
 }
 
 interface NavSection {
-  title?: string;
+  titleKey?: string;
   items: NavItem[];
 }
 
 const navigation: NavSection[] = [
   {
     items: [
-      {name: 'Dashboard', href: '/', icon: LayoutDashboard},
-      {name: 'Contacts', href: '/contacts', icon: Users},
-      {name: 'Segments', href: '/segments', icon: Layers},
-      {name: 'Activity', href: '/activity', icon: Activity},
-      {name: 'Analytics', href: '/analytics', icon: BarChart3},
+      {nameKey: 'nav.dashboard', href: '/', icon: LayoutDashboard},
+      {nameKey: 'nav.contacts', href: '/contacts', icon: Users},
+      {nameKey: 'nav.segments', href: '/segments', icon: Layers},
+      {nameKey: 'nav.activity', href: '/activity', icon: Activity},
+      {nameKey: 'nav.analytics', href: '/analytics', icon: BarChart3},
     ],
   },
   {
-    title: 'Automations',
+    titleKey: 'nav.automations',
     items: [
-      {name: 'Templates', href: '/templates', icon: FileText},
-      {name: 'Workflows', href: '/workflows', icon: Workflow},
+      {nameKey: 'nav.templates', href: '/templates', icon: FileText},
+      {nameKey: 'nav.workflows', href: '/workflows', icon: Workflow},
     ],
   },
   {
-    items: [{name: 'Campaigns', href: '/campaigns', icon: Megaphone}],
+    items: [{nameKey: 'nav.campaigns', href: '/campaigns', icon: Megaphone}],
   },
 ];
 
@@ -83,6 +86,7 @@ function avatarGradient(seed: string): string {
 
 export function DashboardLayout({children}: DashboardLayoutProps) {
   const router = useRouter();
+  const {t, locale, setLocale} = useTranslation();
   const {data: user, mutate: mutateUser} = useUser();
   const {activeProject, availableProjects, setActiveProject} = useActiveProject();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -121,8 +125,7 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-6 border-b border-neutral-200">
         <div className="flex items-center gap-2">
-          <Image src="/assets/logo.png" alt="Plunk" width={28} height={28} className="rounded" />
-          <h1 className="text-xl font-bold text-neutral-900">Plunk</h1>
+          <Image src="/assets/sagy-logo-azul-profundo.png" alt="Sagy" width={112} height={32} className="h-8 w-auto" />
         </div>
         <button
           onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', {key: 'k', metaKey: true, bubbles: true}))}
@@ -141,7 +144,7 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
               <div className="h-8 w-8 rounded-lg bg-neutral-100 text-neutral-700 flex items-center justify-center text-xs font-medium flex-shrink-0">
                 {activeProject?.name.charAt(0).toUpperCase() || 'P'}
               </div>
-              <span className="font-medium text-neutral-900 truncate">{activeProject?.name || 'Select project'}</span>
+              <span className="font-medium text-neutral-900 truncate">{activeProject?.name || t('nav.selectProject')}</span>
             </div>
             <ChevronDown className="h-4 w-4 text-neutral-500 flex-shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </DropdownMenuTrigger>
@@ -168,7 +171,7 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
             <DropdownMenuItem asChild className="gap-2 px-3 py-2 cursor-pointer text-neutral-700">
               <Link href="/projects/create" onClick={() => setShowMobileMenu(false)}>
                 <Plus className="h-4 w-4" />
-                <span>Create project</span>
+                <span>{t('nav.createProject')}</span>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -179,9 +182,9 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
         {navigation.map((section, sectionIndex) => (
           <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-6' : ''}>
-            {section.title && (
+            {section.titleKey && (
               <p className="px-3 mb-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                {section.title}
+                {t(section.titleKey)}
               </p>
             )}
             <div className="space-y-1">
@@ -191,7 +194,7 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
                 const Icon = item.icon;
                 return (
                   <Link
-                    key={item.name}
+                    key={item.nameKey}
                     href={item.href}
                     onClick={() => setShowMobileMenu(false)}
                     className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
@@ -201,7 +204,7 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
                     }`}
                   >
                     <Icon className="h-5 w-5" />
-                    {item.name}
+                    {t(item.nameKey)}
                   </Link>
                 );
               })}
@@ -219,7 +222,7 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
           className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <BookOpen className="h-5 w-5" />
-          Documentation
+          {t('nav.documentation')}
         </a>
 
         <Link
@@ -232,7 +235,7 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
           }`}
         >
           <Settings className="h-5 w-5" />
-          Settings
+          {t('nav.settings')}
         </Link>
 
         <DropdownMenu>
@@ -243,7 +246,7 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
             >
               {user?.email?.charAt(0).toUpperCase() ?? '?'}
             </div>
-            <span className="flex-1 text-left truncate">Account</span>
+            <span className="flex-1 text-left truncate">{t('nav.account')}</span>
             <ChevronDown className="h-4 w-4 text-neutral-500 transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
@@ -251,12 +254,28 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
               {user?.email}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuLabel className="flex items-center gap-2 px-3 py-1.5 font-normal text-xs text-neutral-500">
+              <Globe className="h-3.5 w-3.5" />
+              {t('nav.language')}
+            </DropdownMenuLabel>
+            {UI_LANGUAGES.map(language => (
+              <DropdownMenuItem
+                key={language.code}
+                onSelect={() => setLocale(language.code)}
+                className="gap-2 px-3 py-2 cursor-pointer"
+              >
+                <span>{language.flag}</span>
+                <span className="flex-1 text-left">{language.nativeName}</span>
+                {locale === language.code && <Check className="h-4 w-4 text-neutral-900" />}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() => void handleLogout()}
               className="gap-2 px-3 py-2 cursor-pointer text-red-600 focus:text-red-600"
             >
               <LogOut className="h-4 w-4" />
-              <span>Log out</span>
+              <span>{t('nav.logout')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -294,13 +313,12 @@ export function DashboardLayout({children}: DashboardLayoutProps) {
           <button
             onClick={() => setShowMobileMenu(true)}
             className="p-2 rounded-lg hover:bg-neutral-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label="Open menu"
+            aria-label={t('nav.openMenu')}
           >
             <Menu className="h-6 w-6 text-neutral-900" />
           </button>
           <div className="flex items-center gap-2 ml-4">
-            <Image src="/assets/logo.png" alt="Plunk" width={24} height={24} className="rounded" />
-            <h1 className="text-lg font-bold text-neutral-900">Plunk</h1>
+            <Image src="/assets/sagy-logo-azul-profundo.png" alt="Sagy" width={98} height={28} className="h-7 w-auto" />
           </div>
         </div>
 

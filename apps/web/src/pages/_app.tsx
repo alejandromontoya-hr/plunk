@@ -8,6 +8,7 @@ import {DefaultSeo} from 'next-seo';
 import {NuqsAdapter} from 'nuqs/adapters/next/pages';
 import {Loader} from '@plunk/ui';
 import {ActiveProjectProvider} from '../lib/contexts/ActiveProjectProvider';
+import {I18nProvider, useTranslation} from '../lib/i18n';
 import {CommandPalette} from '../components/CommandPalette';
 import {useProjects} from '../lib/hooks/useProject';
 import {useUser} from '../lib/hooks/useUser';
@@ -46,6 +47,7 @@ function App({Component, pageProps}: AppProps) {
 
 function AuthGuard({children}: {children: React.ReactNode}) {
   const {data: user, isLoading} = useUser();
+  const {t} = useTranslation();
   const router = useRouter();
   const isPublicRoute = PUBLIC_ROUTES.some(
     route => router.pathname === route || router.pathname.startsWith(`${route}/`),
@@ -65,7 +67,7 @@ function AuthGuard({children}: {children: React.ReactNode}) {
 
   // Show loading state while checking authentication (only for protected routes)
   if (isLoading && !isPublicRoute) {
-    return <Loader message="Authenticating..." />;
+    return <Loader message={t('common.authenticating')} />;
   }
 
   // Don't render protected content if redirecting
@@ -78,6 +80,7 @@ function AuthGuard({children}: {children: React.ReactNode}) {
 
 function ProjectGuard({children}: {children: React.ReactNode}) {
   const {data: projects, isLoading} = useProjects();
+  const {t} = useTranslation();
   const router = useRouter();
   const isNoProjectRoute = NO_PROJECT_ROUTES.includes(router.pathname);
 
@@ -90,7 +93,7 @@ function ProjectGuard({children}: {children: React.ReactNode}) {
 
   // Show loading state while checking projects (only for routes that need a project)
   if (isLoading && !isNoProjectRoute) {
-    return <Loader message="Loading project..." />;
+    return <Loader message={t('common.loadingProject')} />;
   }
 
   // Don't render protected content if redirecting
@@ -108,13 +111,14 @@ function ProjectGuard({children}: {children: React.ReactNode}) {
 export default function WithProviders(props: AppProps) {
   return (
     <NuqsAdapter>
-      <SWRConfig
-        value={{
-          fetcher: (url: string) => network.fetch('GET', url),
-          shouldRetryOnError: false,
-        }}
-      >
-        <DefaultSeo titleTemplate="%s | Plunk" defaultTitle="Plunk | Email Platform Dashboard" />
+      <I18nProvider>
+        <SWRConfig
+          value={{
+            fetcher: (url: string) => network.fetch('GET', url),
+            shouldRetryOnError: false,
+          }}
+        >
+          <DefaultSeo titleTemplate="%s | Sagy" defaultTitle="Sagy" />
 
         <Script
           defer
@@ -123,10 +127,11 @@ export default function WithProviders(props: AppProps) {
           data-domains="next-app.useplunk.com"
         />
 
-        <ActiveProjectProvider>
-          <Root {...props} />
-        </ActiveProjectProvider>
-      </SWRConfig>
+          <ActiveProjectProvider>
+            <Root {...props} />
+          </ActiveProjectProvider>
+        </SWRConfig>
+      </I18nProvider>
     </NuqsAdapter>
   );
 }

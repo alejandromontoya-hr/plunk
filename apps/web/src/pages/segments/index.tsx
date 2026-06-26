@@ -14,6 +14,7 @@ import type {FilterCondition} from '@plunk/types';
 import {EmptyState} from '@plunk/ui';
 import {DashboardLayout} from '../../components/DashboardLayout';
 import {network} from '../../lib/network';
+import {useTranslation} from '../../lib/i18n';
 import {formatRelativeTime} from '../../lib/dateUtils';
 import {AlertTriangle, Calendar, Edit, Filter, Plus, Search, Trash2, X} from 'lucide-react';
 import {NextSeo} from 'next-seo';
@@ -41,6 +42,7 @@ function countFiltersInCondition(condition: unknown): number {
 }
 
 export default function SegmentsPage() {
+  const {t} = useTranslation();
   // Limit to 50 segments to avoid loading thousands into the browser
   const {
     data: segments,
@@ -68,10 +70,10 @@ export default function SegmentsPage() {
 
     try {
       await network.fetch('DELETE', `/segments/${segmentToDelete}`);
-      toast.success('Segment deleted successfully');
+      toast.success(t('segments.toast.deleted'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete segment');
+      toast.error(error instanceof Error ? error.message : t('segments.toast.deleteFailed'));
     } finally {
       setSegmentToDelete(null);
     }
@@ -79,22 +81,22 @@ export default function SegmentsPage() {
 
   return (
     <>
-      <NextSeo title="Segments" />
+      <NextSeo title={t('segments.title')} />
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Segments</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('segments.title')}</h1>
               <p className="text-neutral-500 mt-2 text-sm sm:text-base">
-                Create dynamic audience groups based on contact attributes and behaviors
+                {t('segments.subtitle')}
               </p>
             </div>
             <Button asChild className="w-full sm:w-auto">
               <Link href="/segments/new">
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Create Segment</span>
-                <span className="sm:hidden">Create</span>
+                <span className="hidden sm:inline">{t('segments.createSegment')}</span>
+                <span className="sm:hidden">{t('common.create')}</span>
               </Link>
             </Button>
           </div>
@@ -104,7 +106,7 @@ export default function SegmentsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
             <Input
               type="text"
-              placeholder="Search segments..."
+              placeholder={t('segments.searchPlaceholder')}
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               className="pl-10 pr-10"
@@ -112,7 +114,7 @@ export default function SegmentsPage() {
             {searchInput && (
               <button
                 type="button"
-                aria-label="Clear search"
+                aria-label={t('segments.clearSearch')}
                 onClick={() => setSearchInput('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
               >
@@ -126,7 +128,7 @@ export default function SegmentsPage() {
             <Alert variant="default">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Showing first {segments?.length} segments. Consider archiving old segments to improve performance.
+                {t('segments.limitWarning', {count: segments?.length ?? 0})}
               </AlertDescription>
             </Alert>
           )}
@@ -141,14 +143,14 @@ export default function SegmentsPage() {
               <CardContent>
                 <EmptyState
                   icon={Filter}
-                  title={searchInput ? 'No segments match' : 'No segments yet'}
-                  description={searchInput ? 'Try a different search term.' : 'Group contacts by attributes to target specific audiences.'}
+                  title={searchInput ? t('segments.empty.noMatchTitle') : t('segments.empty.noSegmentsTitle')}
+                  description={searchInput ? t('segments.empty.noMatchDescription') : t('segments.empty.noSegmentsDescription')}
                   action={
                     !searchInput ? (
                       <Button asChild>
                         <Link href="/segments/new">
                           <Plus className="h-4 w-4" />
-                          Create Segment
+                          {t('segments.createSegment')}
                         </Link>
                       </Button>
                     ) : undefined
@@ -167,25 +169,25 @@ export default function SegmentsPage() {
                       href={`/segments/${segment.id}`}
                       data-card-link=""
                       className="flex-1 block p-6 pb-4 hover:bg-neutral-50/50 transition-colors rounded-t-xl focus-visible:outline-none"
-                      aria-label={`Open ${segment.name}`}
+                      aria-label={t('segments.openSegment', {name: segment.name})}
                     >
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <h3 className="font-semibold text-neutral-900 leading-snug">{segment.name}</h3>
                         <Badge variant={isDynamic ? 'default' : 'neutral'} className="shrink-0 mt-0.5">
-                          {isDynamic ? 'Dynamic' : 'Static'}
+                          {isDynamic ? t('segments.dynamic') : t('segments.static')}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-4 text-sm">
                         <span>
                           <strong className="font-semibold text-neutral-900">{segment.memberCount.toLocaleString()}</strong>
-                          <span className="text-neutral-400 ml-1 text-xs">members</span>
+                          <span className="text-neutral-400 ml-1 text-xs">{t('segments.members')}</span>
                         </span>
                         {isDynamic && (
                           <>
                             <span className="h-3 w-px bg-neutral-200" />
                             <span>
                               <strong className="font-semibold text-neutral-900">{filterCount}</strong>
-                              <span className="text-neutral-400 ml-1 text-xs">filters</span>
+                              <span className="text-neutral-400 ml-1 text-xs">{t('segments.filters')}</span>
                             </span>
                           </>
                         )}
@@ -195,20 +197,20 @@ export default function SegmentsPage() {
                       <div className="flex items-center gap-1.5 text-xs text-neutral-400">
                         <Calendar className="h-3 w-3" />
                         <div className="group relative inline-block cursor-help">
-                          <span>Updated {formatRelativeTime(segment.updatedAt)}</span>
+                          <span>{t('segments.updatedAt', {time: formatRelativeTime(segment.updatedAt)})}</span>
                           <div className="hidden group-hover:block absolute z-10 w-48 p-2 bg-neutral-900 text-white text-xs rounded shadow-md bottom-full left-0 mb-1 whitespace-nowrap">
                             {dayjs(segment.updatedAt).format('DD MMMM YYYY, hh:mm')}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button asChild variant="ghost" size="sm" title="Edit segment">
-                          <Link href={`/segments/${segment.id}`} aria-label="Edit segment"><Edit className="h-4 w-4" /></Link>
+                        <Button asChild variant="ghost" size="sm" title={t('segments.editSegment')}>
+                          <Link href={`/segments/${segment.id}`} aria-label={t('segments.editSegment')}><Edit className="h-4 w-4" /></Link>
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          title="Delete segment"
+                          title={t('segments.deleteSegment')}
                           onClick={() => {
                             setSegmentToDelete(segment.id);
                             setShowDeleteDialog(true);
@@ -229,9 +231,9 @@ export default function SegmentsPage() {
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           onConfirm={handleDelete}
-          title="Delete Segment"
-          description="Are you sure you want to delete this segment? This action cannot be undone."
-          confirmText="Delete"
+          title={t('segments.deleteDialog.title')}
+          description={t('segments.deleteDialog.description')}
+          confirmText={t('common.delete')}
           variant="destructive"
         />
       </DashboardLayout>

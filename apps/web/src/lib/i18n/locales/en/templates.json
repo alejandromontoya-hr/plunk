@@ -1,0 +1,104 @@
+{
+  "list": {
+    "seoTitle": "Templates",
+    "title": "Email Templates",
+    "description": "Create and manage reusable email templates for your campaigns and workflows.",
+    "totalCount": "{count} total templates",
+    "createTemplate": "Create Template",
+    "searchPlaceholder": "Search templates...",
+    "clearSearch": "Clear search",
+    "selectAllRows": "Select all rows on this page",
+    "selectRow": "Select {name}",
+    "deleteSelected": "Delete selected",
+    "emptyTitle": "No templates yet",
+    "emptyDescription": "Create reusable email designs for campaigns.",
+    "updatedAt": "Updated {time}",
+    "pagination": {
+      "showing": "Showing {from} to {to} of {total} templates",
+      "page": "Page {page} of {totalPages}"
+    },
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "subject": "Subject",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "actions": {
+      "edit": "Edit template",
+      "duplicate": "Duplicate template",
+      "delete": "Delete template"
+    }
+  },
+  "types": {
+    "marketing": "Marketing",
+    "transactional": "Transactional",
+    "headless": "Headless",
+    "descriptions": {
+      "marketing": "Subscribed contacts, includes unsubscribe link",
+      "transactional": "All contacts, no subscription check or footer",
+      "headless": "Subscribed contacts, no Plunk footer"
+    }
+  },
+  "create": {
+    "seoTitle": "Create Template",
+    "title": "Create Template",
+    "description": "Create a reusable email template for campaigns and workflows"
+  },
+  "edit": {
+    "title": "Edit Template",
+    "savingStatus": "Saving...",
+    "unsavedChanges": "Unsaved changes",
+    "allChangesSaved": "All changes saved"
+  },
+  "form": {
+    "basicInfoTitle": "Basic Information",
+    "basicInfoDescription": "Name and describe your template",
+    "nameLabel": "Template Name",
+    "namePlaceholder": "Welcome Email",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Sent to new subscribers",
+    "typeTitle": "Template Type",
+    "typeDescription": "Choose how this template should be treated",
+    "emailSettingsTitle": "Email Settings",
+    "emailSettingsDescription": "Configure sender information and subject",
+    "subjectLabel": "Subject Line",
+    "subjectPlaceholder": "Welcome to our platform!",
+    "variableHint": "Use {variable} for dynamic content",
+    "bodyTitle": "Email Body",
+    "bodyDescription": "Create your email using the visual editor or paste custom HTML",
+    "fromNamePlaceholder": "Your Company",
+    "createButton": "Create Template",
+    "creatingButton": "Creating...",
+    "saveButton": "Save Changes",
+    "savingButton": "Saving...",
+    "deleteButton": "Delete Template"
+  },
+  "unsubscribeWarning": {
+    "title": "No unsubscribe link detected",
+    "body": "You are responsible for providing recipients a way to opt out. Use the Plunk variables below to build your own footer."
+  },
+  "deleteDialog": {
+    "title": "Delete Template",
+    "description": "Are you sure you want to delete this template? This action cannot be undone.",
+    "confirm": "Delete"
+  },
+  "bulkDeleteDialog": {
+    "title": "Delete {count} template",
+    "title_plural": "Delete {count} templates",
+    "description": "Are you sure you want to delete the selected templates? This action cannot be undone. Templates referenced by a workflow step will block the operation.",
+    "confirm": "Delete"
+  },
+  "toast": {
+    "deleted": "Template deleted successfully",
+    "deleteFailed": "Failed to delete template",
+    "duplicated": "Template duplicated successfully",
+    "duplicateFailed": "Failed to duplicate template",
+    "bulkDeleted": "{count} template deleted",
+    "bulkDeleted_plural": "{count} templates deleted",
+    "bulkDeleteFailed": "Failed to delete templates",
+    "created": "Template created successfully",
+    "createFailed": "Failed to create template",
+    "saveFailed": "Failed to save template"
+  }
+}

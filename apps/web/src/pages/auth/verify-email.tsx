@@ -7,6 +7,7 @@ import Link from 'next/link';
 import {useRouter} from 'next/router';
 import React, {useEffect, useRef, useState} from 'react';
 
+import {useTranslation} from '../../lib/i18n';
 import {network} from '../../lib/network';
 
 const dotGrid = {
@@ -17,6 +18,7 @@ const dotGrid = {
 
 
 export default function VerifyEmail() {
+  const {t} = useTranslation();
   const router = useRouter();
   const {token} = router.query;
 
@@ -24,6 +26,7 @@ export default function VerifyEmail() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<string>('');
+  const [resendSucceeded, setResendSucceeded] = useState(false);
   const [cooldownExpiry, setCooldownExpiry] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const processedToken = useRef<string | undefined>(undefined);
@@ -63,11 +66,11 @@ export default function VerifyEmail() {
           }, 2000);
         } else {
           setStatus('error');
-          setErrorMessage('Invalid or expired verification link');
+          setErrorMessage(t('auth.verifyEmail.invalidLink'));
         }
       } catch (error) {
         setStatus('error');
-        setErrorMessage(error instanceof Error ? error.message : 'Something went wrong');
+        setErrorMessage(error instanceof Error ? error.message : t('auth.errors.somethingWentWrong'));
       }
     }
 
@@ -112,19 +115,23 @@ export default function VerifyEmail() {
   async function handleResend() {
     setIsResending(true);
     setResendMessage('');
+    setResendSucceeded(false);
     try {
       const response = await network.fetch<{success: boolean}>('POST', '/auth/request-verification');
 
       if (response.success) {
-        setResendMessage('Verification email sent! Please check your inbox.');
+        setResendSucceeded(true);
+        setResendMessage(t('auth.verifyEmail.resendSuccess'));
         const expiryTime = Date.now() + 60000;
         setCooldownExpiry(expiryTime);
         localStorage.setItem('plunk:email-verification-cooldown', expiryTime.toString());
       } else {
-        setResendMessage('Failed to send verification email. Please try again.');
+        setResendSucceeded(false);
+        setResendMessage(t('auth.verifyEmail.resendFailed'));
       }
     } catch (error) {
-      setResendMessage(error instanceof Error ? error.message : 'Failed to send verification email. Please try again.');
+      setResendSucceeded(false);
+      setResendMessage(error instanceof Error ? error.message : t('auth.verifyEmail.resendFailed'));
       const expiryTime = Date.now() + 60000;
       setCooldownExpiry(expiryTime);
       localStorage.setItem('plunk:email-verification-cooldown', expiryTime.toString());
@@ -135,14 +142,11 @@ export default function VerifyEmail() {
 
   return (
     <>
-      <NextSeo title="Verify Email" />
+      <NextSeo title={t('auth.verifyEmail.seoTitle')} />
       <div className="min-h-screen flex items-center justify-center py-12" style={dotGrid}>
         <div className="flex flex-col gap-6 max-w-md w-full px-4">
-          <div className="flex items-center justify-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-white shadow-sm border border-neutral-200 flex items-center justify-center p-1">
-              <Image src="/assets/logo.svg" alt="" aria-hidden width={24} height={24} />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-neutral-900">Plunk</span>
+          <div className="flex items-center justify-center">
+            <Image src="/assets/sagy-logo-azul-profundo.png" alt="Sagy" width={140} height={40} priority className="h-10 w-auto" />
           </div>
 
           <Card>
@@ -169,29 +173,29 @@ export default function VerifyEmail() {
                         </svg>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <h1 className="text-xl font-bold tracking-tight">Check your email</h1>
+                        <h1 className="text-xl font-bold tracking-tight">{t('auth.verifyEmail.pendingTitle')}</h1>
                         <p className="text-sm text-neutral-500">
-                          We sent a verification link to your inbox. Click it to verify your account.
+                          {t('auth.verifyEmail.pendingSubtitle')}
                         </p>
                       </div>
 
                       <div className="flex flex-col gap-2 w-full mt-2">
                         <Button onClick={handleResend} disabled={isResending || cooldownExpiry !== null} className="w-full">
                           {isResending
-                            ? 'Sending...'
+                            ? t('auth.verifyEmail.resending')
                             : cooldownExpiry !== null
-                              ? `Resend in ${remainingSeconds}s`
-                              : 'Resend verification email'}
+                              ? t('auth.verifyEmail.resendIn', {seconds: remainingSeconds})
+                              : t('auth.verifyEmail.resend')}
                         </Button>
 
                         {resendMessage && (
-                          <p className={`text-sm ${resendMessage.includes('sent') ? 'text-neutral-600' : 'text-red-500'}`}>
+                          <p className={`text-sm ${resendSucceeded ? 'text-neutral-600' : 'text-red-500'}`}>
                             {resendMessage}
                           </p>
                         )}
 
                         <Button asChild variant="outline" className="w-full">
-                          <Link href="/auth/login">Back to login</Link>
+                          <Link href="/auth/login">{t('auth.verifyEmail.backToLogin')}</Link>
                         </Button>
                       </div>
                     </motion.div>
@@ -210,8 +214,8 @@ export default function VerifyEmail() {
                         <IconSpinner size="sm" />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <h1 className="text-xl font-bold tracking-tight">Verifying...</h1>
-                        <p className="text-sm text-neutral-500">Please wait a moment.</p>
+                        <h1 className="text-xl font-bold tracking-tight">{t('auth.verifyEmail.verifyingTitle')}</h1>
+                        <p className="text-sm text-neutral-500">{t('auth.verifyEmail.verifyingSubtitle')}</p>
                       </div>
                     </motion.div>
                   )}
@@ -231,8 +235,8 @@ export default function VerifyEmail() {
                         </svg>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <h1 className="text-xl font-bold tracking-tight">Email verified</h1>
-                        <p className="text-sm text-neutral-500">Redirecting to your dashboard...</p>
+                        <h1 className="text-xl font-bold tracking-tight">{t('auth.verifyEmail.successTitle')}</h1>
+                        <p className="text-sm text-neutral-500">{t('auth.verifyEmail.successSubtitle')}</p>
                       </div>
                     </motion.div>
                   )}
@@ -252,27 +256,27 @@ export default function VerifyEmail() {
                         </svg>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <h1 className="text-xl font-bold tracking-tight">Verification failed</h1>
+                        <h1 className="text-xl font-bold tracking-tight">{t('auth.verifyEmail.errorTitle')}</h1>
                         <p className="text-sm text-neutral-500">{errorMessage}</p>
                       </div>
 
                       <div className="flex flex-col gap-2 w-full mt-2">
                         <Button onClick={handleResend} disabled={isResending || cooldownExpiry !== null} className="w-full">
                           {isResending
-                            ? 'Sending...'
+                            ? t('auth.verifyEmail.resending')
                             : cooldownExpiry !== null
-                              ? `Resend in ${remainingSeconds}s`
-                              : 'Resend verification email'}
+                              ? t('auth.verifyEmail.resendIn', {seconds: remainingSeconds})
+                              : t('auth.verifyEmail.resend')}
                         </Button>
 
                         {resendMessage && (
-                          <p className={`text-sm ${resendMessage.includes('sent') ? 'text-neutral-600' : 'text-red-500'}`}>
+                          <p className={`text-sm ${resendSucceeded ? 'text-neutral-600' : 'text-red-500'}`}>
                             {resendMessage}
                           </p>
                         )}
 
                         <Button asChild variant="outline" className="w-full">
-                          <Link href="/auth/login">Back to login</Link>
+                          <Link href="/auth/login">{t('auth.verifyEmail.backToLogin')}</Link>
                         </Button>
                       </div>
                     </motion.div>

@@ -1,0 +1,105 @@
+{
+  "seoTitle": "Dashboard",
+  "greeting": {
+    "workingLate": "Working late",
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening"
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago"
+  },
+  "trend": {
+    "noDataYet": "No data yet",
+    "new": "New",
+    "noChange": "No change",
+    "vsPrevious": "vs previous 30d"
+  },
+  "subtitle": {
+    "loading": "Catching up on the last 30 days.",
+    "freshProject": "{project} is fresh. Time to send the first email.",
+    "yourProject": "Your project",
+    "contactsReadyOne": "{count} contact ready. Time to send something.",
+    "contactsReadyOther": "{count} contacts ready. Time to send something.",
+    "sentOne": "{project} {count} email in the last 30 days.",
+    "sentOther": "{project} {count} emails in the last 30 days.",
+    "projectSent": "{project} sent",
+    "youSent": "You sent",
+    "openRateExcellent": "Open rate is well above average.",
+    "openRateHealthy": "Open rate is healthy."
+  },
+  "live": {
+    "eventsOne": "{count} event in the last 5 min",
+    "eventsOther": "{count} events in the last 5 min",
+    "quiet": "Quiet right now"
+  },
+  "activity": {
+    "sent": "Sent",
+    "delivered": "Delivered",
+    "opened": "Opened",
+    "clicked": "Clicked",
+    "bounced": "Bounced",
+    "complaint": "Complaint",
+    "event": "Event",
+    "campaign": "Campaign",
+    "scheduled": "Scheduled",
+    "workflow": "Workflow"
+  },
+  "banners": {
+    "projectDisabled": {
+      "title": "Project Disabled - Read-Only Mode",
+      "description": "This project has been disabled and is now in read-only mode. You can view your data but cannot create, update, or delete anything.",
+      "contactSupport": "Please contact support for more details and to get your project re-enabled.",
+      "viewDetails": "View Details"
+    },
+    "emailVerification": {
+      "title": "Verify your email address",
+      "description": "Please verify your email address to unlock all features. Check your inbox for the verification link.",
+      "resend": "Resend verification email",
+      "sending": "Sending...",
+      "sentSuccess": "Verification email sent! Please check your inbox.",
+      "sentError": "Failed to send verification email. Please try again."
+    },
+    "upgrade": {
+      "title": "Upgrade to remove Plunk branding",
+      "description": "Your emails currently include Plunk branding. Upgrade to a subscription to remove it.",
+      "upgradeNow": "Upgrade Now"
+    }
+  },
+  "stats": {
+    "totalContacts": "Total Contacts",
+    "emailsSent": "Emails Sent",
+    "openRate": "Open Rate"
+  },
+  "deliverability": {
+    "title": "Deliverability",
+    "lastSevenDays": "Last 7 days",
+    "allTime": "All time",
+    "healthy": "Healthy",
+    "watch": "Watch",
+    "critical": "Critical",
+    "delivered": "delivered",
+    "noEmailsSent": "No emails sent yet",
+    "bounce": "Bounce",
+    "complaint": "Complaint"
+  },
+  "recentActivity": {
+    "title": "Recent activity",
+    "description": "Live feed of what’s happening across your project",
+    "viewAll": "View all",
+    "emptyTitle": "Nothing has happened yet",
+    "emptyDescription": "Send your first email or trigger an event and you’ll see it land here in real time."
+  },
+  "apiKeys": {
+    "title": "API Keys",
+    "description": "Use these keys to integrate with Plunk",
+    "publicKey": "Public Key",
+    "publicKeyDescription": "Use this key for client-side integrations",
+    "secretKey": "Secret Key",
+    "secretKeyDescription": "Keep this key secure and never expose it publicly",
+    "noProject": "No project selected"
+  }
+}

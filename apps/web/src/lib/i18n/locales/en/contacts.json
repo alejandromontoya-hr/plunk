@@ -1,0 +1,211 @@
+{
+  "title": "Contacts",
+  "subtitle": "Manage your email subscribers and their data.",
+  "countMatching": "{count} matching",
+  "countTotal": "{count} total",
+  "importCsv": "Import CSV",
+  "import": "Import",
+  "addContact": "Add Contact",
+  "searchPlaceholder": "Search by email...",
+  "clearSearch": "Clear search",
+  "status": {
+    "subscribed": "Subscribed",
+    "unsubscribed": "Unsubscribed"
+  },
+  "columns": {
+    "select": "Select",
+    "email": "Email",
+    "status": "Status",
+    "created": "Created",
+    "updated": "Updated",
+    "actions": "Actions"
+  },
+  "selectAllOnPage": "Select all contacts on this page",
+  "selectContact": "Select {email}",
+  "statusFilterTitle": "Status",
+  "editContact": "Edit contact",
+  "deleteContact": "Delete contact",
+  "itemNoun": "contact",
+  "selectAllMatching": "Select all {count}",
+  "selectAllMatchingFiltered": "Select all {count} matching",
+  "allMatchingSelected": "All matching selected",
+  "bulk": {
+    "subscribe": "Subscribe",
+    "unsubscribe": "Unsubscribe",
+    "delete": "Delete"
+  },
+  "empty": {
+    "title": "No contacts yet",
+    "description": "Add contacts to start tracking engagement."
+  },
+  "noResultsNoun": "contacts",
+  "addedRelative": "Added {time}",
+  "pagination": {
+    "showing": "Showing {from} to {to}",
+    "showingOf": "Showing {from} to {to} of {total}"
+  },
+  "deleteDialog": {
+    "title": "Delete Contact",
+    "description": "Are you sure you want to delete this contact? This action cannot be undone."
+  },
+  "createDialog": {
+    "title": "Create New Contact",
+    "emailLabel": "Email Address *",
+    "emailPlaceholder": "contact@example.com",
+    "subscribedLabel": "Subscribed",
+    "subscribedHelp": "Receive emails from campaigns and workflows.",
+    "submit": "Create Contact",
+    "submitting": "Creating..."
+  },
+  "importDialog": {
+    "title": "Import Contacts from CSV",
+    "instructionsPrefix": "Required column:",
+    "instructionsMiddle": ". Optional:",
+    "instructionsSuffix": "(true/false) and any custom fields. Max 5MB.",
+    "selectFileLabel": "Select CSV File",
+    "chooseFile": "Choose CSV File",
+    "uploadingFile": "Uploading file...",
+    "processingContacts": "Processing contacts...",
+    "resultProcessed": "processed —",
+    "resultCreated": "created,",
+    "resultUpdated": "updated",
+    "resultFailed": "failed",
+    "row": "Row {row}",
+    "moreErrors": "+{count} more errors",
+    "genericError": "Please check your CSV file and try again.",
+    "submit": "Import Contacts",
+    "submitting": "Uploading...",
+    "closeConfirm": {
+      "title": "Close Import",
+      "description": "Import is still in progress. Are you sure you want to close?",
+      "confirmText": "Close Anyway"
+    }
+  },
+  "bulkDialog": {
+    "confirmContacts": "{count} contact",
+    "confirmContactsPlural": "{count} contacts",
+    "deleteWarningStrong": "This action cannot be undone.",
+    "deleteWarning": "Contacts and their event history will be permanently removed.",
+    "queryNote": "Contacts are evaluated when the job runs — any added in the meantime may also be included.",
+    "queued": "Queued — starting up…",
+    "failedGeneric": "Something went wrong. Please try again.",
+    "starting": "Starting…",
+    "totalProcessed": "Total processed",
+    "showErrorDetails": "Show error details ({count})",
+    "moreErrors": "+{count} more",
+    "done": "Done",
+    "hide": "Hide",
+    "failedRow": "Failed",
+    "closeConfirm": {
+      "title": "Hide this dialog?",
+      "description": "The job will keep running in the background. You won't see the result here, but the contacts will still be updated.",
+      "confirmText": "Hide"
+    }
+  },
+  "operations": {
+    "subscribe": {
+      "title": "Subscribe contacts",
+      "progressTitle": "Subscribing…",
+      "completedTitle": "Subscribed",
+      "failedTitle": "Couldn't subscribe contacts",
+      "confirmVerb": "Subscribe",
+      "confirmButton": "Subscribe",
+      "processingLabel": "Subscribing",
+      "changedVerb": "subscribed",
+      "summaryNoun": "subscribed",
+      "alreadyState": "already subscribed",
+      "skipNote": "Already-subscribed contacts will be skipped."
+    },
+    "unsubscribe": {
+      "title": "Unsubscribe contacts",
+      "progressTitle": "Unsubscribing…",
+      "completedTitle": "Unsubscribed",
+      "failedTitle": "Couldn't unsubscribe contacts",
+      "confirmVerb": "Unsubscribe",
+      "confirmButton": "Unsubscribe",
+      "processingLabel": "Unsubscribing",
+      "changedVerb": "unsubscribed",
+      "summaryNoun": "unsubscribed",
+      "alreadyState": "already unsubscribed",
+      "skipNote": "Already-unsubscribed contacts will be skipped."
+    },
+    "delete": {
+      "title": "Delete contacts",
+      "progressTitle": "Deleting…",
+      "completedTitle": "Deleted",
+      "failedTitle": "Couldn't delete contacts",
+      "confirmVerb": "Permanently delete",
+      "confirmButton": "Delete",
+      "processingLabel": "Deleting",
+      "changedVerb": "deleted",
+      "summaryNoun": "removed"
+    },
+    "default": {
+      "title": "Process contacts",
+      "progressTitle": "Processing…",
+      "completedTitle": "Done",
+      "failedTitle": "Operation failed",
+      "confirmVerb": "Process",
+      "confirmButton": "Process",
+      "processingLabel": "Processing",
+      "changedVerb": "processed",
+      "summaryNoun": "processed"
+    }
+  },
+  "detail": {
+    "notFoundTitle": "Contact not found",
+    "notFoundDescription": "The contact you're looking for doesn't exist or has been deleted.",
+    "backToContacts": "Back to Contacts",
+    "deleteContact": "Delete Contact",
+    "contactInformation": "Contact Information",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "contact@example.com",
+    "subscribedLabel": "Subscribed to emails",
+    "subscribedHelpOn": "Receives emails from campaigns and workflows",
+    "subscribedHelpOff": "Will not receive emails",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "activity": "Activity",
+    "details": "Details",
+    "contactId": "Contact ID",
+    "copyContactId": "Copy contact ID",
+    "created": "Created",
+    "lastUpdated": "Last Updated",
+    "publicLinks": "Public Links",
+    "subscribePage": "Subscribe Page",
+    "unsubscribePage": "Unsubscribe Page",
+    "managePreferences": "Manage Preferences",
+    "labels": {
+      "contactId": "Contact ID",
+      "subscribeLink": "Subscribe link",
+      "unsubscribeLink": "Unsubscribe link",
+      "managePreferencesLink": "Manage preferences link"
+    }
+  },
+  "toast": {
+    "deleted": "Contact deleted successfully",
+    "deleteFailed": "Failed to delete contact",
+    "updated": "Contact updated successfully",
+    "updateFailed": "Failed to update contact",
+    "createdUpdated": "Contact {email} already existed and was updated with new data",
+    "created": "Contact created successfully",
+    "saveFailed": "Failed to save contact",
+    "importNotCsv": "Please select a CSV file",
+    "importTooLarge": "File size must be less than 5MB",
+    "importCompleted": "Import completed: {summary}",
+    "importCreated": "{count} created",
+    "importUpdated": "{count} updated",
+    "importFailedCount": "{count} failed",
+    "importDefaultError": "Import failed. Please check your CSV file and try again.",
+    "importStatusCheckFailed": "Failed to check import status",
+    "importNoFile": "Please select a file to upload",
+    "importUploadFailed": "Failed to upload file",
+    "bulkOperationFailed": "Operation failed",
+    "bulkStatusCheckFailed": "Failed to check operation status",
+    "bulkStartFailed": "Failed to start operation",
+    "summaryNoUpdate": "No contacts to update",
+    "summaryFailed": "{count} failed",
+    "copied": "{label} copied to clipboard",
+    "copyFailed": "Failed to copy"
+  }
+}

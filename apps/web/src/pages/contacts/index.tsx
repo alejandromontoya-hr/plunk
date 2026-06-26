@@ -44,6 +44,7 @@ import {
 } from '../../components/data-table';
 import {KeyValueEditor} from '../../components/KeyValueEditor';
 import {network} from '../../lib/network';
+import {useTranslation, type TranslateFn} from '../../lib/i18n';
 import {formatRelativeTime} from '../../lib/dateUtils';
 import {useColumnVisibility} from '../../lib/hooks/useColumnVisibility';
 import {usePersistentState} from '../../lib/hooks/usePersistentState';
@@ -79,13 +80,6 @@ type StatusFilter = 'ALL' | 'subscribed' | 'unsubscribed';
 const VIEW_STORAGE_KEY = 'plunk:contacts:view';
 const COLUMNS_STORAGE_KEY = 'plunk:contacts:columns';
 
-// Fixed-value options for the Status faceted filter (table header) and the
-// card-view toolbar dropdown. Single source of truth for both.
-const STATUS_OPTIONS: FacetedFilterOption[] = [
-  {value: 'subscribed', label: 'Subscribed'},
-  {value: 'unsubscribed', label: 'Unsubscribed'},
-];
-
 // select + email + actions are locked-visible (see lockedColumnIds). `updatedAt`
 // starts hidden so the Columns menu has a meaningful toggle out of the box.
 const DEFAULT_COLUMN_VISIBILITY: VisibilityState = {
@@ -98,6 +92,16 @@ const DEFAULT_COLUMN_VISIBILITY: VisibilityState = {
 };
 
 export default function ContactsPage() {
+  const {t} = useTranslation();
+  // Fixed-value options for the Status faceted filter (table header) and the
+  // card-view toolbar dropdown. Single source of truth for both.
+  const STATUS_OPTIONS: FacetedFilterOption[] = useMemo(
+    () => [
+      {value: 'subscribed', label: t('contacts.status.subscribed')},
+      {value: 'unsubscribed', label: t('contacts.status.unsubscribed')},
+    ],
+    [t],
+  );
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [cursorHistory, setCursorHistory] = useState<(string | undefined)[]>([undefined]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -292,10 +296,10 @@ export default function ContactsPage() {
 
     try {
       await network.fetch('DELETE', `/contacts/${contactToDelete}`);
-      toast.success('Contact deleted successfully');
+      toast.success(t('contacts.toast.deleted'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete contact');
+      toast.error(error instanceof Error ? error.message : t('contacts.toast.deleteFailed'));
     } finally {
       setContactToDelete(null);
     }
@@ -323,17 +327,17 @@ export default function ContactsPage() {
         id: 'select',
         enableSorting: false,
         enableHiding: false, // Selection column is locked-visible.
-        meta: {label: 'Select', headClassName: 'w-10', cellClassName: 'w-10'} satisfies DataTableColumnMeta,
+        meta: {label: t('contacts.columns.select'), headClassName: 'w-10', cellClassName: 'w-10'} satisfies DataTableColumnMeta,
         header: () => (
           <Checkbox
-            aria-label="Select all contacts on this page"
+            aria-label={t('contacts.selectAllOnPage')}
             checked={allOnPageSelected ? true : contacts.some(c => isContactSelected(c.id)) ? 'indeterminate' : false}
             onCheckedChange={handleSelectAll}
           />
         ),
         cell: ({row}) => (
           <Checkbox
-            aria-label={`Select ${row.original.email}`}
+            aria-label={t('contacts.selectContact', {email: row.original.email})}
             checked={isContactSelected(row.original.id)}
             onClick={e => e.stopPropagation()}
             onCheckedChange={() => handleSelectContact(row.original.id)}
@@ -344,8 +348,8 @@ export default function ContactsPage() {
         id: 'email',
         accessorKey: 'email',
         enableHiding: false, // Email column is locked-visible.
-        meta: {label: 'Email'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Email</DataTableColumnHeader>,
+        meta: {label: t('contacts.columns.email')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('contacts.columns.email')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <div className="flex items-center gap-2">
             {row.original.subscribed ? (
@@ -366,13 +370,13 @@ export default function ContactsPage() {
         id: 'status',
         accessorKey: 'subscribed',
         enableSorting: false, // Status is faceted-filtered, not sorted.
-        meta: {label: 'Status'} satisfies DataTableColumnMeta,
+        meta: {label: t('contacts.columns.status')} satisfies DataTableColumnMeta,
         header: ({column}) => (
           <DataTableColumnHeader
             column={column}
             filter={
               <DataTableFacetedFilter
-                title="Status"
+                title={t('contacts.statusFilterTitle')}
                 multiple={false}
                 options={STATUS_OPTIONS}
                 selected={statusFilter === 'ALL' ? [] : [statusFilter]}
@@ -380,12 +384,12 @@ export default function ContactsPage() {
               />
             }
           >
-            Status
+            {t('contacts.columns.status')}
           </DataTableColumnHeader>
         ),
         cell: ({row}) => (
           <Badge variant={row.original.subscribed ? 'success' : 'destructive'}>
-            {row.original.subscribed ? 'Subscribed' : 'Unsubscribed'}
+            {row.original.subscribed ? t('contacts.status.subscribed') : t('contacts.status.unsubscribed')}
           </Badge>
         ),
       },
@@ -393,8 +397,8 @@ export default function ContactsPage() {
         id: 'createdAt',
         accessorKey: 'createdAt',
         sortDescFirst: true, // First click surfaces the newest contacts.
-        meta: {label: 'Created'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Created</DataTableColumnHeader>,
+        meta: {label: t('contacts.columns.created')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('contacts.columns.created')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <div className="group relative inline-block cursor-help text-sm text-neutral-500 whitespace-nowrap">
             {formatRelativeTime(row.original.createdAt)}
@@ -408,8 +412,8 @@ export default function ContactsPage() {
         id: 'updatedAt',
         accessorKey: 'updatedAt',
         enableSorting: false, // No backend sort field for updatedAt.
-        meta: {label: 'Updated'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Updated</DataTableColumnHeader>,
+        meta: {label: t('contacts.columns.updated')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('contacts.columns.updated')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <span className="text-sm text-neutral-500 whitespace-nowrap">
             {formatRelativeTime(row.original.updatedAt)}
@@ -420,20 +424,20 @@ export default function ContactsPage() {
         id: 'actions',
         enableSorting: false,
         enableHiding: false, // Actions column is locked-visible.
-        meta: {label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right'} satisfies DataTableColumnMeta,
-        header: () => <span className="flex justify-end">Actions</span>,
+        meta: {label: t('contacts.columns.actions'), headClassName: 'text-right', cellClassName: 'text-right'} satisfies DataTableColumnMeta,
+        header: () => <span className="flex justify-end">{t('contacts.columns.actions')}</span>,
         cell: ({row}) => (
           <div className="flex items-center justify-end gap-1">
-            <Button asChild variant="ghost" size="sm" title="Edit contact">
-              <Link href={`/contacts/${row.original.id}`} aria-label="Edit contact">
+            <Button asChild variant="ghost" size="sm" title={t('contacts.editContact')}>
+              <Link href={`/contacts/${row.original.id}`} aria-label={t('contacts.editContact')}>
                 <Edit className="h-4 w-4" />
               </Link>
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              title="Delete contact"
-              aria-label="Delete contact"
+              title={t('contacts.deleteContact')}
+              aria-label={t('contacts.deleteContact')}
               onClick={() => promptDelete(row.original.id)}
             >
               <Trash2 className="h-4 w-4" />
@@ -463,28 +467,32 @@ export default function ContactsPage() {
 
   return (
     <>
-      <NextSeo title="Contacts" />
+      <NextSeo title={t('contacts.title')} />
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Contacts</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('contacts.title')}</h1>
               <p className="text-neutral-500 mt-2 text-sm sm:text-base">
-                Manage your email subscribers and their data.{' '}
-                {totalCount > 0 ? `${totalCount.toLocaleString()} ${hasActiveFilters ? 'matching' : 'total'}` : ''}
+                {t('contacts.subtitle')}{' '}
+                {totalCount > 0
+                  ? hasActiveFilters
+                    ? t('contacts.countMatching', {count: totalCount.toLocaleString()})
+                    : t('contacts.countTotal', {count: totalCount.toLocaleString()})
+                  : ''}
               </p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowImportDialog(true)} className="flex-1 sm:flex-none">
                 <Upload className="h-4 w-4" />
-                <span className="hidden sm:inline">Import CSV</span>
-                <span className="sm:hidden">Import</span>
+                <span className="hidden sm:inline">{t('contacts.importCsv')}</span>
+                <span className="sm:hidden">{t('contacts.import')}</span>
               </Button>
               <Button onClick={() => setShowCreateDialog(true)} className="flex-1 sm:flex-none">
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Contact</span>
-                <span className="sm:hidden">Add</span>
+                <span className="hidden sm:inline">{t('contacts.addContact')}</span>
+                <span className="sm:hidden">{t('common.add')}</span>
               </Button>
             </div>
           </div>
@@ -501,7 +509,7 @@ export default function ContactsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
               <Input
                 type="text"
-                placeholder="Search by email..."
+                placeholder={t('contacts.searchPlaceholder')}
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 className="pl-10 pr-10 h-8 text-xs"
@@ -509,7 +517,7 @@ export default function ContactsPage() {
               {searchInput && (
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t('contacts.clearSearch')}
                   onClick={() => {
                     setSearchInput('');
                     setSearch('');
@@ -524,7 +532,7 @@ export default function ContactsPage() {
             <div className="flex items-center gap-2 shrink-0">
               {view === 'card' && (
                 <DataTableFilter
-                  title="Status"
+                  title={t('contacts.statusFilterTitle')}
                   multiple={false}
                   options={STATUS_OPTIONS}
                   selected={statusFilter === 'ALL' ? [] : [statusFilter]}
@@ -545,7 +553,7 @@ export default function ContactsPage() {
           {effectiveSelectionCount > 0 && (
             <BulkActionBar
               selectedCount={effectiveSelectionCount}
-              itemNoun="contact"
+              itemNoun={t('contacts.itemNoun')}
               onClear={clearSelection}
               note={
                 !selectAllMatching && allOnPageSelected && totalCount > contacts.length ? (
@@ -554,21 +562,22 @@ export default function ContactsPage() {
                     onClick={handleSelectAllMatching}
                     className="text-sm font-medium text-neutral-600 underline-offset-4 transition-colors hover:text-neutral-900 hover:underline focus-visible:outline-none focus-visible:underline focus-visible:text-neutral-900 whitespace-nowrap rounded-sm tabular-nums"
                   >
-                    Select all {totalCount.toLocaleString()}
-                    {hasActiveFilters ? ' matching' : ''}
+                    {hasActiveFilters
+                      ? t('contacts.selectAllMatchingFiltered', {count: totalCount.toLocaleString()})
+                      : t('contacts.selectAllMatching', {count: totalCount.toLocaleString()})}
                   </button>
                 ) : selectAllMatching ? (
-                  <span className="text-sm text-neutral-500 whitespace-nowrap">All matching selected</span>
+                  <span className="text-sm text-neutral-500 whitespace-nowrap">{t('contacts.allMatchingSelected')}</span>
                 ) : null
               }
             >
               <Button variant="outline" size="sm" onClick={() => handleBulkAction('subscribe')}>
                 <MailCheck className="h-4 w-4" />
-                Subscribe
+                {t('contacts.bulk.subscribe')}
               </Button>
               <Button variant="outline" size="sm" onClick={() => handleBulkAction('unsubscribe')}>
                 <MailX className="h-4 w-4" />
-                Unsubscribe
+                {t('contacts.bulk.unsubscribe')}
               </Button>
               <Button
                 variant="outline"
@@ -577,7 +586,7 @@ export default function ContactsPage() {
                 className="text-neutral-700 transition-colors hover:bg-red-50 hover:text-red-700 hover:border-red-200"
               >
                 <Trash2 className="h-4 w-4" />
-                Delete
+                {t('contacts.bulk.delete')}
               </Button>
             </BulkActionBar>
           )}
@@ -598,17 +607,17 @@ export default function ContactsPage() {
                   {hasActiveFilters ? (
                     // Items exist, but the active search/status filters matched
                     // none — offer a one-click recovery.
-                    <NoResultsState icon={Mail} itemNoun="contacts" onClear={clearFilters} />
+                    <NoResultsState icon={Mail} itemNoun={t('contacts.noResultsNoun')} onClear={clearFilters} />
                   ) : (
                     // Genuinely empty project — first-run state.
                     <EmptyState
                       icon={Mail}
-                      title="No contacts yet"
-                      description="Add contacts to start tracking engagement."
+                      title={t('contacts.empty.title')}
+                      description={t('contacts.empty.description')}
                       action={
                         <Button onClick={() => setShowCreateDialog(true)}>
                           <Plus className="h-4 w-4" />
-                          Add Contact
+                          {t('contacts.addContact')}
                         </Button>
                       }
                     />
@@ -648,29 +657,29 @@ export default function ContactsPage() {
                                 <span className="truncate">{contact.email}</span>
                               </Link>
                               <Badge variant={contact.subscribed ? 'success' : 'destructive'} className="shrink-0">
-                                {contact.subscribed ? 'Subscribed' : 'Unsubscribed'}
+                                {contact.subscribed ? t('contacts.status.subscribed') : t('contacts.status.unsubscribed')}
                               </Badge>
                             </div>
                             <div className="mt-3 flex items-center justify-between">
                               <div className="group relative inline-block cursor-help">
                                 <span className="text-xs text-neutral-400">
-                                  Added {formatRelativeTime(contact.createdAt)}
+                                  {t('contacts.addedRelative', {time: formatRelativeTime(contact.createdAt)})}
                                 </span>
                                 <div className="hidden group-hover:block absolute z-10 w-48 p-2 bg-neutral-900 text-white text-xs rounded shadow-md bottom-full left-0 mb-1 whitespace-nowrap">
                                   {dayjs(contact.createdAt).format('DD MMMM YYYY, hh:mm')}
                                 </div>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Button asChild variant="ghost" size="sm" title="Edit contact">
-                                  <Link href={`/contacts/${contact.id}`} aria-label="Edit contact">
+                                <Button asChild variant="ghost" size="sm" title={t('contacts.editContact')}>
+                                  <Link href={`/contacts/${contact.id}`} aria-label={t('contacts.editContact')}>
                                     <Edit className="h-4 w-4" />
                                   </Link>
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  title="Delete contact"
-                                  aria-label="Delete contact"
+                                  title={t('contacts.deleteContact')}
+                                  aria-label={t('contacts.deleteContact')}
                                   onClick={() => promptDelete(contact.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -687,9 +696,16 @@ export default function ContactsPage() {
                 {(currentPage > 0 || data?.hasMore) && (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
                     <p className="text-sm text-neutral-500 tabular-nums">
-                      Showing {(currentPage * pageSize + 1).toLocaleString()} to{' '}
-                      {(currentPage * pageSize + contacts.length).toLocaleString()}
-                      {totalCount > 0 ? ` of ${totalCount.toLocaleString()}` : ''}
+                      {totalCount > 0
+                        ? t('contacts.pagination.showingOf', {
+                            from: (currentPage * pageSize + 1).toLocaleString(),
+                            to: (currentPage * pageSize + contacts.length).toLocaleString(),
+                            total: totalCount.toLocaleString(),
+                          })
+                        : t('contacts.pagination.showing', {
+                            from: (currentPage * pageSize + 1).toLocaleString(),
+                            to: (currentPage * pageSize + contacts.length).toLocaleString(),
+                          })}
                     </p>
                     <div className="flex items-center gap-2 justify-center sm:justify-end">
                       <Button
@@ -699,7 +715,7 @@ export default function ContactsPage() {
                         disabled={currentPage === 0 || isLoading}
                       >
                         <ChevronLeft className="h-4 w-4" />
-                        <span className="hidden sm:inline">Previous</span>
+                        <span className="hidden sm:inline">{t('common.previous')}</span>
                       </Button>
                       <Button
                         variant="outline"
@@ -707,7 +723,7 @@ export default function ContactsPage() {
                         onClick={handleNextPage}
                         disabled={!data?.hasMore || isLoading}
                       >
-                        <span className="hidden sm:inline">Next</span>
+                        <span className="hidden sm:inline">{t('common.next')}</span>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -726,9 +742,16 @@ export default function ContactsPage() {
                 {(currentPage > 0 || data?.hasMore) && (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
                     <p className="text-sm text-neutral-500 tabular-nums">
-                      Showing {(currentPage * pageSize + 1).toLocaleString()} to{' '}
-                      {(currentPage * pageSize + contacts.length).toLocaleString()}
-                      {totalCount > 0 ? ` of ${totalCount.toLocaleString()}` : ''}
+                      {totalCount > 0
+                        ? t('contacts.pagination.showingOf', {
+                            from: (currentPage * pageSize + 1).toLocaleString(),
+                            to: (currentPage * pageSize + contacts.length).toLocaleString(),
+                            total: totalCount.toLocaleString(),
+                          })
+                        : t('contacts.pagination.showing', {
+                            from: (currentPage * pageSize + 1).toLocaleString(),
+                            to: (currentPage * pageSize + contacts.length).toLocaleString(),
+                          })}
                     </p>
                     <div className="flex items-center gap-2 justify-center sm:justify-end">
                       <Button
@@ -738,7 +761,7 @@ export default function ContactsPage() {
                         disabled={currentPage === 0 || isLoading}
                       >
                         <ChevronLeft className="h-4 w-4" />
-                        <span className="hidden sm:inline">Previous</span>
+                        <span className="hidden sm:inline">{t('common.previous')}</span>
                       </Button>
                       <Button
                         variant="outline"
@@ -746,7 +769,7 @@ export default function ContactsPage() {
                         onClick={handleNextPage}
                         disabled={!data?.hasMore || isLoading}
                       >
-                        <span className="hidden sm:inline">Next</span>
+                        <span className="hidden sm:inline">{t('common.next')}</span>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -794,9 +817,9 @@ export default function ContactsPage() {
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           onConfirm={handleDelete}
-          title="Delete Contact"
-          description="Are you sure you want to delete this contact? This action cannot be undone."
-          confirmText="Delete"
+          title={t('contacts.deleteDialog.title')}
+          description={t('contacts.deleteDialog.description')}
+          confirmText={t('common.delete')}
           variant="destructive"
         />
       </DashboardLayout>
@@ -811,6 +834,7 @@ interface CreateContactDialogProps {
 }
 
 function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialogProps) {
+  const {t} = useTranslation();
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(true);
   const [customData, setCustomData] = useState<Record<string, string | number | boolean> | null>(null);
@@ -831,9 +855,9 @@ function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialo
 
       // Show appropriate message based on whether contact was new or updated
       if (response._meta?.isUpdate) {
-        toast.success(`Contact ${response.email} already existed and was updated with new data`);
+        toast.success(t('contacts.toast.createdUpdated', {email: response.email}));
       } else {
-        toast.success('Contact created successfully');
+        toast.success(t('contacts.toast.created'));
       }
 
       setEmail('');
@@ -842,7 +866,7 @@ function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialo
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save contact');
+      toast.error(error instanceof Error ? error.message : t('contacts.toast.saveFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -852,28 +876,28 @@ function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Contact</DialogTitle>
+          <DialogTitle>{t('contacts.createDialog.title')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email Address *</Label>
+            <Label htmlFor="email">{t('contacts.createDialog.emailLabel')}</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              placeholder="contact@example.com"
+              placeholder={t('contacts.createDialog.emailPlaceholder')}
             />
           </div>
 
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label htmlFor="subscribed" className="font-medium cursor-pointer">
-                Subscribed
+                {t('contacts.createDialog.subscribedLabel')}
               </Label>
               <p className="text-xs text-neutral-500 mt-0.5">
-                Receive emails from campaigns and workflows.
+                {t('contacts.createDialog.subscribedHelp')}
               </p>
             </div>
             <Switch id="subscribed" checked={subscribed} onCheckedChange={setSubscribed} />
@@ -883,10 +907,10 @@ function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialo
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating...' : 'Create Contact'}
+              {isSubmitting ? t('contacts.createDialog.submitting') : t('contacts.createDialog.submit')}
             </Button>
           </DialogFooter>
         </form>
@@ -911,6 +935,7 @@ interface ImportResult {
 }
 
 function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDialogProps) {
+  const {t} = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [, setJobId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -959,13 +984,13 @@ function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDia
     if (selectedFile) {
       // Validate file type
       if (!selectedFile.name.endsWith('.csv')) {
-        toast.error('Please select a CSV file');
+        toast.error(t('contacts.toast.importNotCsv'));
         return;
       }
 
       // Validate file size (5MB max)
       if (selectedFile.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
+        toast.error(t('contacts.toast.importTooLarge'));
         return;
       }
 
@@ -998,11 +1023,11 @@ function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDia
         if (response.result) {
           const {createdCount, updatedCount, failureCount} = response.result;
           const parts = [];
-          if (createdCount > 0) parts.push(`${createdCount} created`);
-          if (updatedCount > 0) parts.push(`${updatedCount} updated`);
-          if (failureCount > 0) parts.push(`${failureCount} failed`);
+          if (createdCount > 0) parts.push(t('contacts.toast.importCreated', {count: createdCount}));
+          if (updatedCount > 0) parts.push(t('contacts.toast.importUpdated', {count: updatedCount}));
+          if (failureCount > 0) parts.push(t('contacts.toast.importFailedCount', {count: failureCount}));
 
-          toast.success(`Import completed: ${parts.join(', ')}`);
+          toast.success(t('contacts.toast.importCompleted', {summary: parts.join(', ')}));
         }
 
         onSuccess();
@@ -1013,7 +1038,7 @@ function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDia
           pollIntervalRef.current = null;
         }
         // Store and show the specific error message if available, otherwise show generic error
-        const errorMsg = response.failedReason || 'Import failed. Please check your CSV file and try again.';
+        const errorMsg = response.failedReason || t('contacts.toast.importDefaultError');
         setErrorMessage(errorMsg);
         toast.error(errorMsg);
       } else if (response.state === 'active') {
@@ -1026,13 +1051,13 @@ function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDia
         pollIntervalRef.current = null;
       }
       setStatus('failed');
-      toast.error('Failed to check import status');
+      toast.error(t('contacts.toast.importStatusCheckFailed'));
     }
   };
 
   const handleUpload = async () => {
     if (!file) {
-      toast.error('Please select a file to upload');
+      toast.error(t('contacts.toast.importNoFile'));
       return;
     }
 
@@ -1053,7 +1078,7 @@ function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDia
         void pollJobStatus(data.jobId);
       }, 1000); // Poll every second
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to upload file';
+      const errorMsg = error instanceof Error ? error.message : t('contacts.toast.importUploadFailed');
       setErrorMessage(errorMsg);
       toast.error(errorMsg);
       setStatus('failed');
@@ -1079,19 +1104,25 @@ function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDia
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Import Contacts from CSV</DialogTitle>
+            <DialogTitle>{t('contacts.importDialog.title')}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Instructions */}
             <div className="text-sm text-neutral-500 space-y-1">
-              <p>Required column: <code className="text-neutral-700 bg-neutral-100 px-1 py-0.5 rounded text-xs">email</code>. Optional: <code className="text-neutral-700 bg-neutral-100 px-1 py-0.5 rounded text-xs">subscribed</code> (true/false) and any custom fields. Max 5MB.</p>
+              <p>
+                {t('contacts.importDialog.instructionsPrefix')}{' '}
+                <code className="text-neutral-700 bg-neutral-100 px-1 py-0.5 rounded text-xs">email</code>
+                {t('contacts.importDialog.instructionsMiddle')}{' '}
+                <code className="text-neutral-700 bg-neutral-100 px-1 py-0.5 rounded text-xs">subscribed</code>{' '}
+                {t('contacts.importDialog.instructionsSuffix')}
+              </p>
             </div>
 
             {/* File Upload */}
             {status === 'idle' || status === 'failed' ? (
               <div>
-                <Label htmlFor="csv-file">Select CSV File</Label>
+                <Label htmlFor="csv-file">{t('contacts.importDialog.selectFileLabel')}</Label>
                 <div className="mt-2">
                   <input
                     ref={fileInputRef}
@@ -1108,7 +1139,7 @@ function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDia
                     type="button"
                   >
                     <FileUp className="h-4 w-4 mr-2" />
-                    {file ? truncateFileName(file.name) : 'Choose CSV File'}
+                    {file ? truncateFileName(file.name) : t('contacts.importDialog.chooseFile')}
                   </Button>
                 </div>
               </div>
@@ -1119,7 +1150,9 @@ function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDia
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-neutral-600">
-                    {status === 'uploading' ? 'Uploading file...' : 'Processing contacts...'}
+                    {status === 'uploading'
+                      ? t('contacts.importDialog.uploadingFile')
+                      : t('contacts.importDialog.processingContacts')}
                   </span>
                   <span className="text-neutral-900 font-medium">{progress}%</span>
                 </div>
@@ -1138,11 +1171,15 @@ function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDia
                 <div className="flex items-center gap-1.5 text-sm text-neutral-600">
                   <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
                   <span>
-                    <span className="font-medium text-neutral-900">{result.totalRows}</span> processed —{' '}
-                    <span className="text-neutral-900">{result.createdCount}</span> created,{' '}
-                    <span className="text-neutral-900">{result.updatedCount}</span> updated
+                    <span className="font-medium text-neutral-900">{result.totalRows}</span>{' '}
+                    {t('contacts.importDialog.resultProcessed')}{' '}
+                    <span className="text-neutral-900">{result.createdCount}</span>{' '}
+                    {t('contacts.importDialog.resultCreated')}{' '}
+                    <span className="text-neutral-900">{result.updatedCount}</span>{' '}
+                    {t('contacts.importDialog.resultUpdated')}
                     {result.failureCount > 0 && (
-                      <>, <span className="text-red-600">{result.failureCount}</span> failed</>
+                      <>, <span className="text-red-600">{result.failureCount}</span>{' '}
+                      {t('contacts.importDialog.resultFailed')}</>
                     )}
                   </span>
                 </div>

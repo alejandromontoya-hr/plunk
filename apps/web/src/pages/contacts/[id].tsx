@@ -21,12 +21,14 @@ import {DashboardLayout} from '../../components/DashboardLayout';
 import {KeyValueEditor} from '../../components/KeyValueEditor';
 import {ActivityFeed} from '../../components/ActivityFeed';
 import {network} from '../../lib/network';
+import {useTranslation} from '../../lib/i18n';
 import {toast} from 'sonner';
 import useSWR from 'swr';
 import {ContactSchemas} from '@plunk/shared';
 import dayjs from 'dayjs';
 
 export default function ContactDetailPage() {
+  const {t} = useTranslation();
   const router = useRouter();
   const {id} = router.query;
   const {data: contact, mutate, isLoading} = useSWR<Contact>(id ? `/contacts/${id}` : null);
@@ -57,10 +59,10 @@ export default function ContactDetailPage() {
         },
         typeof ContactSchemas.create
       >('PATCH', `/contacts/${id}`, {email, subscribed, data: customData});
-      toast.success('Contact updated successfully');
+      toast.success(t('contacts.toast.updated'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update contact');
+      toast.error(error instanceof Error ? error.message : t('contacts.toast.updateFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -69,10 +71,10 @@ export default function ContactDetailPage() {
   const handleDelete = async () => {
     try {
       await network.fetch('DELETE', `/contacts/${id}`);
-      toast.success('Contact deleted successfully');
+      toast.success(t('contacts.toast.deleted'));
       void router.push('/contacts');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete contact');
+      toast.error(error instanceof Error ? error.message : t('contacts.toast.deleteFailed'));
     }
   };
 
@@ -81,9 +83,9 @@ export default function ContactDetailPage() {
       await navigator.clipboard.writeText(text);
       setCopiedId(copyId);
       setTimeout(() => setCopiedId(null), 2000);
-      toast.success(`${label} copied to clipboard`);
+      toast.success(t('contacts.toast.copied', {label}));
     } catch {
-      toast.error('Failed to copy');
+      toast.error(t('contacts.toast.copyFailed'));
     }
   };
 
@@ -101,14 +103,14 @@ export default function ContactDetailPage() {
     return (
       <DashboardLayout>
         <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-neutral-900 mb-2">Contact not found</h3>
+          <h3 className="text-lg font-medium text-neutral-900 mb-2">{t('contacts.detail.notFoundTitle')}</h3>
           <p className="text-neutral-500 mb-6">
-            The contact you&apos;re looking for doesn&apos;t exist or has been deleted.
+            {t('contacts.detail.notFoundDescription')}
           </p>
           <Button asChild>
             <Link href="/contacts">
               <ArrowLeft className="h-4 w-4" />
-              Back to Contacts
+              {t('contacts.detail.backToContacts')}
             </Link>
           </Button>
         </div>
@@ -135,14 +137,14 @@ export default function ContactDetailPage() {
                       contact.subscribed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}
                   >
-                    {contact.subscribed ? 'Subscribed' : 'Unsubscribed'}
+                    {contact.subscribed ? t('contacts.status.subscribed') : t('contacts.status.unsubscribed')}
                   </span>
                 </p>
               </div>
             </div>
             <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} className="flex-shrink-0">
               <Trash2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Delete Contact</span>
+              <span className="hidden sm:inline">{t('contacts.detail.deleteContact')}</span>
             </Button>
           </div>
 
@@ -151,29 +153,29 @@ export default function ContactDetailPage() {
             <div className="lg:col-span-2 space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
+                  <CardTitle>{t('contacts.detail.contactInformation')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <Label htmlFor="email">Email Address</Label>
+                      <Label htmlFor="email">{t('contacts.detail.emailLabel')}</Label>
                       <Input
                         id="email"
                         type="email"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         required
-                        placeholder="contact@example.com"
+                        placeholder={t('contacts.detail.emailPlaceholder')}
                       />
                     </div>
 
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <Label htmlFor="subscribed" className="font-medium cursor-pointer">
-                          Subscribed to emails
+                          {t('contacts.detail.subscribedLabel')}
                         </Label>
                         <p className="text-xs text-neutral-500 mt-0.5">
-                          {subscribed ? 'Receives emails from campaigns and workflows' : 'Will not receive emails'}
+                          {subscribed ? t('contacts.detail.subscribedHelpOn') : t('contacts.detail.subscribedHelpOff')}
                         </p>
                       </div>
                       <Switch id="subscribed" checked={subscribed} onCheckedChange={setSubscribed} />
@@ -191,7 +193,7 @@ export default function ContactDetailPage() {
 
                     <Button type="submit" disabled={isSubmitting}>
                       <Save className="h-4 w-4" />
-                      {isSubmitting ? 'Saving...' : 'Save Changes'}
+                      {isSubmitting ? t('contacts.detail.saving') : t('contacts.detail.saveChanges')}
                     </Button>
                   </form>
                 </CardContent>
@@ -200,7 +202,7 @@ export default function ContactDetailPage() {
               {/* Activity Feed */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Activity</CardTitle>
+                  <CardTitle>{t('contacts.detail.activity')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ActivityFeed contactId={id as string} />
@@ -212,20 +214,20 @@ export default function ContactDetailPage() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Details</CardTitle>
+                  <CardTitle>{t('contacts.detail.details')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-start gap-3">
                     <Database className="h-5 w-5 text-neutral-500 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-neutral-900">Contact ID</p>
+                      <p className="text-sm font-medium text-neutral-900">{t('contacts.detail.contactId')}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <p className="text-xs text-neutral-500 font-mono break-all flex-1">{contact.id}</p>
                         <button
                           type="button"
-                          onClick={() => copyToClipboard(contact.id, 'Contact ID', 'contact-id')}
+                          onClick={() => copyToClipboard(contact.id, t('contacts.detail.labels.contactId'), 'contact-id')}
                           className="flex-shrink-0 text-neutral-400 hover:text-neutral-700 transition-colors"
-                          aria-label="Copy contact ID"
+                          aria-label={t('contacts.detail.copyContactId')}
                         >
                           <AnimatePresence mode="wait" initial={false}>
                             {copiedId === 'contact-id' ? (
@@ -256,7 +258,7 @@ export default function ContactDetailPage() {
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">Created</p>
+                    <p className="text-sm font-medium text-neutral-900">{t('contacts.detail.created')}</p>
                     <div className="group relative inline-block cursor-help">
                       <p className="text-sm text-neutral-500">{dayjs(contact.createdAt).fromNow()}</p>
                       <div className="hidden group-hover:block absolute z-10 w-48 p-2 bg-neutral-900 text-white text-xs rounded shadow-md bottom-full left-0 mb-1 whitespace-nowrap">
@@ -266,7 +268,7 @@ export default function ContactDetailPage() {
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">Last Updated</p>
+                    <p className="text-sm font-medium text-neutral-900">{t('contacts.detail.lastUpdated')}</p>
                     <div className="group relative inline-block cursor-help">
                       <p className="text-sm text-neutral-500">{dayjs(contact.updatedAt).fromNow()}</p>
                       <div className="hidden group-hover:block absolute z-10 w-48 p-2 bg-neutral-900 text-white text-xs rounded shadow-md bottom-full left-0 mb-1 whitespace-nowrap">
@@ -280,11 +282,11 @@ export default function ContactDetailPage() {
               {/* Public Links Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Public Links</CardTitle>
+                  <CardTitle>{t('contacts.detail.publicLinks')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-neutral-700">Subscribe Page</p>
+                    <p className="text-xs font-medium text-neutral-700">{t('contacts.detail.subscribePage')}</p>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
@@ -293,7 +295,7 @@ export default function ContactDetailPage() {
                         onClick={() => window.open(`${window.location.origin}/subscribe/${contact.id}`, '_blank')}
                       >
                         <ExternalLink className="h-3 w-3" />
-                        Open
+                        {t('common.open')}
                       </Button>
                       <Button
                         variant="outline"
@@ -302,7 +304,7 @@ export default function ContactDetailPage() {
                         onClick={() =>
                           copyToClipboard(
                             `${window.location.origin}/subscribe/${contact.id}`,
-                            'Subscribe link',
+                            t('contacts.detail.labels.subscribeLink'),
                             'subscribe',
                           )
                         }
@@ -335,7 +337,7 @@ export default function ContactDetailPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-neutral-700">Unsubscribe Page</p>
+                    <p className="text-xs font-medium text-neutral-700">{t('contacts.detail.unsubscribePage')}</p>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
@@ -344,7 +346,7 @@ export default function ContactDetailPage() {
                         onClick={() => window.open(`${window.location.origin}/unsubscribe/${contact.id}`, '_blank')}
                       >
                         <ExternalLink className="h-3 w-3" />
-                        Open
+                        {t('common.open')}
                       </Button>
                       <Button
                         variant="outline"
@@ -353,7 +355,7 @@ export default function ContactDetailPage() {
                         onClick={() =>
                           copyToClipboard(
                             `${window.location.origin}/unsubscribe/${contact.id}`,
-                            'Unsubscribe link',
+                            t('contacts.detail.labels.unsubscribeLink'),
                             'unsubscribe',
                           )
                         }
@@ -386,7 +388,7 @@ export default function ContactDetailPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-neutral-700">Manage Preferences</p>
+                    <p className="text-xs font-medium text-neutral-700">{t('contacts.detail.managePreferences')}</p>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
@@ -395,7 +397,7 @@ export default function ContactDetailPage() {
                         onClick={() => window.open(`${window.location.origin}/manage/${contact.id}`, '_blank')}
                       >
                         <Settings className="h-3 w-3" />
-                        Open
+                        {t('common.open')}
                       </Button>
                       <Button
                         variant="outline"
@@ -404,7 +406,7 @@ export default function ContactDetailPage() {
                         onClick={() =>
                           copyToClipboard(
                             `${window.location.origin}/manage/${contact.id}`,
-                            'Manage preferences link',
+                            t('contacts.detail.labels.managePreferencesLink'),
                             'manage',
                           )
                         }
@@ -445,9 +447,9 @@ export default function ContactDetailPage() {
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           onConfirm={handleDelete}
-          title="Delete Contact"
-          description="Are you sure you want to delete this contact? This action cannot be undone."
-          confirmText="Delete"
+          title={t('contacts.deleteDialog.title')}
+          description={t('contacts.deleteDialog.description')}
+          confirmText={t('common.delete')}
           variant="destructive"
         />
       </DashboardLayout>

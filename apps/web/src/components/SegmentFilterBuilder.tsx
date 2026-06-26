@@ -16,47 +16,56 @@ import type {FilterCondition, FilterGroup, SegmentFilter, SegmentFilterOperator}
 import {Check, ChevronsUpDown, GripVertical, Plus, Search, Trash2} from 'lucide-react';
 import {memo, useCallback, useEffect, useMemo, useState} from 'react';
 import {network} from '../lib/network';
+import {useTranslation, type TranslateFn} from '../lib/i18n';
 
-const STANDARD_OPERATORS: {value: SegmentFilterOperator; label: string; description: string}[] = [
-  {value: 'equals', label: 'Equals', description: 'Exact match'},
-  {value: 'notEquals', label: 'Not equals', description: 'Anything other than this value'},
-  {value: 'contains', label: 'Contains', description: 'Value includes this text'},
-  {value: 'notContains', label: 'Does not contain', description: 'Value does not include this text'},
-  {value: 'greaterThan', label: 'Greater than', description: 'Value is higher than'},
-  {value: 'lessThan', label: 'Less than', description: 'Value is lower than'},
-  {value: 'greaterThanOrEqual', label: 'Greater than or equal', description: 'Value is at least'},
-  {value: 'lessThanOrEqual', label: 'Less than or equal', description: 'Value is at most'},
-  {value: 'exists', label: 'Has a value', description: 'Field is set to anything'},
-  {value: 'notExists', label: 'Has no value', description: 'Field is empty or unset'},
-  {value: 'within', label: 'Less than X ago', description: 'Date is within the last X days/hours'},
-  {value: 'olderThan', label: 'More than X ago', description: 'Date is older than X days/hours'},
+// Operator value sets (labels/descriptions resolved via i18n at render time)
+const STANDARD_OPERATOR_VALUES: SegmentFilterOperator[] = [
+  'equals',
+  'notEquals',
+  'contains',
+  'notContains',
+  'greaterThan',
+  'lessThan',
+  'greaterThanOrEqual',
+  'lessThanOrEqual',
+  'exists',
+  'notExists',
+  'within',
+  'olderThan',
 ];
 
-const EVENT_OPERATORS: {value: SegmentFilterOperator; label: string; description: string}[] = [
-  {value: 'triggered', label: 'Ever occurred', description: 'This event has happened at least once'},
-  {value: 'triggeredWithin', label: 'Occurred within', description: 'Happened at least once in the last X days/hours'},
-  {value: 'triggeredOlderThan', label: 'Occurred, but not recently', description: 'Has happened before, but not in the last X days/hours'},
-  {value: 'notTriggered', label: 'Never occurred', description: 'This event has never happened'},
-  {value: 'notTriggeredWithin', label: 'Not occurred within', description: 'Has not happened in the last X days/hours — includes contacts who never triggered this'},
+const EVENT_OPERATOR_VALUES: SegmentFilterOperator[] = [
+  'triggered',
+  'triggeredWithin',
+  'triggeredOlderThan',
+  'notTriggered',
+  'notTriggeredWithin',
 ];
 
-const SEGMENT_OPERATORS: {value: SegmentFilterOperator; label: string; description: string}[] = [
-  {value: 'memberOfSegment', label: 'Is member of', description: 'Contact is currently in this segment'},
-  {value: 'notMemberOfSegment', label: 'Is not member of', description: 'Contact is not in this segment'},
-];
+const SEGMENT_OPERATOR_VALUES: SegmentFilterOperator[] = ['memberOfSegment', 'notMemberOfSegment'];
 
-const TIME_UNITS = [
-  {value: 'minutes', label: 'Minutes'},
-  {value: 'hours', label: 'Hours'},
-  {value: 'days', label: 'Days'},
-] as const;
+interface OperatorOption {
+  value: SegmentFilterOperator;
+  label: string;
+  description: string;
+}
+
+function buildOperators(t: TranslateFn, values: SegmentFilterOperator[]): OperatorOption[] {
+  return values.map(value => ({
+    value,
+    label: t(`segments.builder.operator.${value}`),
+    description: t(`segments.builder.operator.${value}Desc`),
+  }));
+}
+
+const TIME_UNIT_VALUES = ['minutes', 'hours', 'days'] as const;
 
 const STANDARD_FIELDS = [
-  // Contact fields
-  {value: 'email', label: 'Email', type: 'string', category: 'Contact Fields'},
-  {value: 'subscribed', label: 'Subscribed', type: 'boolean', category: 'Contact Fields'},
-  {value: 'createdAt', label: 'Created At', type: 'date', category: 'Contact Fields'},
-  {value: 'updatedAt', label: 'Updated At', type: 'date', category: 'Contact Fields'},
+  // Contact fields (labels resolved via i18n at render time)
+  {value: 'email', labelKey: 'email', type: 'string', category: 'Contact Fields'},
+  {value: 'subscribed', labelKey: 'subscribed', type: 'boolean', category: 'Contact Fields'},
+  {value: 'createdAt', labelKey: 'createdAt', type: 'date', category: 'Contact Fields'},
+  {value: 'updatedAt', labelKey: 'updatedAt', type: 'date', category: 'Contact Fields'},
 ] as const;
 
 interface FieldOption {
@@ -68,8 +77,10 @@ interface FieldOption {
 }
 
 // Hook to fetch available fields, events, and segments
-function useAvailableOptions(currentSegmentId?: string) {
-  const [fields, setFields] = useState<FieldOption[]>([...STANDARD_FIELDS]);
+function useAvailableOptions(t: TranslateFn, currentSegmentId?: string) {
+  const [fields, setFields] = useState<FieldOption[]>(() =>
+    STANDARD_FIELDS.map(f => ({...f, label: t(`segments.builder.field.${f.labelKey}`)})),
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

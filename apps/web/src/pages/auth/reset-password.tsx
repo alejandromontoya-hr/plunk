@@ -22,6 +22,7 @@ import React, {useEffect, useState} from 'react';
 import {useForm} from 'react-hook-form';
 import type {z} from 'zod';
 
+import {useTranslation} from '../../lib/i18n';
 import {network} from '../../lib/network';
 
 const dotGrid = {
@@ -32,15 +33,13 @@ const dotGrid = {
 
 
 const Wordmark = () => (
-  <div className="flex items-center justify-center gap-2.5">
-    <div className="h-8 w-8 rounded-lg bg-white shadow-sm border border-neutral-200 flex items-center justify-center p-1">
-      <Image src="/assets/logo.svg" alt="" aria-hidden width={24} height={24} />
-    </div>
-    <span className="text-lg font-bold tracking-tight text-neutral-900">Plunk</span>
+  <div className="flex items-center justify-center">
+    <Image src="/assets/sagy-logo-azul-profundo.png" alt="Sagy" width={140} height={40} priority className="h-10 w-auto" />
   </div>
 );
 
 export default function ResetPassword() {
+  const {t} = useTranslation();
   const router = useRouter();
   const {token} = router.query;
 
@@ -76,18 +75,18 @@ export default function ResetPassword() {
         }, 2000);
       } else {
         setStatus('error');
-        setErrorMessage('Failed to reset password. The link may be invalid or expired.');
+        setErrorMessage(t('auth.resetPassword.failed'));
       }
     } catch (error) {
       setStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : 'Something went wrong');
+      setErrorMessage(error instanceof Error ? error.message : t('auth.errors.somethingWentWrong'));
     }
   }
 
   if (!token) {
     return (
       <>
-        <NextSeo title="Reset Password" />
+        <NextSeo title={t('auth.resetPassword.seoTitle')} />
         <div className="min-h-screen flex items-center justify-center py-12" style={dotGrid}>
           <div className="flex flex-col gap-6 max-w-md w-full px-4">
             <Wordmark />
@@ -100,13 +99,13 @@ export default function ResetPassword() {
                     </svg>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <h1 className="text-xl font-bold tracking-tight">Invalid reset link</h1>
+                    <h1 className="text-xl font-bold tracking-tight">{t('auth.resetPassword.invalidTitle')}</h1>
                     <p className="text-sm text-neutral-500">
-                      This link is invalid or has expired. Request a new one from the login page.
+                      {t('auth.resetPassword.invalidSubtitle')}
                     </p>
                   </div>
                   <Button asChild className="mt-2">
-                    <Link href="/auth/login">Back to login</Link>
+                    <Link href="/auth/login">{t('auth.resetPassword.backToLogin')}</Link>
                   </Button>
                 </div>
               </CardContent>
@@ -119,7 +118,7 @@ export default function ResetPassword() {
 
   return (
     <>
-      <NextSeo title="Reset Password" />
+      <NextSeo title={t('auth.resetPassword.seoTitle')} />
       <div className="min-h-screen flex items-center justify-center py-12" style={dotGrid}>
         <div className="flex flex-col gap-6 max-w-md w-full px-4">
           <Wordmark />
@@ -142,8 +141,8 @@ export default function ResetPassword() {
                         </svg>
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <h1 className="text-xl font-bold tracking-tight">Password updated</h1>
-                        <p className="text-sm text-neutral-500">Redirecting you to login...</p>
+                        <h1 className="text-xl font-bold tracking-tight">{t('auth.resetPassword.successTitle')}</h1>
+                        <p className="text-sm text-neutral-500">{t('auth.resetPassword.successSubtitle')}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -158,8 +157,8 @@ export default function ResetPassword() {
                       >
                         <div className="flex flex-col gap-6">
                           <div className="flex flex-col gap-1.5">
-                            <h1 className="text-2xl font-bold tracking-tight">Reset your password</h1>
-                            <p className="text-sm text-neutral-500">Enter your new password below</p>
+                            <h1 className="text-2xl font-bold tracking-tight">{t('auth.resetPassword.title')}</h1>
+                            <p className="text-sm text-neutral-500">{t('auth.resetPassword.subtitle')}</p>
                           </div>
 
                           <FormField
@@ -167,9 +166,9 @@ export default function ResetPassword() {
                             name="newPassword"
                             render={({field}) => (
                               <FormItem>
-                                <FormLabel>New password</FormLabel>
+                                <FormLabel>{t('auth.fields.newPassword')}</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="At least 6 characters" type="password" autoFocus {...field} />
+                                  <Input placeholder={t('auth.fields.passwordPlaceholder')} type="password" autoFocus {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -194,20 +193,20 @@ export default function ResetPassword() {
                             {form.formState.isSubmitting ? (
                               <>
                                 <IconSpinner size="sm" />
-                                Resetting...
+                                {t('auth.resetPassword.submitting')}
                               </>
                             ) : (
-                              'Reset password'
+                              t('auth.resetPassword.submit')
                             )}
                           </Button>
 
                           <p className="text-center text-sm text-neutral-500">
-                            Remember your password?{' '}
+                            {t('auth.resetPassword.rememberPassword')}{' '}
                             <Link
                               href="/auth/login"
                               className="text-neutral-900 underline underline-offset-4 hover:text-neutral-600 transition-colors"
                             >
-                              Back to login
+                              {t('auth.resetPassword.backToLogin')}
                             </Link>
                           </p>
                         </div>

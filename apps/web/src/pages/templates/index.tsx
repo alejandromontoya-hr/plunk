@@ -35,6 +35,7 @@ import {
   type DataTableView,
 } from '../../components/data-table';
 import {network} from '../../lib/network';
+import {useTranslation} from '../../lib/i18n';
 import {formatRelativeTime} from '../../lib/dateUtils';
 import {useColumnVisibility} from '../../lib/hooks/useColumnVisibility';
 import {usePersistentState} from '../../lib/hooks/usePersistentState';
@@ -68,6 +69,7 @@ const DEFAULT_COLUMN_VISIBILITY: VisibilityState = {
 const TYPE_OPTIONS = ['MARKETING', 'TRANSACTIONAL', 'HEADLESS'] as const;
 
 export default function TemplatesPage() {
+  const {t} = useTranslation();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -118,10 +120,10 @@ export default function TemplatesPage() {
 
     try {
       await network.fetch('DELETE', `/templates/${templateToDelete}`);
-      toast.success('Template deleted successfully');
+      toast.success(t('templates.toast.deleted'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete template');
+      toast.error(error instanceof Error ? error.message : t('templates.toast.deleteFailed'));
     } finally {
       setTemplateToDelete(null);
     }
@@ -130,10 +132,10 @@ export default function TemplatesPage() {
   const handleDuplicate = async (templateId: string) => {
     try {
       await network.fetch('POST', `/templates/${templateId}/duplicate`);
-      toast.success('Template duplicated successfully');
+      toast.success(t('templates.toast.duplicated'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to duplicate template');
+      toast.error(error instanceof Error ? error.message : t('templates.toast.duplicateFailed'));
     }
   };
 
@@ -152,16 +154,19 @@ export default function TemplatesPage() {
         },
       );
       const count = result?.deleted ?? selectedIds.length;
-      toast.success(`${count} template${count === 1 ? '' : 's'} deleted`);
+      toast.success(t(count === 1 ? 'templates.toast.bulkDeleted' : 'templates.toast.bulkDeleted_plural', {count}));
       setRowSelection({});
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete templates');
+      toast.error(error instanceof Error ? error.message : t('templates.toast.bulkDeleteFailed'));
     } finally {
       // ConfirmDialog closes itself after onConfirm resolves.
       setBulkDeleteStatus('idle');
     }
   };
+
+  // Localized label for an email template type (MARKETING/TRANSACTIONAL/HEADLESS).
+  const typeLabel = (type: string) => t(`templates.types.${type.toLowerCase()}`);
 
   const columns = useMemo<Array<ColumnDef<Template, unknown>>>(
     () => [
@@ -169,10 +174,10 @@ export default function TemplatesPage() {
         id: 'select',
         enableSorting: false,
         enableHiding: false, // Selection column is locked-visible.
-        meta: {label: 'Select', headClassName: 'w-10', cellClassName: 'w-10'} satisfies DataTableColumnMeta,
+        meta: {label: t('common.select'), headClassName: 'w-10', cellClassName: 'w-10'} satisfies DataTableColumnMeta,
         header: ({table}) => (
           <Checkbox
-            aria-label="Select all rows on this page"
+            aria-label={t('templates.list.selectAllRows')}
             checked={
               table.getIsAllPageRowsSelected()
                 ? true
@@ -185,7 +190,7 @@ export default function TemplatesPage() {
         ),
         cell: ({row}) => (
           <Checkbox
-            aria-label={`Select ${row.original.name}`}
+            aria-label={t('templates.list.selectRow', {name: row.original.name})}
             checked={row.getIsSelected()}
             // Capture shift-key state before the toggle, then apply range
             // selection on change (see useShiftClickSelection below).
@@ -201,8 +206,8 @@ export default function TemplatesPage() {
         id: 'name',
         accessorKey: 'name',
         enableHiding: false, // Name column is locked-visible.
-        meta: {label: 'Name'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Name</DataTableColumnHeader>,
+        meta: {label: t('templates.list.columns.name')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('templates.list.columns.name')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <Link
             href={`/templates/${row.original.id}`}
@@ -216,15 +221,15 @@ export default function TemplatesPage() {
         id: 'type',
         accessorKey: 'type',
         enableSorting: false, // Type is faceted-filtered, not sorted.
-        meta: {label: 'Type'} satisfies DataTableColumnMeta,
+        meta: {label: t('templates.list.columns.type')} satisfies DataTableColumnMeta,
         header: ({column}) => (
           <DataTableColumnHeader
             column={column}
             filter={
               <DataTableFacetedFilter
-                title="Type"
+                title={t('templates.list.columns.type')}
                 multiple={false}
-                options={TYPE_OPTIONS.map(t => ({value: t, label: t.toLowerCase()}))}
+                options={TYPE_OPTIONS.map(value => ({value, label: typeLabel(value)}))}
                 selected={typeFilter === 'ALL' ? [] : [typeFilter]}
                 onChange={next => {
                   setTypeFilter((next[0] as TypeFilter) ?? 'ALL');
@@ -233,12 +238,12 @@ export default function TemplatesPage() {
               />
             }
           >
-            Type
+            {t('templates.list.columns.type')}
           </DataTableColumnHeader>
         ),
         cell: ({row}) => (
-          <Badge className="capitalize" variant="neutral">
-            {row.original.type.toLowerCase()}
+          <Badge variant="neutral">
+            {typeLabel(row.original.type)}
           </Badge>
         ),
       },
@@ -246,8 +251,8 @@ export default function TemplatesPage() {
         id: 'subject',
         accessorKey: 'subject',
         enableSorting: false, // No backend sort field for subject.
-        meta: {label: 'Subject', cellClassName: 'max-w-xs'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Subject</DataTableColumnHeader>,
+        meta: {label: t('templates.list.columns.subject'), cellClassName: 'max-w-xs'} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('templates.list.columns.subject')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <p className="text-sm text-neutral-700 truncate" title={row.original.subject}>
             {row.original.subject}
@@ -260,8 +265,8 @@ export default function TemplatesPage() {
         // ISO-string values sort ascending on first click by default; flip so
         // the first click on "Updated" surfaces the most recently edited rows.
         sortDescFirst: true,
-        meta: {label: 'Updated'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Updated</DataTableColumnHeader>,
+        meta: {label: t('templates.list.columns.updated')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('templates.list.columns.updated')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <div className="group relative inline-block cursor-help text-sm text-neutral-500 whitespace-nowrap">
             {formatRelativeTime(row.original.updatedAt)}
@@ -275,20 +280,20 @@ export default function TemplatesPage() {
         id: 'actions',
         enableSorting: false,
         enableHiding: false, // Actions column is locked-visible.
-        meta: {label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right'} satisfies DataTableColumnMeta,
-        header: () => <span className="flex justify-end">Actions</span>,
+        meta: {label: t('templates.list.columns.actions'), headClassName: 'text-right', cellClassName: 'text-right'} satisfies DataTableColumnMeta,
+        header: () => <span className="flex justify-end">{t('templates.list.columns.actions')}</span>,
         cell: ({row}) => (
           <div className="flex items-center justify-end gap-1">
-            <Button asChild variant="ghost" size="sm" title="Edit template">
-              <Link href={`/templates/${row.original.id}`} aria-label="Edit template">
+            <Button asChild variant="ghost" size="sm" title={t('templates.list.actions.edit')}>
+              <Link href={`/templates/${row.original.id}`} aria-label={t('templates.list.actions.edit')}>
                 <Edit className="h-4 w-4" />
               </Link>
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              title="Duplicate template"
-              aria-label="Duplicate template"
+              title={t('templates.list.actions.duplicate')}
+              aria-label={t('templates.list.actions.duplicate')}
               onClick={() => handleDuplicate(row.original.id)}
             >
               <Copy className="h-4 w-4" />
@@ -296,8 +301,8 @@ export default function TemplatesPage() {
             <Button
               variant="ghost"
               size="sm"
-              title="Delete template"
-              aria-label="Delete template"
+              title={t('templates.list.actions.delete')}
+              aria-label={t('templates.list.actions.delete')}
               onClick={() => {
                 setTemplateToDelete(row.original.id);
                 setShowDeleteDialog(true);
@@ -312,7 +317,7 @@ export default function TemplatesPage() {
     // Re-creating columns on every render is cheap and avoids stale-closure bugs
     // for the typeFilter-driven facet and delete/duplicate handlers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [typeFilter],
+    [typeFilter, t],
   );
 
   const table = useReactTable<Template>({
@@ -349,23 +354,23 @@ export default function TemplatesPage() {
 
   return (
     <>
-      <NextSeo title="Templates" />
+      <NextSeo title={t('templates.list.seoTitle')} />
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Email Templates</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('templates.list.title')}</h1>
               <p className="text-neutral-500 mt-2 text-sm sm:text-base">
-                Create and manage reusable email templates for your campaigns and workflows.{' '}
-                {data?.total ? `${data.total} total templates` : ''}
+                {t('templates.list.description')}{' '}
+                {data?.total ? t('templates.list.totalCount', {count: data.total}) : ''}
               </p>
             </div>
             <Button asChild className="w-full sm:w-auto">
               <Link href="/templates/create">
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Create Template</span>
-                <span className="sm:hidden">Create</span>
+                <span className="hidden sm:inline">{t('templates.list.createTemplate')}</span>
+                <span className="sm:hidden">{t('common.create')}</span>
               </Link>
             </Button>
           </div>
@@ -383,7 +388,7 @@ export default function TemplatesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
               <Input
                 type="text"
-                placeholder="Search templates..."
+                placeholder={t('templates.list.searchPlaceholder')}
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 className="pl-10 pr-10 h-8 text-xs"
@@ -391,7 +396,7 @@ export default function TemplatesPage() {
               {searchInput && (
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t('templates.list.clearSearch')}
                   onClick={() => {
                     setSearchInput('');
                     setSearch('');
@@ -406,9 +411,9 @@ export default function TemplatesPage() {
             <div className="flex items-center gap-2 shrink-0">
               {view === 'card' && (
                 <DataTableFilter
-                  title="Type"
+                  title={t('templates.list.columns.type')}
                   multiple={false}
-                  options={TYPE_OPTIONS.map(t => ({value: t, label: t.toLowerCase()}))}
+                  options={TYPE_OPTIONS.map(value => ({value, label: typeLabel(value)}))}
                   selected={typeFilter === 'ALL' ? [] : [typeFilter]}
                   onChange={next => {
                     setTypeFilter((next[0] as TypeFilter) ?? 'ALL');
@@ -437,7 +442,7 @@ export default function TemplatesPage() {
                 disabled={bulkDeleteStatus === 'loading'}
               >
                 <Trash2 className="h-4 w-4" />
-                Delete selected
+                {t('templates.list.deleteSelected')}
               </Button>
             </BulkActionBar>
           )}
@@ -463,13 +468,13 @@ export default function TemplatesPage() {
                     // Genuinely empty project — first-run state.
                     <EmptyState
                       icon={FileText}
-                      title="No templates yet"
-                      description="Create reusable email designs for campaigns."
+                      title={t('templates.list.emptyTitle')}
+                      description={t('templates.list.emptyDescription')}
                       action={
                         <Button asChild>
                           <Link href="/templates/create">
                             <Plus className="h-4 w-4" />
-                            Create Template
+                            {t('templates.list.createTemplate')}
                           </Link>
                         </Button>
                       }
@@ -490,12 +495,12 @@ export default function TemplatesPage() {
                         href={`/templates/${template.id}`}
                         data-card-link=""
                         className="flex-1 block p-6 pb-4 hover:bg-neutral-50/50 transition-colors rounded-t-xl focus-visible:outline-none"
-                        aria-label={`Edit ${template.name}`}
+                        aria-label={t('templates.list.actions.edit')}
                       >
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <h3 className="font-semibold text-neutral-900 leading-snug">{template.name}</h3>
-                          <Badge className="capitalize shrink-0 mt-0.5" variant="neutral">
-                            {template.type.toLowerCase()}
+                          <Badge className="shrink-0 mt-0.5" variant="neutral">
+                            {typeLabel(template.type)}
                           </Badge>
                         </div>
                         <p className="text-sm font-medium text-neutral-700 truncate">{template.subject}</p>
@@ -504,22 +509,22 @@ export default function TemplatesPage() {
                         <div className="flex items-center gap-1.5 text-xs text-neutral-400">
                           <Calendar className="h-3 w-3" />
                           <div className="group relative inline-block cursor-help">
-                            <span>Updated {formatRelativeTime(template.updatedAt)}</span>
+                            <span>{t('templates.list.updatedAt', {time: formatRelativeTime(template.updatedAt)})}</span>
                             <div className="hidden group-hover:block absolute z-10 w-48 p-2 bg-neutral-900 text-white text-xs rounded shadow-md bottom-full left-0 mb-1 whitespace-nowrap">
                               {dayjs(template.updatedAt).format('DD MMMM YYYY, hh:mm')}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Button asChild variant="ghost" size="sm" title="Edit template">
-                            <Link href={`/templates/${template.id}`} aria-label="Edit template">
+                          <Button asChild variant="ghost" size="sm" title={t('templates.list.actions.edit')}>
+                            <Link href={`/templates/${template.id}`} aria-label={t('templates.list.actions.edit')}>
                               <Edit className="h-4 w-4" />
                             </Link>
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="Duplicate template"
+                            title={t('templates.list.actions.duplicate')}
                             onClick={() => handleDuplicate(template.id)}
                           >
                             <Copy className="h-4 w-4" />
@@ -527,7 +532,7 @@ export default function TemplatesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="Delete template"
+                            title={t('templates.list.actions.delete')}
                             onClick={() => {
                               setTemplateToDelete(template.id);
                               setShowDeleteDialog(true);
@@ -545,15 +550,18 @@ export default function TemplatesPage() {
                 {data && data.totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <p className="text-sm text-neutral-500">
-                      Showing {(page - 1) * data.pageSize + 1} to {Math.min(page * data.pageSize, data.total)} of{' '}
-                      {data.total} templates
+                      {t('templates.list.pagination.showing', {
+                        from: (page - 1) * data.pageSize + 1,
+                        to: Math.min(page * data.pageSize, data.total),
+                        total: data.total,
+                      })}
                     </p>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
-                        Previous
+                        {t('common.previous')}
                       </Button>
                       <span className="text-sm text-neutral-700">
-                        Page {page} of {data.totalPages}
+                        {t('templates.list.pagination.page', {page, totalPages: data.totalPages})}
                       </span>
                       <Button
                         variant="outline"
@@ -561,7 +569,7 @@ export default function TemplatesPage() {
                         onClick={() => setPage(p => p + 1)}
                         disabled={page === data.totalPages}
                       >
-                        Next
+                        {t('common.next')}
                       </Button>
                     </div>
                   </div>
@@ -580,15 +588,18 @@ export default function TemplatesPage() {
                 {data && data.totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <p className="text-sm text-neutral-500">
-                      Showing {(page - 1) * data.pageSize + 1} to {Math.min(page * data.pageSize, data.total)} of{' '}
-                      {data.total} templates
+                      {t('templates.list.pagination.showing', {
+                        from: (page - 1) * data.pageSize + 1,
+                        to: Math.min(page * data.pageSize, data.total),
+                        total: data.total,
+                      })}
                     </p>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
-                        Previous
+                        {t('common.previous')}
                       </Button>
                       <span className="text-sm text-neutral-700">
-                        Page {page} of {data.totalPages}
+                        {t('templates.list.pagination.page', {page, totalPages: data.totalPages})}
                       </span>
                       <Button
                         variant="outline"
@@ -596,7 +607,7 @@ export default function TemplatesPage() {
                         onClick={() => setPage(p => p + 1)}
                         disabled={page === data.totalPages}
                       >
-                        Next
+                        {t('common.next')}
                       </Button>
                     </div>
                   </div>
@@ -610,9 +621,9 @@ export default function TemplatesPage() {
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           onConfirm={handleDelete}
-          title="Delete Template"
-          description="Are you sure you want to delete this template? This action cannot be undone."
-          confirmText="Delete"
+          title={t('templates.deleteDialog.title')}
+          description={t('templates.deleteDialog.description')}
+          confirmText={t('templates.deleteDialog.confirm')}
           variant="destructive"
         />
 
@@ -620,9 +631,9 @@ export default function TemplatesPage() {
           open={showBulkDeleteDialog}
           onOpenChange={setShowBulkDeleteDialog}
           onConfirm={handleBulkDelete}
-          title={`Delete ${selectedIds.length} template${selectedIds.length === 1 ? '' : 's'}`}
-          description="Are you sure you want to delete the selected templates? This action cannot be undone. Templates referenced by a workflow step will block the operation."
-          confirmText="Delete"
+          title={t(selectedIds.length === 1 ? 'templates.bulkDeleteDialog.title' : 'templates.bulkDeleteDialog.title_plural', {count: selectedIds.length})}
+          description={t('templates.bulkDeleteDialog.description')}
+          confirmText={t('templates.bulkDeleteDialog.confirm')}
           variant="destructive"
           status={bulkDeleteStatus}
         />

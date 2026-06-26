@@ -39,6 +39,7 @@ import {DashboardLayout} from '../components/DashboardLayout';
 import {QuickStart} from '../components/QuickStart';
 import {SecurityWarningBanner} from '../components/SecurityWarningBanner';
 import {useActiveProject} from '../lib/contexts/ActiveProjectProvider';
+import {useTranslation, type TranslateFn} from '../lib/i18n';
 import {useDashboardStats} from '../lib/hooks/useDashboardStats';
 import {useOnboardingPath} from '../lib/hooks/useOnboardingPath';
 import {useOnboardingStatus} from '../lib/hooks/useOnboardingStatus';
@@ -48,23 +49,23 @@ import {useConfig} from '../lib/hooks/useConfig';
 import {useUser} from '../lib/hooks/useUser';
 import {network} from '../lib/network';
 
-function getGreeting(): string {
+function getGreeting(t: TranslateFn): string {
   const hour = new Date().getHours();
-  if (hour >= 23 || hour < 5) return 'Working late';
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour >= 23 || hour < 5) return t('dashboard.greeting.workingLate');
+  if (hour < 12) return t('dashboard.greeting.morning');
+  if (hour < 18) return t('dashboard.greeting.afternoon');
+  return t('dashboard.greeting.evening');
 }
 
-function relativeTime(date: Date): string {
+function relativeTime(date: Date, t: TranslateFn): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return 'just now';
+  if (seconds < 60) return t('dashboard.time.justNow');
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return t('dashboard.time.minutesAgo', {count: minutes});
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t('dashboard.time.hoursAgo', {count: hours});
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
+  if (days < 7) return t('dashboard.time.daysAgo', {count: days});
   return date.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
 }
 
@@ -84,9 +85,10 @@ function computeTrend(current: number, previous: number): TrendInfo {
 }
 
 function TrendChip({trend, label}: {trend: TrendInfo; label?: string}) {
+  const {t} = useTranslation();
   if (trend.direction === 'none') {
     return (
-      <p className="mt-1 text-xs text-neutral-400 tabular-nums">{label ?? 'No data yet'}</p>
+      <p className="mt-1 text-xs text-neutral-400 tabular-nums">{label ?? t('dashboard.trend.noDataYet')}</p>
     );
   }
 
@@ -100,9 +102,9 @@ function TrendChip({trend, label}: {trend: TrendInfo; label?: string}) {
   const {Icon, color, bg} = config;
   const text =
     trend.direction === 'new'
-      ? 'New'
+      ? t('dashboard.trend.new')
       : trend.direction === 'flat'
-        ? 'No change'
+        ? t('dashboard.trend.noChange')
         : `${trend.pct.toFixed(trend.pct >= 100 ? 0 : 1)}%`;
 
   return (
@@ -111,7 +113,7 @@ function TrendChip({trend, label}: {trend: TrendInfo; label?: string}) {
         <Icon className="h-3 w-3" strokeWidth={2.5} />
         {text}
       </span>
-      <span className="text-neutral-400">vs previous 30d</span>
+      <span className="text-neutral-400">{t('dashboard.trend.vsPrevious')}</span>
     </div>
   );
 }
@@ -136,35 +138,35 @@ function AnimatedNumber({value, format}: {value: number; format?: (n: number) =>
 interface ActivityVisual {
   icon: React.ComponentType<{className?: string}>;
   tone: 'neutral' | 'green' | 'blue' | 'amber' | 'red';
-  label: string;
+  labelKey: string;
 }
 
 function activityVisual(a: Activity): ActivityVisual {
   switch (a.type) {
     case 'email.sent':
-      return {icon: Send, tone: 'neutral', label: 'Sent'};
+      return {icon: Send, tone: 'neutral', labelKey: 'dashboard.activity.sent'};
     case 'email.delivered':
-      return {icon: Inbox, tone: 'green', label: 'Delivered'};
+      return {icon: Inbox, tone: 'green', labelKey: 'dashboard.activity.delivered'};
     case 'email.opened':
-      return {icon: Eye, tone: 'green', label: 'Opened'};
+      return {icon: Eye, tone: 'green', labelKey: 'dashboard.activity.opened'};
     case 'email.clicked':
-      return {icon: MousePointerClick, tone: 'blue', label: 'Clicked'};
+      return {icon: MousePointerClick, tone: 'blue', labelKey: 'dashboard.activity.clicked'};
     case 'email.bounced':
-      return {icon: XCircle, tone: 'red', label: 'Bounced'};
+      return {icon: XCircle, tone: 'red', labelKey: 'dashboard.activity.bounced'};
     case 'email.complaint':
-      return {icon: AlertCircle, tone: 'red', label: 'Complaint'};
+      return {icon: AlertCircle, tone: 'red', labelKey: 'dashboard.activity.complaint'};
     case 'event.triggered':
-      return {icon: Zap, tone: 'amber', label: 'Event'};
+      return {icon: Zap, tone: 'amber', labelKey: 'dashboard.activity.event'};
     case 'campaign.sent':
-      return {icon: Mail, tone: 'neutral', label: 'Campaign'};
+      return {icon: Mail, tone: 'neutral', labelKey: 'dashboard.activity.campaign'};
     case 'campaign.scheduled':
-      return {icon: Calendar, tone: 'blue', label: 'Scheduled'};
+      return {icon: Calendar, tone: 'blue', labelKey: 'dashboard.activity.scheduled'};
     case 'workflow.started':
     case 'workflow.completed':
     case 'workflow.email.scheduled':
-      return {icon: Workflow, tone: 'amber', label: 'Workflow'};
+      return {icon: Workflow, tone: 'amber', labelKey: 'dashboard.activity.workflow'};
     default:
-      return {icon: Zap, tone: 'neutral', label: 'Event'};
+      return {icon: Zap, tone: 'neutral', labelKey: 'dashboard.activity.event'};
   }
 }
 
@@ -176,16 +178,17 @@ const TONE_CLASSES: Record<ActivityVisual['tone'], {bg: string; fg: string}> = {
   red: {bg: 'bg-red-50', fg: 'text-red-700'},
 };
 
-function activityTitle(a: Activity): string {
+function activityTitle(a: Activity, t: TranslateFn): string {
   const m = a.metadata;
   if (typeof m.subject === 'string' && m.subject) return m.subject;
   if (typeof m.eventName === 'string' && m.eventName) return m.eventName;
   if (typeof m.campaignName === 'string' && m.campaignName) return m.campaignName;
   if (typeof m.workflowName === 'string' && m.workflowName) return m.workflowName;
-  return activityVisual(a).label;
+  return t(activityVisual(a).labelKey);
 }
 
 function LivePulse({count}: {count: number}) {
+  const {t} = useTranslation();
   const isLive = count > 0;
   return (
     <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700">
@@ -198,17 +201,22 @@ function LivePulse({count}: {count: number}) {
         />
       </span>
       <span className="tabular-nums">
-        {isLive ? `${count.toLocaleString()} ${count === 1 ? 'event' : 'events'} in the last 5 min` : 'Quiet right now'}
+        {isLive
+          ? t(count === 1 ? 'dashboard.live.eventsOne' : 'dashboard.live.eventsOther', {
+              count: count.toLocaleString(),
+            })
+          : t('dashboard.live.quiet')}
       </span>
     </div>
   );
 }
 
 function CompactActivityRow({activity}: {activity: Activity}) {
+  const {t} = useTranslation();
   const visual = activityVisual(activity);
   const Icon = visual.icon;
   const tone = TONE_CLASSES[visual.tone];
-  const title = activityTitle(activity);
+  const title = activityTitle(activity, t);
   const subtitle = activity.contactEmail;
 
   return (
@@ -226,18 +234,19 @@ function CompactActivityRow({activity}: {activity: Activity}) {
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <p className="truncate text-sm font-medium text-neutral-900">{title}</p>
-          <span className="flex-shrink-0 text-[11px] text-neutral-400">{visual.label}</span>
+          <span className="flex-shrink-0 text-[11px] text-neutral-400">{t(visual.labelKey)}</span>
         </div>
         {subtitle && <p className="truncate text-xs text-neutral-500">{subtitle}</p>}
       </div>
       <span className="flex-shrink-0 tabular-nums text-xs text-neutral-400">
-        {relativeTime(new Date(activity.timestamp))}
+        {relativeTime(new Date(activity.timestamp), t)}
       </span>
     </motion.div>
   );
 }
 
 export default function Index() {
+  const {t} = useTranslation();
   const {activeProject} = useActiveProject();
   const {totalContacts, totalEmailsSent, totalCampaigns, openRate, isLoading} = useDashboardStats();
   const {setupState, isLoading: isLoadingSetupState} = useProjectSetupState(activeProject?.id);
@@ -249,6 +258,7 @@ export default function Index() {
   const bannerActive = onboardingStatus === 'show' && Boolean(onboardingPath);
   const [isResending, setIsResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<string>('');
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   // Previous-period stats (60d ago to 30d ago) for trend comparison.
   // Round to UTC day boundary so the URL — and therefore the Redis cache key —
@@ -295,20 +305,30 @@ export default function Index() {
     dedupingInterval: 30_000,
   });
 
-  const greeting = useMemo(() => getGreeting(), []);
+  const greeting = useMemo(() => getGreeting(t), [t]);
 
   const subtitle = useMemo(() => {
-    if (isLoading) return 'Catching up on the last 30 days.';
+    if (isLoading) return t('dashboard.subtitle.loading');
     if (totalEmailsSent === 0) {
-      if (totalContacts === 0) return `${activeProject?.name ?? 'Your project'} is fresh. Time to send the first email.`;
-      return `${totalContacts.toLocaleString()} ${totalContacts === 1 ? 'contact' : 'contacts'} ready. Time to send something.`;
+      if (totalContacts === 0)
+        return t('dashboard.subtitle.freshProject', {
+          project: activeProject?.name ?? t('dashboard.subtitle.yourProject'),
+        });
+      return t(totalContacts === 1 ? 'dashboard.subtitle.contactsReadyOne' : 'dashboard.subtitle.contactsReadyOther', {
+        count: totalContacts.toLocaleString(),
+      });
     }
-    const projectLabel = activeProject?.name ? `${activeProject.name} sent` : 'You sent';
-    const base = `${projectLabel} ${totalEmailsSent.toLocaleString()} ${totalEmailsSent === 1 ? 'email' : 'emails'} in the last 30 days.`;
-    if (openRate >= 40) return `${base} Open rate is well above average.`;
-    if (openRate >= 25) return `${base} Open rate is healthy.`;
+    const projectLabel = activeProject?.name
+      ? t('dashboard.subtitle.projectSent', {project: activeProject.name})
+      : t('dashboard.subtitle.youSent');
+    const base = t(totalEmailsSent === 1 ? 'dashboard.subtitle.sentOne' : 'dashboard.subtitle.sentOther', {
+      project: projectLabel,
+      count: totalEmailsSent.toLocaleString(),
+    });
+    if (openRate >= 40) return `${base} ${t('dashboard.subtitle.openRateExcellent')}`;
+    if (openRate >= 25) return `${base} ${t('dashboard.subtitle.openRateHealthy')}`;
     return base;
-  }, [isLoading, totalEmailsSent, totalContacts, openRate, activeProject?.name]);
+  }, [isLoading, totalEmailsSent, totalContacts, openRate, activeProject?.name, t]);
 
   // Friendly console message for the developer audience. Once per session.
   useEffect(() => {
@@ -329,19 +349,22 @@ export default function Index() {
 
   const stats = [
     {
-      name: 'Total Contacts',
+      key: 'contacts',
+      name: t('dashboard.stats.totalContacts'),
       value: totalContacts,
       icon: Users,
       format: (n: number) => n.toLocaleString(),
     },
     {
-      name: 'Emails Sent',
+      key: 'emails',
+      name: t('dashboard.stats.emailsSent'),
       value: totalEmailsSent,
       icon: Mail,
       format: (n: number) => n.toLocaleString(),
     },
     {
-      name: 'Open Rate',
+      key: 'openRate',
+      name: t('dashboard.stats.openRate'),
       value: openRate,
       icon: TrendingUp,
       format: (n: number) => `${n.toFixed(1)}%`,
@@ -352,7 +375,8 @@ export default function Index() {
   const sevenDay = securityMetrics?.status.sevenDay;
   const allTime = securityMetrics?.status.allTime;
   const delivWindow = sevenDay && sevenDay.total > 0 ? sevenDay : allTime;
-  const delivWindowLabel = sevenDay && sevenDay.total > 0 ? 'Last 7 days' : 'All time';
+  const delivWindowLabel =
+    sevenDay && sevenDay.total > 0 ? t('dashboard.deliverability.lastSevenDays') : t('dashboard.deliverability.allTime');
   const deliveryRate =
     delivWindow && delivWindow.total > 0 ? ((delivWindow.total - delivWindow.bounces) / delivWindow.total) * 100 : 0;
   const bounceRate = delivWindow?.bounceRate ?? 0;
@@ -367,7 +391,13 @@ export default function Index() {
       : bounceLevel === 'warning' || complaintLevel === 'warning'
         ? 'warning'
         : 'healthy';
-  const healthLabel = !hasDelivData ? 'No data yet' : worstLevel === 'healthy' ? 'Healthy' : worstLevel === 'warning' ? 'Watch' : 'Critical';
+  const healthLabel = !hasDelivData
+    ? t('dashboard.trend.noDataYet')
+    : worstLevel === 'healthy'
+      ? t('dashboard.deliverability.healthy')
+      : worstLevel === 'warning'
+        ? t('dashboard.deliverability.watch')
+        : t('dashboard.deliverability.critical');
   const healthDot =
     !hasDelivData ? 'bg-neutral-300' : worstLevel === 'healthy' ? 'bg-emerald-500' : worstLevel === 'warning' ? 'bg-amber-500' : 'bg-red-500';
   const healthText =
@@ -376,16 +406,20 @@ export default function Index() {
   async function handleResendVerification() {
     setIsResending(true);
     setResendMessage('');
+    setResendSuccess(false);
     try {
       const response = await network.fetch<{success: boolean}>('POST', '/auth/request-verification');
 
       if (response.success) {
-        setResendMessage('Verification email sent! Please check your inbox.');
+        setResendSuccess(true);
+        setResendMessage(t('dashboard.banners.emailVerification.sentSuccess'));
       } else {
-        setResendMessage('Failed to send verification email. Please try again.');
+        setResendSuccess(false);
+        setResendMessage(t('dashboard.banners.emailVerification.sentError'));
       }
     } catch {
-      setResendMessage('Failed to send verification email. Please try again.');
+      setResendSuccess(false);
+      setResendMessage(t('dashboard.banners.emailVerification.sentError'));
     } finally {
       setIsResending(false);
     }
@@ -396,26 +430,21 @@ export default function Index() {
 
   return (
     <>
-      <NextSeo title="Dashboard" />
+      <NextSeo title={t('dashboard.seoTitle')} />
       <DashboardLayout>
         <div className="space-y-8">
           {/* Project Disabled Banner */}
           {activeProject && activeProject.disabled && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Project Disabled - Read-Only Mode</AlertTitle>
+              <AlertTitle>{t('dashboard.banners.projectDisabled.title')}</AlertTitle>
               <AlertDescription className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="space-y-2 flex-1">
-                  <p className="text-sm font-medium">
-                    This project has been disabled and is now in read-only mode. You can view your data but cannot
-                    create, update, or delete anything.
-                  </p>
-                  <p className="text-xs text-red-800 mt-2">
-                    Please contact support for more details and to get your project re-enabled.
-                  </p>
+                  <p className="text-sm font-medium">{t('dashboard.banners.projectDisabled.description')}</p>
+                  <p className="text-xs text-red-800 mt-2">{t('dashboard.banners.projectDisabled.contactSupport')}</p>
                 </div>
                 <Button asChild size="sm" variant="outline" className="w-full sm:w-auto flex-shrink-0">
-                  <Link href="/settings?tab=security">View Details</Link>
+                  <Link href="/settings?tab=security">{t('dashboard.banners.projectDisabled.viewDetails')}</Link>
                 </Button>
               </AlertDescription>
             </Alert>
@@ -425,11 +454,9 @@ export default function Index() {
           {user && user.type === 'PASSWORD' && !user.emailVerified && (
             <Alert variant="warning">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Verify your email address</AlertTitle>
+              <AlertTitle>{t('dashboard.banners.emailVerification.title')}</AlertTitle>
               <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <span className="text-sm">
-                  Please verify your email address to unlock all features. Check your inbox for the verification link.
-                </span>
+                <span className="text-sm">{t('dashboard.banners.emailVerification.description')}</span>
                 <div className="flex flex-col gap-2">
                   <Button
                     size="sm"
@@ -437,10 +464,12 @@ export default function Index() {
                     onClick={handleResendVerification}
                     disabled={isResending}
                   >
-                    {isResending ? 'Sending...' : 'Resend verification email'}
+                    {isResending
+                      ? t('dashboard.banners.emailVerification.sending')
+                      : t('dashboard.banners.emailVerification.resend')}
                   </Button>
                   {resendMessage && (
-                    <p className={`text-xs ${resendMessage.includes('sent') ? 'text-green-600' : 'text-red-500'}`}>
+                    <p className={`text-xs ${resendSuccess ? 'text-green-600' : 'text-red-500'}`}>
                       {resendMessage}
                     </p>
                   )}
@@ -461,13 +490,11 @@ export default function Index() {
             config?.features.billing.enabled && (
               <Alert variant="warning">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Upgrade to remove Plunk branding</AlertTitle>
+                <AlertTitle>{t('dashboard.banners.upgrade.title')}</AlertTitle>
                 <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <span className="text-sm">
-                    Your emails currently include Plunk branding. Upgrade to a subscription to remove it.
-                  </span>
+                  <span className="text-sm">{t('dashboard.banners.upgrade.description')}</span>
                   <Button asChild size="sm" className="w-full sm:w-auto">
-                    <Link href="/settings?tab=billing">Upgrade Now</Link>
+                    <Link href="/settings?tab=billing">{t('dashboard.banners.upgrade.upgradeNow')}</Link>
                   </Button>
                 </AlertDescription>
               </Alert>
@@ -491,11 +518,11 @@ export default function Index() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, index) => {
               const Icon = stat.icon;
-              const isEmails = stat.name === 'Emails Sent';
-              const isOpenRate = stat.name === 'Open Rate';
+              const isEmails = stat.key === 'emails';
+              const isOpenRate = stat.key === 'openRate';
               return (
                 <motion.div
-                  key={stat.name}
+                  key={stat.key}
                   initial={{opacity: 0, y: 12}}
                   animate={{opacity: 1, y: 0}}
                   transition={{
@@ -540,7 +567,7 @@ export default function Index() {
               <Card className="relative overflow-hidden h-full transition-colors duration-200 hover:border-neutral-300">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardDescription>Deliverability</CardDescription>
+                    <CardDescription>{t('dashboard.deliverability.title')}</CardDescription>
                     <div className="inline-flex items-center gap-1.5 rounded-full bg-neutral-50 border border-neutral-200/60 px-2 py-0.5">
                       <span className="relative flex h-1.5 w-1.5">
                         {hasDelivData && worstLevel === 'healthy' && (
@@ -561,7 +588,7 @@ export default function Index() {
                     )}
                   </CardTitle>
                   <p className="mt-1 text-xs text-neutral-500">
-                    {hasDelivData ? 'delivered' : 'No emails sent yet'}
+                    {hasDelivData ? t('dashboard.deliverability.delivered') : t('dashboard.deliverability.noEmailsSent')}
                     {hasDelivData && <span className="text-neutral-400"> · {delivWindowLabel}</span>}
                   </p>
                 </CardHeader>
@@ -570,11 +597,13 @@ export default function Index() {
                     <div className="flex items-center gap-4 text-[11px] text-neutral-500 tabular-nums">
                       <span className="inline-flex items-center gap-1.5">
                         <ShieldCheck className="h-3 w-3 text-neutral-400" />
-                        Bounce <span className="font-medium text-neutral-700">{bounceRate.toFixed(2)}%</span>
+                        {t('dashboard.deliverability.bounce')}{' '}
+                        <span className="font-medium text-neutral-700">{bounceRate.toFixed(2)}%</span>
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <AlertCircle className="h-3 w-3 text-neutral-400" />
-                        Complaint <span className="font-medium text-neutral-700">{complaintRate.toFixed(3)}%</span>
+                        {t('dashboard.deliverability.complaint')}{' '}
+                        <span className="font-medium text-neutral-700">{complaintRate.toFixed(3)}%</span>
                       </span>
                     </div>
                   </div>
@@ -598,11 +627,11 @@ export default function Index() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>Recent activity</CardTitle>
-                      <CardDescription>Live feed of what’s happening across your project</CardDescription>
+                      <CardTitle>{t('dashboard.recentActivity.title')}</CardTitle>
+                      <CardDescription>{t('dashboard.recentActivity.description')}</CardDescription>
                     </div>
                     <Button asChild variant="ghost" size="sm">
-                      <Link href="/activity">View all</Link>
+                      <Link href="/activity">{t('dashboard.recentActivity.viewAll')}</Link>
                     </Button>
                   </div>
                 </CardHeader>
@@ -625,10 +654,8 @@ export default function Index() {
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
                         <Inbox className="h-5 w-5 text-neutral-400" />
                       </div>
-                      <p className="text-sm font-medium text-neutral-700">Nothing has happened yet</p>
-                      <p className="text-xs text-neutral-500 max-w-xs">
-                        Send your first email or trigger an event and you’ll see it land here in real time.
-                      </p>
+                      <p className="text-sm font-medium text-neutral-700">{t('dashboard.recentActivity.emptyTitle')}</p>
+                      <p className="text-xs text-neutral-500 max-w-xs">{t('dashboard.recentActivity.emptyDescription')}</p>
                     </div>
                   ) : (
                     <div className="space-y-0.5">
@@ -647,26 +674,26 @@ export default function Index() {
           {/* API Keys — full-width slim band with the two keys side-by-side */}
           <Card>
             <CardHeader>
-              <CardTitle>API Keys</CardTitle>
-              <CardDescription>Use these keys to integrate with Plunk</CardDescription>
+              <CardTitle>{t('dashboard.apiKeys.title')}</CardTitle>
+              <CardDescription>{t('dashboard.apiKeys.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               {activeProject ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                   <ApiKeyDisplay
-                    label="Public Key"
+                    label={t('dashboard.apiKeys.publicKey')}
                     value={activeProject.public}
-                    description="Use this key for client-side integrations"
+                    description={t('dashboard.apiKeys.publicKeyDescription')}
                   />
                   <ApiKeyDisplay
-                    label="Secret Key"
+                    label={t('dashboard.apiKeys.secretKey')}
                     value={activeProject.secret}
-                    description="Keep this key secure and never expose it publicly"
+                    description={t('dashboard.apiKeys.secretKeyDescription')}
                     isSecret
                   />
                 </div>
               ) : (
-                <p className="text-sm text-neutral-500">No project selected</p>
+                <p className="text-sm text-neutral-500">{t('dashboard.apiKeys.noProject')}</p>
               )}
             </CardContent>
           </Card>
