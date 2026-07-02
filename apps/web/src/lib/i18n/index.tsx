@@ -112,7 +112,10 @@ function isSupported(code: string): boolean {
   return UI_LANGUAGES.some(lang => lang.code === code);
 }
 
-function lookup(messages: Messages, key: string): string | undefined {
+function lookup(messages: Messages | undefined, key: string): string | undefined {
+  if (!messages) {
+    return undefined;
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let value: any = messages;
   for (const part of key.split('.')) {

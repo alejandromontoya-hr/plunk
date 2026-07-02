@@ -166,6 +166,7 @@ interface FilterRowProps {
 }
 
 const FilterRow = memo(function FilterRow({filter, onChange, onRemove, availableFields}: FilterRowProps) {
+  const {t} = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -184,41 +185,46 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
   }, []);
 
   // Helper to get valid operators for a field type
-  const getOperatorsForType = useCallback((type: string, isEvent: boolean) => {
-    if (type === 'segment') {
-      return SEGMENT_OPERATORS;
-    }
+  const getOperatorsForType = useCallback(
+    (type: string, isEvent: boolean) => {
+      if (type === 'segment') {
+        return buildOperators(t, SEGMENT_OPERATOR_VALUES);
+      }
 
-    if (isEvent) {
-      return EVENT_OPERATORS;
-    }
+      if (isEvent) {
+        return buildOperators(t, EVENT_OPERATOR_VALUES);
+      }
 
-    if (type === 'boolean') {
-      return STANDARD_OPERATORS.filter(op => ['equals', 'notEquals', 'exists', 'notExists'].includes(op.value));
-    }
+      if (type === 'boolean') {
+        return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
+          ['equals', 'notEquals', 'exists', 'notExists'].includes(op.value),
+        );
+      }
 
-    if (type === 'number' || type === 'date') {
-      return STANDARD_OPERATORS.filter(op =>
-        [
-          'equals',
-          'notEquals',
-          'greaterThan',
-          'lessThan',
-          'greaterThanOrEqual',
-          'lessThanOrEqual',
-          'exists',
-          'notExists',
-          'within',
-          'olderThan',
-        ].includes(op.value),
+      if (type === 'number' || type === 'date') {
+        return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
+          [
+            'equals',
+            'notEquals',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual',
+            'exists',
+            'notExists',
+            'within',
+            'olderThan',
+          ].includes(op.value),
+        );
+      }
+
+      // String type - no within operator, no comparison operators
+      return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
+        ['equals', 'notEquals', 'contains', 'notContains', 'exists', 'notExists'].includes(op.value),
       );
-    }
-
-    // String type - no within operator, no comparison operators
-    return STANDARD_OPERATORS.filter(op =>
-      ['equals', 'notEquals', 'contains', 'notContains', 'exists', 'notExists'].includes(op.value),
-    );
-  }, []);
+    },
+    [t],
+  );
 
   const needsValue = !['exists', 'notExists', 'triggered', 'notTriggered', 'memberOfSegment', 'notMemberOfSegment'].includes(filter.operator);
   const needsUnit = ['within', 'triggeredWithin', 'olderThan', 'triggeredOlderThan', 'notTriggeredWithin'].includes(filter.operator);
@@ -236,20 +242,22 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
   // Get operators based on field type (memoized)
   const operators = useMemo(() => {
     if (isSegment) {
-      return SEGMENT_OPERATORS;
+      return buildOperators(t, SEGMENT_OPERATOR_VALUES);
     }
 
     if (isEventOrEmailActivity) {
-      return EVENT_OPERATORS;
+      return buildOperators(t, EVENT_OPERATOR_VALUES);
     }
 
     // Filter operators based on field type
     if (fieldType === 'boolean') {
-      return STANDARD_OPERATORS.filter(op => ['equals', 'notEquals', 'exists', 'notExists'].includes(op.value));
+      return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
+        ['equals', 'notEquals', 'exists', 'notExists'].includes(op.value),
+      );
     }
 
     if (fieldType === 'number' || fieldType === 'date') {
-      return STANDARD_OPERATORS.filter(op =>
+      return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
         [
           'equals',
           'notEquals',
@@ -266,10 +274,10 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
     }
 
     // String type - no within operator, no comparison operators
-    return STANDARD_OPERATORS.filter(op =>
+    return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
       ['equals', 'notEquals', 'contains', 'notContains', 'exists', 'notExists'].includes(op.value),
     );
-  }, [fieldType, isEventOrEmailActivity, isSegment]);
+  }, [fieldType, isEventOrEmailActivity, isSegment, t]);
 
   const handleFieldChange = useCallback(
     (value: string) => {
@@ -533,9 +541,9 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TIME_UNITS.map(unit => (
-                    <SelectItem key={unit.value} value={unit.value}>
-                      {unit.label}
+                  {TIME_UNIT_VALUES.map(unit => (
+                    <SelectItem key={unit} value={unit}>
+                      {t(`segments.builder.timeUnit.${unit}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -818,10 +826,11 @@ interface SegmentFilterBuilderProps {
 }
 
 export function SegmentFilterBuilder({condition, onChange, currentSegmentId}: SegmentFilterBuilderProps) {
-  const {fields, loading} = useAvailableOptions(currentSegmentId);
+  const {t} = useTranslation();
+  const {fields, loading} = useAvailableOptions(t, currentSegmentId);
 
   if (loading) {
-    return <div className="text-sm text-neutral-500 py-4">Loading available fields and events...</div>;
+    return <div className="text-sm text-neutral-500 py-4">{t('segments.builder.loadingFields')}</div>;
   }
 
   return <FilterConditionComponent condition={condition} onChange={onChange} availableFields={fields} />;
