@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Label,
   Progress,
   RadioGroup,
   RadioGroupItem,
@@ -118,7 +117,7 @@ export function ImportContactsWizard({open, onOpenChange, onSuccess}: ImportCont
   const [mode, setMode] = useState<ImportMode>('UPSERT');
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const [importId, setImportId] = useState<string | null>(null);
+  const [, setImportId] = useState<string | null>(null);
   const [record, setRecord] = useState<ImportRecord | null>(null);
   const [job, setJob] = useState<JobStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

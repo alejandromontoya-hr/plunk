@@ -53,11 +53,9 @@ import {usePersistentState} from '../../lib/hooks/usePersistentState';
 import {
   AlertTriangle,
   Check,
-  CheckCircle,
   ChevronLeft,
   ChevronRight,
   Edit,
-  FileUp,
   Layers,
   Loader2,
   Mail,
@@ -69,7 +67,6 @@ import {
   Trash2,
   Upload,
   X,
-  XCircle,
 } from 'lucide-react';
 import {NextSeo} from 'next-seo';
 import Link from 'next/link';

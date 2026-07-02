@@ -139,7 +139,7 @@ function useAvailableOptions(t: TranslateFn, currentSegmentId?: string) {
           .map((s: {id: string; name: string; memberCount: number}) => ({
             value: `segment.${s.id}`,
             label: s.name,
-            description: `${s.memberCount.toLocaleString()} ${s.memberCount === 1 ? 'person' : 'people'}`,
+            description: `${s.memberCount.toLocaleString()} ${s.memberCount === 1 ? t('segments.builder.person') : t('segments.builder.people')}`,
             type: 'segment' as const,
             category: 'Segments' as const,
           }));
@@ -153,7 +153,7 @@ function useAvailableOptions(t: TranslateFn, currentSegmentId?: string) {
     };
 
     fetchOptions();
-  }, [currentSegmentId]);
+  }, [currentSegmentId, t]);
 
   return {fields, loading};
 }
@@ -395,7 +395,7 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
       <div className="flex-1 grid grid-cols-3 gap-3">
         {/* Field Selection */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-neutral-600">Field</Label>
+          <Label className="text-xs text-neutral-600">{t('segments.builder.fieldLabel')}</Label>
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -412,7 +412,7 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
               <div className="flex items-center border-b px-3 py-2">
                 <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                 <Input
-                  placeholder="Search fields, events, or email activity..."
+                  placeholder={t('segments.builder.searchFieldsPlaceholder')}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -420,11 +420,13 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
               </div>
               <div className="max-h-[300px] overflow-y-auto p-1">
                 {Object.keys(filteredGroups).length === 0 ? (
-                  <div className="py-6 text-center text-sm text-neutral-500">No fields or events found.</div>
+                  <div className="py-6 text-center text-sm text-neutral-500">{t('segments.builder.noFieldsFound')}</div>
                 ) : (
                   Object.entries(filteredGroups).map(([category, fields]) => (
                     <div key={category} className="py-1">
-                      <div className="px-2 py-1.5 text-xs font-semibold text-neutral-500">{category}</div>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-neutral-500">
+                        {t(`segments.builder.category.${category}`)}
+                      </div>
                       {fields.map(field => (
                         <button
                           key={field.value}
@@ -459,7 +461,7 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
 
         {/* Operator Selection */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-neutral-600">Operator</Label>
+          <Label className="text-xs text-neutral-600">{t('segments.builder.operatorLabel')}</Label>
           <Select
             value={filter.operator}
             onValueChange={(v: SegmentFilterOperator) => {
@@ -519,10 +521,10 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
 
         {/* Value Input */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-neutral-600">Value</Label>
+          <Label className="text-xs text-neutral-600">{t('segments.builder.valueLabel')}</Label>
           {!needsValue ? (
             <div className="h-9 flex items-center text-sm text-neutral-400 px-3 bg-neutral-100 rounded border border-neutral-200">
-              No value needed
+              {t('segments.builder.noValueNeeded')}
             </div>
           ) : needsUnit ? (
             <div className="flex gap-1">
@@ -558,8 +560,8 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">True</SelectItem>
-                <SelectItem value="false">False</SelectItem>
+                <SelectItem value="true">{t('segments.builder.valueTrue')}</SelectItem>
+                <SelectItem value="false">{t('segments.builder.valueFalse')}</SelectItem>
               </SelectContent>
             </Select>
           ) : fieldType === 'number' ? (
@@ -571,7 +573,7 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
                 onChange({...filter, value: val === '' ? 0 : parseFloat(val) || 0});
               }}
               className="text-sm bg-white"
-              placeholder="Enter number"
+              placeholder={t('segments.builder.enterNumber')}
             />
           ) : fieldType === 'date' ? (
             <Input
@@ -586,7 +588,7 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
               value={String(filter.value ?? '')}
               onChange={e => onChange({...filter, value: e.target.value})}
               className="text-sm bg-white"
-              placeholder="Enter value"
+              placeholder={t('segments.builder.enterValue')}
             />
           )}
         </div>
@@ -608,6 +610,7 @@ interface FilterGroupComponentProps {
 }
 
 function FilterGroupComponent({group, onChange, onRemove, depth = 0, availableFields}: FilterGroupComponentProps) {
+  const {t} = useTranslation();
   const addFilter = useCallback(() => {
     onChange({
       ...group,
@@ -671,7 +674,9 @@ function FilterGroupComponent({group, onChange, onRemove, depth = 0, availableFi
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <GripVertical className="h-4 w-4 text-neutral-400" />
-          <span className="text-sm font-medium text-neutral-700">Filter Group {depth > 0 && `(Nested)`}</span>
+          <span className="text-sm font-medium text-neutral-700">
+            {depth > 0 ? t('segments.builder.filterGroupNested') : t('segments.builder.filterGroup')}
+          </span>
         </div>
         {onRemove && (
           <Button type="button" variant="destructiveGhost" size="sm" onClick={onRemove}>
@@ -694,7 +699,9 @@ function FilterGroupComponent({group, onChange, onRemove, depth = 0, availableFi
         {group.conditions && (
           <div className="mt-4">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-medium text-neutral-600 uppercase tracking-wide">Nested Conditions</span>
+              <span className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
+                {t('segments.builder.nestedConditions')}
+              </span>
               <Button
                 type="button"
                 variant="destructiveGhost"
@@ -702,7 +709,7 @@ function FilterGroupComponent({group, onChange, onRemove, depth = 0, availableFi
                 onClick={removeNestedCondition}
                 className="h-6 text-xs"
               >
-                Remove nested
+                {t('segments.builder.removeNested')}
               </Button>
             </div>
             <FilterConditionComponent
@@ -717,12 +724,12 @@ function FilterGroupComponent({group, onChange, onRemove, depth = 0, availableFi
         <div className="flex gap-2 pt-2">
           <Button type="button" variant="outline" size="sm" onClick={addFilter} className="flex-1">
             <Plus className="h-3 w-3 mr-1" />
-            Add Filter
+            {t('segments.builder.addFilter')}
           </Button>
           {!group.conditions && (
             <Button type="button" variant="outline" size="sm" onClick={addNestedCondition} className="flex-1">
               <Plus className="h-3 w-3 mr-1" />
-              Add Nested Condition
+              {t('segments.builder.addNestedCondition')}
             </Button>
           )}
         </div>
@@ -739,6 +746,7 @@ interface FilterConditionComponentProps {
 }
 
 function FilterConditionComponent({condition, onChange, depth = 0, availableFields}: FilterConditionComponentProps) {
+  const {t} = useTranslation();
   const addGroup = useCallback(() => {
     onChange({
       ...condition,
@@ -777,7 +785,7 @@ function FilterConditionComponent({condition, onChange, depth = 0, availableFiel
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-neutral-600">Groups are combined with:</span>
+          <span className="text-sm font-medium text-neutral-600">{t('segments.builder.groupsCombinedWith')}</span>
           <Button
             type="button"
             variant={condition.logic === 'AND' ? 'default' : 'outline'}
@@ -813,7 +821,7 @@ function FilterConditionComponent({condition, onChange, depth = 0, availableFiel
 
       <Button type="button" variant="outline" onClick={addGroup} className="w-full">
         <Plus className="h-4 w-4 mr-2" />
-        Add Group
+        {t('segments.builder.addGroup')}
       </Button>
     </div>
   );

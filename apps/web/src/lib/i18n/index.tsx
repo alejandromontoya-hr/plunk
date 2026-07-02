@@ -172,8 +172,12 @@ export function I18nProvider({children}: {children: React.ReactNode}) {
   const [locale, setLocaleState] = useState<string>(DEFAULT_UI_LANGUAGE);
 
   useEffect(() => {
+    // Intentional post-hydration sync: localStorage/navigator are unavailable
+    // during SSR, so we read the preference once on mount. This runs a single
+    // extra render, not a cascade.
     const initial = detectInitialLocale();
     if (initial !== DEFAULT_UI_LANGUAGE) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocaleState(initial);
     }
   }, []);
