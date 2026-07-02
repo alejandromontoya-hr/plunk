@@ -1,174 +1,248 @@
 /**
  * Background Job: Contact Import Processor
- * Processes CSV contact imports with validation and batch processing
+ *
+ * Processes a confirmed CSV/XLSX import. Loads the stored file, applies the
+ * user-chosen column mapping and mode (create / update / both), records a
+ * per-row change snapshot for undo, and writes the result back to the
+ * ContactImport row.
  */
 
-import type {ContactImportJobData} from '@plunk/types';
+import type {ColumnMapping, ContactImportJobData, ImportMode, ImportResult, ImportRowError} from '@plunk/types';
 import {type Job, Worker} from 'bullmq';
-import {parse} from 'csv-parse/sync';
 import signale from 'signale';
 
 import {prisma} from '../database/prisma.js';
 import {ContactService} from '../services/ContactService.js';
+import {ImportService} from '../services/ImportService.js';
 import {NtfyService} from '../services/NtfyService.js';
 import {importQueue} from '../services/QueueService.js';
 
-const BATCH_SIZE = 100; // Process contacts in batches of 100
+const BATCH_SIZE = 100; // Rows processed before reporting progress
+const CHANGE_FLUSH_SIZE = 1000; // Change snapshots buffered before a createMany
+// Imports larger than this are not undoable (snapshotting every row would be
+// too expensive). The UI warns the user when an import is not undoable.
+const UNDO_MAX_ROWS = 100_000;
 
-interface ImportResult {
-  totalRows: number;
-  successCount: number;
-  createdCount: number;
-  updatedCount: number;
-  failureCount: number;
-  errors: {row: number; email: string; error: string}[];
+interface PendingChange {
+  importId: string;
+  contactId: string;
+  email: string;
+  action: 'CREATED' | 'UPDATED';
+  previousData: unknown;
+  previousSubscribed: boolean | null;
 }
 
 export function createImportWorker() {
   const worker = new Worker<ContactImportJobData>(
     importQueue.name,
     async (job: Job<ContactImportJobData>) => {
-      const {projectId, csvData, filename} = job.data;
+      const {projectId, importId} = job.data;
 
-      signale.info(`[IMPORT-PROCESSOR] Processing import for project ${projectId} (${filename})`);
-
-      // Fetch project information for notifications
-      const project = await prisma.project.findUnique({
-        where: {id: projectId},
-        select: {name: true},
+      const record = await prisma.contactImport.findFirst({
+        where: {id: importId, projectId},
       });
 
+      if (!record) {
+        throw new Error(`Import ${importId} not found for project ${projectId}`);
+      }
+      if (!record.rawData) {
+        throw new Error(`Import ${importId} has no stored file to process`);
+      }
+
+      const project = await prisma.project.findUnique({where: {id: projectId}, select: {name: true}});
       const projectName = project?.name || projectId;
+
+      const mode = record.mode as ImportMode;
+      const mapping = (record.mapping ?? {}) as unknown as ColumnMapping;
+      const undoable = record.totalRows <= UNDO_MAX_ROWS;
+
+      await prisma.contactImport.update({
+        where: {id: importId},
+        data: {status: 'PROCESSING', undoable},
+      });
 
       const result: ImportResult = {
         totalRows: 0,
-        successCount: 0,
         createdCount: 0,
         updatedCount: 0,
+        skippedCount: 0,
         failureCount: 0,
         errors: [],
       };
+      const MAX_ERRORS = 200; // Cap stored errors to keep the row small
+
+      // Resolve the mapping into concrete column roles.
+      const emailColumn = Object.entries(mapping).find(([, entry]) => entry.field === 'email')?.[0];
+      const subscribedColumn = Object.entries(mapping).find(([, entry]) => entry.field === 'subscribed')?.[0];
+      const dataColumns = Object.entries(mapping)
+        .filter(([, entry]) => entry.field === 'data')
+        .map(([column, entry]) => ({column, key: entry.key?.trim() || column}));
 
       try {
-        // Decode base64 CSV data
-        const csvContent = Buffer.from(csvData, 'base64').toString('utf-8');
-
-        // Parse CSV with column header normalization
-        const records = parse(csvContent, {
-          columns: (header: string[]) => header.map(h => h.toLowerCase()), // Normalize headers to lowercase
-          skip_empty_lines: true,
-          trim: true,
-          relax_column_count: true, // Allow rows with different column counts
-        }) as Record<string, string>[];
-
-        result.totalRows = records.length;
-
-        // Validate row count
-        if (records.length === 0) {
-          throw new Error('CSV file is empty');
+        if (!emailColumn) {
+          throw new Error('No column is mapped to the email field');
         }
 
-        signale.info(`[IMPORT-PROCESSOR] Parsed ${records.length} rows from CSV`);
+        const buffer = Buffer.from(record.rawData, 'base64');
+        const {rows} = ImportService.parseFile(buffer, record.fileType);
+        result.totalRows = rows.length;
 
-        // Notify that import has started
-        await NtfyService.notifyContactImportStarted(projectName, projectId, filename, result.totalRows);
-
-        // Validate that 'email' column exists (case-insensitive)
-        const firstRecord = records[0];
-        if (firstRecord && typeof firstRecord === 'object' && !('email' in firstRecord)) {
-          throw new Error('CSV must have an "email" column (case-insensitive)');
+        if (rows.length === 0) {
+          throw new Error('The file has no data rows');
         }
 
-        // Process contacts in batches
-        for (let i = 0; i < records.length; i += BATCH_SIZE) {
-          const batch = records.slice(i, Math.min(i + BATCH_SIZE, records.length));
+        signale.info(`[IMPORT-PROCESSOR] Processing import ${importId} (${rows.length} rows, mode=${mode})`);
+        await NtfyService.notifyContactImportStarted(projectName, projectId, record.filename, result.totalRows);
 
-          // Process batch sequentially (to avoid overwhelming the database)
-          for (const [batchIndex, record] of batch.entries()) {
-            const rowNumber = i + batchIndex + 2; // +2 for header row and 1-based index
+        const pendingChanges: PendingChange[] = [];
+        // Ensures a single change snapshot per contact even if the same email
+        // appears multiple times within the file (keeps undo correct).
+        const snapshotted = new Set<string>();
+
+        const flushChanges = async () => {
+          if (pendingChanges.length === 0) return;
+          await prisma.contactImportChange.createMany({
+            data: pendingChanges.map(change => ({
+              importId: change.importId,
+              contactId: change.contactId,
+              email: change.email,
+              action: change.action,
+              previousData: change.previousData === undefined ? undefined : (change.previousData as never),
+              previousSubscribed: change.previousSubscribed,
+            })),
+          });
+          pendingChanges.length = 0;
+        };
+
+        for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+          const batch = rows.slice(i, Math.min(i + BATCH_SIZE, rows.length));
+
+          for (const [batchIndex, row] of batch.entries()) {
+            const rowNumber = i + batchIndex + 2; // +2: header row + 1-based index
+            const rawEmail = String(row[emailColumn] ?? '').trim();
 
             try {
-              // Validate email
-              const email = record.email?.trim();
-              if (!email) {
+              if (!rawEmail) {
+                pushError(result, MAX_ERRORS, {row: rowNumber, email: '', error: 'Email is required'});
                 result.failureCount++;
-                result.errors.push({
-                  row: rowNumber,
-                  email: '',
-                  error: 'Email is required',
-                });
+                continue;
+              }
+              if (!isValidEmail(rawEmail)) {
+                pushError(result, MAX_ERRORS, {row: rowNumber, email: rawEmail, error: 'Invalid email format'});
+                result.failureCount++;
                 continue;
               }
 
-              // Basic email validation
-              if (!isValidEmail(email)) {
-                result.failureCount++;
-                result.errors.push({
-                  row: rowNumber,
-                  email,
-                  error: 'Invalid email format',
-                });
-                continue;
+              // Build custom data object from mapped data columns.
+              const data: Record<string, unknown> = {};
+              for (const {column, key} of dataColumns) {
+                const value = row[column];
+                if (value !== undefined && value !== '') {
+                  data[key] = coerceCustomValue(value);
+                }
               }
 
-              // Extract subscribed field if present (case-insensitive)
-              const subscribedValue = record.subscribed;
+              // Subscription (optional column).
               let subscribed: boolean | undefined;
-
-              if (subscribedValue !== undefined && subscribedValue !== '') {
-                // Handle various truthy/falsy values
-                const lowerValue = subscribedValue.toLowerCase().trim();
-                subscribed = lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes';
+              if (subscribedColumn) {
+                const raw = String(row[subscribedColumn] ?? '').trim().toLowerCase();
+                if (raw !== '') {
+                  subscribed = raw === 'true' || raw === '1' || raw === 'yes' || raw === 'si' || raw === 'sí';
+                }
               }
 
-              // Extract custom data (all fields except email and subscribed)
-              const {email: _, subscribed: __, ...customData} = record;
-              const customEntries = Object.entries(customData);
-              const data =
-                customEntries.length > 0
-                  ? Object.fromEntries(customEntries.map(([k, v]) => [k, coerceCustomValue(v)]))
-                  : undefined;
+              const existing = await ContactService.findByEmail(projectId, rawEmail);
 
-              // Check if contact exists before upserting
-              const existingContact = await ContactService.findByEmail(projectId, email);
-              const isUpdate = !!existingContact;
+              // Apply the selected mode.
+              if (existing && mode === 'CREATE') {
+                result.skippedCount++;
+                continue;
+              }
+              if (!existing && mode === 'UPDATE') {
+                result.skippedCount++;
+                continue;
+              }
 
-              // Upsert contact with subscribed value from CSV if provided
-              // For new contacts, ContactService.upsert defaults to true
-              // For existing contacts, only update if explicitly provided in CSV
-              await ContactService.upsert(projectId, email, data, subscribed);
-
-              result.successCount++;
-              if (isUpdate) {
+              if (existing) {
+                // UPDATE path (UPDATE or UPSERT with an existing contact).
+                if (undoable && !snapshotted.has(existing.id)) {
+                  snapshotted.add(existing.id);
+                  pendingChanges.push({
+                    importId,
+                    contactId: existing.id,
+                    email: existing.email,
+                    action: 'UPDATED',
+                    previousData: existing.data ?? undefined,
+                    previousSubscribed: existing.subscribed,
+                  });
+                }
+                await ContactService.update(projectId, existing.id, {
+                  data: Object.keys(data).length > 0 ? (data as never) : undefined,
+                  subscribed,
+                });
                 result.updatedCount++;
               } else {
+                // CREATE path (CREATE or UPSERT with a new contact).
+                const created = await ContactService.create(projectId, {
+                  email: rawEmail,
+                  data: Object.keys(data).length > 0 ? (data as never) : undefined,
+                  subscribed,
+                });
+                if (undoable && !snapshotted.has(created.id)) {
+                  snapshotted.add(created.id);
+                  pendingChanges.push({
+                    importId,
+                    contactId: created.id,
+                    email: created.email,
+                    action: 'CREATED',
+                    previousData: undefined,
+                    previousSubscribed: null,
+                  });
+                }
                 result.createdCount++;
+              }
+
+              if (pendingChanges.length >= CHANGE_FLUSH_SIZE) {
+                await flushChanges();
               }
             } catch (error) {
               result.failureCount++;
-              result.errors.push({
+              pushError(result, MAX_ERRORS, {
                 row: rowNumber,
-                email: record.email || '',
+                email: rawEmail,
                 error: error instanceof Error ? error.message : 'Unknown error',
               });
             }
           }
 
-          // Update progress
-          const progress = Math.round(((i + batch.length) / records.length) * 100);
-          await job.updateProgress(progress);
+          await job.updateProgress(Math.round(((i + batch.length) / rows.length) * 100));
         }
 
-        signale.info(
-          `[IMPORT-PROCESSOR] Import completed: ${result.createdCount} created, ${result.updatedCount} updated, ${result.failureCount} failed`,
-        );
+        await flushChanges();
 
-        // Notify that import has completed
+        await prisma.contactImport.update({
+          where: {id: importId},
+          data: {
+            status: 'COMPLETED',
+            createdCount: result.createdCount,
+            updatedCount: result.updatedCount,
+            skippedCount: result.skippedCount,
+            failureCount: result.failureCount,
+            errors: result.errors as never,
+            undoable,
+            completedAt: new Date(),
+            rawData: null, // Free the stored file once processed
+          },
+        });
+
+        signale.info(
+          `[IMPORT-PROCESSOR] Import ${importId} completed: ${result.createdCount} created, ${result.updatedCount} updated, ${result.skippedCount} skipped, ${result.failureCount} failed`,
+        );
         await NtfyService.notifyContactImportCompleted(
           projectName,
           projectId,
-          filename,
-          result.successCount,
+          record.filename,
+          result.createdCount + result.updatedCount,
           result.createdCount,
           result.updatedCount,
           result.failureCount,
@@ -176,41 +250,37 @@ export function createImportWorker() {
 
         return result;
       } catch (error) {
-        signale.error(`[IMPORT-PROCESSOR] Failed to process import:`, error);
-
-        // Notify that import has failed
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        await NtfyService.notifyContactImportFailed(projectName, projectId, filename, errorMessage);
+        signale.error(`[IMPORT-PROCESSOR] Import ${importId} failed:`, error);
 
-        // Return partial results with error
-        result.errors.push({
-          row: 0,
-          email: '',
-          error: errorMessage,
-        });
+        await prisma.contactImport
+          .update({
+            where: {id: importId},
+            data: {status: 'FAILED', errors: [{row: 0, email: '', error: errorMessage}] as never, rawData: null},
+          })
+          .catch(() => undefined);
 
-        throw error; // Re-throw to mark job as failed
+        await NtfyService.notifyContactImportFailed(projectName, projectId, record.filename, errorMessage);
+        throw error;
       }
     },
     {
       connection: importQueue.opts.connection,
-      concurrency: 2, // Process max 2 imports concurrently
+      concurrency: 2,
     },
   );
 
-  worker.on('completed', job => {
-    signale.info(`[IMPORT-PROCESSOR] Job ${job.id} completed`);
-  });
-
-  worker.on('failed', (job, err) => {
-    signale.error(`[IMPORT-PROCESSOR] Job ${job?.id} failed:`, err.message);
-  });
-
-  worker.on('error', err => {
-    signale.error('[IMPORT-PROCESSOR] Worker error:', err);
-  });
+  worker.on('completed', job => signale.info(`[IMPORT-PROCESSOR] Job ${job.id} completed`));
+  worker.on('failed', (job, err) => signale.error(`[IMPORT-PROCESSOR] Job ${job?.id} failed:`, err.message));
+  worker.on('error', err => signale.error('[IMPORT-PROCESSOR] Worker error:', err));
 
   return worker;
+}
+
+function pushError(result: ImportResult, max: number, error: ImportRowError): void {
+  if (result.errors.length < max) {
+    result.errors.push(error);
+  }
 }
 
 /**
@@ -222,22 +292,15 @@ function isValidEmail(email: string): boolean {
 }
 
 // Values considered as boolean during import.
-// Numbers (0, 1) are intentionally absent.
 const BOOLEAN_TRUE = new Set(['true', 'yes']);
 const BOOLEAN_FALSE = new Set(['false', 'no']);
 
 // Strict integer-or-decimal number detection pattern.
-// Valid: 0, 42, -42, 3.14
-// Rejected: 007, +42, 1.2.3, 1e5
 const NUMERIC_RE = /^-?(0|[1-9]\d*)(\.\d+)?$/;
 
 /**
  * Coerces a raw string into its most natural primitive type: `boolean`,
- * `number`, or `string`. Values that match neither are
- * returned unchanged.
- *
- * @param value The raw string to coerce.
- * @returns The coerced value as `boolean`, `number`, or `string`.
+ * `number`, or `string`. Values that match neither are returned unchanged.
  */
 export function coerceCustomValue(value: string): string | boolean | number {
   const trimmed = value.trim();

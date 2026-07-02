@@ -117,6 +117,25 @@ export const ContactSchemas = {
   }),
 } as const;
 
+const columnMappingEntrySchema = z.object({
+  field: z.enum(['email', 'subscribed', 'data', 'ignore']),
+  // Custom field name, only meaningful when field === 'data'.
+  key: z.string().min(1).max(100).optional(),
+});
+
+export const ImportSchemas = {
+  // Body for POST /contacts/import/:id/confirm
+  confirm: z
+    .object({
+      mode: z.enum(['CREATE', 'UPDATE', 'UPSERT']).default('UPSERT'),
+      mapping: z.record(columnMappingEntrySchema),
+    })
+    .refine(data => Object.values(data.mapping).filter(entry => entry.field === 'email').length === 1, {
+      message: 'Exactly one column must be mapped to the email field',
+      path: ['mapping'],
+    }),
+} as const;
+
 const segmentFilterSchema = z.object({
   field: z.string().min(1),
   operator: z.enum([

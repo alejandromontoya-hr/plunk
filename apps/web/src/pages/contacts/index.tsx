@@ -43,6 +43,8 @@ import {
   type FacetedFilterOption,
 } from '../../components/data-table';
 import {KeyValueEditor} from '../../components/KeyValueEditor';
+import {ImportContactsWizard} from '../../components/ImportContactsWizard';
+import {AddToSegmentDialog} from '../../components/AddToSegmentDialog';
 import {network} from '../../lib/network';
 import {useTranslation, type TranslateFn} from '../../lib/i18n';
 import {formatRelativeTime} from '../../lib/dateUtils';
@@ -56,6 +58,7 @@ import {
   ChevronRight,
   Edit,
   FileUp,
+  Layers,
   Loader2,
   Mail,
   MailCheck,
@@ -122,6 +125,7 @@ export default function ContactsPage() {
   const [excludedContacts, setExcludedContacts] = useState<Set<string>>(new Set());
   const [showBulkActionsDialog, setShowBulkActionsDialog] = useState(false);
   const [bulkOperation, setBulkOperation] = useState<'subscribe' | 'unsubscribe' | 'delete' | null>(null);
+  const [showAddToSegmentDialog, setShowAddToSegmentDialog] = useState(false);
   const pageSize = 50;
 
   // Backend is authoritative for sorting + status filtering
@@ -487,7 +491,7 @@ export default function ContactsPage() {
               <Button variant="outline" onClick={() => setShowImportDialog(true)} className="flex-1 sm:flex-none">
                 <Upload className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('contacts.importCsv')}</span>
-                <span className="sm:hidden">{t('contacts.import')}</span>
+                <span className="sm:hidden">{t('contacts.importShort')}</span>
               </Button>
               <Button onClick={() => setShowCreateDialog(true)} className="flex-1 sm:flex-none">
                 <Plus className="h-4 w-4" />
@@ -554,6 +558,7 @@ export default function ContactsPage() {
             <BulkActionBar
               selectedCount={effectiveSelectionCount}
               itemNoun={t('contacts.itemNoun')}
+              selectionLabel={t('contacts.selectedCount', {count: effectiveSelectionCount.toLocaleString()})}
               onClear={clearSelection}
               note={
                 !selectAllMatching && allOnPageSelected && totalCount > contacts.length ? (
@@ -571,6 +576,10 @@ export default function ContactsPage() {
                 ) : null
               }
             >
+              <Button variant="outline" size="sm" onClick={() => setShowAddToSegmentDialog(true)}>
+                <Layers className="h-4 w-4" />
+                {t('contacts.addToSegment.title')}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => handleBulkAction('subscribe')}>
                 <MailCheck className="h-4 w-4" />
                 {t('contacts.bulk.subscribe')}
@@ -784,7 +793,7 @@ export default function ContactsPage() {
         <CreateContactDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onSuccess={() => mutate()} />
 
         {/* Import Contacts Dialog */}
-        <ImportContactsDialog open={showImportDialog} onOpenChange={setShowImportDialog} onSuccess={() => mutate()} />
+        <ImportContactsWizard open={showImportDialog} onOpenChange={setShowImportDialog} onSuccess={() => mutate()} />
 
         {/* Bulk Actions Dialog */}
         <BulkActionsDialog
@@ -797,6 +806,29 @@ export default function ContactsPage() {
                   mode: 'query',
                   // Mirror the active list filters so "select all matching"
                   // targets exactly the rows the user is looking at.
+                  filter: {
+                    ...(search ? {search} : {}),
+                    ...(statusFilter !== 'ALL' ? {subscribed: statusFilter === 'subscribed'} : {}),
+                  },
+                  excludeIds: Array.from(excludedContacts),
+                }
+              : {mode: 'ids', contactIds: Array.from(selectedContacts)}
+          }
+          targetCount={effectiveSelectionCount}
+          onSuccess={() => {
+            mutate();
+            clearSelection();
+          }}
+        />
+
+        {/* Add to Segment Dialog */}
+        <AddToSegmentDialog
+          open={showAddToSegmentDialog}
+          onOpenChange={setShowAddToSegmentDialog}
+          selector={
+            selectAllMatching
+              ? {
+                  mode: 'query',
                   filter: {
                     ...(search ? {search} : {}),
                     ...(statusFilter !== 'ALL' ? {subscribed: statusFilter === 'subscribed'} : {}),
@@ -919,336 +951,6 @@ function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialo
   );
 }
 
-interface ImportContactsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-}
-
-interface ImportResult {
-  totalRows: number;
-  successCount: number;
-  createdCount: number;
-  updatedCount: number;
-  failureCount: number;
-  errors: Array<{row: number; email: string; error: string}>;
-}
-
-function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDialogProps) {
-  const {t} = useTranslation();
-  const [file, setFile] = useState<File | null>(null);
-  const [, setJobId] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'completed' | 'failed'>('idle');
-  const [result, setResult] = useState<ImportResult | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [showCloseConfirmDialog, setShowCloseConfirmDialog] = useState(false);
-
-  // Helper function to truncate long file names from the middle
-  const truncateFileName = (fileName: string, maxLength: number = 30) => {
-    if (fileName.length <= maxLength) return fileName;
-
-    const extension = fileName.substring(fileName.lastIndexOf('.'));
-    const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
-    const charsToShow = maxLength - extension.length - 3; // 3 for "..."
-    const frontChars = Math.ceil(charsToShow / 2);
-    const backChars = Math.floor(charsToShow / 2);
-
-    return `${nameWithoutExt.substring(0, frontChars)}...${nameWithoutExt.substring(nameWithoutExt.length - backChars)}${extension}`;
-  };
-
-  // Clean up polling on unmount or dialog close
-  useEffect(() => {
-    if (!open) {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-      // Reset state when dialog closes
-      setTimeout(() => {
-        setFile(null);
-        setJobId(null);
-        setProgress(0);
-        setStatus('idle');
-        setResult(null);
-        setErrorMessage(null);
-      }, 300);
-    }
-  }, [open]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      // Validate file type
-      if (!selectedFile.name.endsWith('.csv')) {
-        toast.error(t('contacts.toast.importNotCsv'));
-        return;
-      }
-
-      // Validate file size (5MB max)
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        toast.error(t('contacts.toast.importTooLarge'));
-        return;
-      }
-
-      setFile(selectedFile);
-      setStatus('idle');
-    }
-  };
-
-  const pollJobStatus = async (jobId: string) => {
-    try {
-      const response = await network.fetch<{
-        id: string;
-        state: string;
-        progress: number;
-        result: ImportResult | null;
-        failedReason?: string;
-      }>('GET', `/contacts/import/${jobId}`);
-
-      setProgress(response.progress || 0);
-
-      if (response.state === 'completed') {
-        setStatus('completed');
-        setResult(response.result);
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
-
-        // Show success message
-        if (response.result) {
-          const {createdCount, updatedCount, failureCount} = response.result;
-          const parts = [];
-          if (createdCount > 0) parts.push(t('contacts.toast.importCreated', {count: createdCount}));
-          if (updatedCount > 0) parts.push(t('contacts.toast.importUpdated', {count: updatedCount}));
-          if (failureCount > 0) parts.push(t('contacts.toast.importFailedCount', {count: failureCount}));
-
-          toast.success(t('contacts.toast.importCompleted', {summary: parts.join(', ')}));
-        }
-
-        onSuccess();
-      } else if (response.state === 'failed') {
-        setStatus('failed');
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
-        // Store and show the specific error message if available, otherwise show generic error
-        const errorMsg = response.failedReason || t('contacts.toast.importDefaultError');
-        setErrorMessage(errorMsg);
-        toast.error(errorMsg);
-      } else if (response.state === 'active') {
-        setStatus('processing');
-      }
-    } catch (error) {
-      console.error('Failed to poll job status:', error);
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-      setStatus('failed');
-      toast.error(t('contacts.toast.importStatusCheckFailed'));
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
-      toast.error(t('contacts.toast.importNoFile'));
-      return;
-    }
-
-    setIsUploading(true);
-    setStatus('uploading');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const data = await network.upload<{jobId: string; message: string}>('POST', '/contacts/import', formData);
-
-      setJobId(data.jobId);
-      setStatus('processing');
-
-      // Start polling for job status
-      pollIntervalRef.current = setInterval(() => {
-        void pollJobStatus(data.jobId);
-      }, 1000); // Poll every second
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : t('contacts.toast.importUploadFailed');
-      setErrorMessage(errorMsg);
-      toast.error(errorMsg);
-      setStatus('failed');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleClose = () => {
-    if (status === 'processing') {
-      setShowCloseConfirmDialog(true);
-      return;
-    }
-    onOpenChange(false);
-  };
-
-  const confirmClose = () => {
-    onOpenChange(false);
-  };
-
-  return (
-    <>
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{t('contacts.importDialog.title')}</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Instructions */}
-            <div className="text-sm text-neutral-500 space-y-1">
-              <p>
-                {t('contacts.importDialog.instructionsPrefix')}{' '}
-                <code className="text-neutral-700 bg-neutral-100 px-1 py-0.5 rounded text-xs">email</code>
-                {t('contacts.importDialog.instructionsMiddle')}{' '}
-                <code className="text-neutral-700 bg-neutral-100 px-1 py-0.5 rounded text-xs">subscribed</code>{' '}
-                {t('contacts.importDialog.instructionsSuffix')}
-              </p>
-            </div>
-
-            {/* File Upload */}
-            {status === 'idle' || status === 'failed' ? (
-              <div>
-                <Label htmlFor="csv-file">{t('contacts.importDialog.selectFileLabel')}</Label>
-                <div className="mt-2">
-                  <input
-                    ref={fileInputRef}
-                    id="csv-file"
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => fileInputRef.current?.click()}
-                    type="button"
-                  >
-                    <FileUp className="h-4 w-4 mr-2" />
-                    {file ? truncateFileName(file.name) : t('contacts.importDialog.chooseFile')}
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
-            {/* Progress */}
-            {(status === 'uploading' || status === 'processing') && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neutral-600">
-                    {status === 'uploading'
-                      ? t('contacts.importDialog.uploadingFile')
-                      : t('contacts.importDialog.processingContacts')}
-                  </span>
-                  <span className="text-neutral-900 font-medium">{progress}%</span>
-                </div>
-                <div className="w-full bg-neutral-200 rounded-full h-1.5">
-                  <div
-                    className="bg-neutral-900 h-1.5 rounded-full transition-all duration-300"
-                    style={{width: `${progress}%`}}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Results */}
-            {status === 'completed' && result && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-1.5 text-sm text-neutral-600">
-                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  <span>
-                    <span className="font-medium text-neutral-900">{result.totalRows}</span>{' '}
-                    {t('contacts.importDialog.resultProcessed')}{' '}
-                    <span className="text-neutral-900">{result.createdCount}</span>{' '}
-                    {t('contacts.importDialog.resultCreated')}{' '}
-                    <span className="text-neutral-900">{result.updatedCount}</span>{' '}
-                    {t('contacts.importDialog.resultUpdated')}
-                    {result.failureCount > 0 && (
-                      <>, <span className="text-red-600">{result.failureCount}</span>{' '}
-                      {t('contacts.importDialog.resultFailed')}</>
-                    )}
-                  </span>
-                </div>
-
-                {/* Error Details */}
-                {result.errors && result.errors.length > 0 && (
-                  <div className="max-h-40 overflow-y-auto border border-neutral-200 rounded-md">
-                    <div className="space-y-0 text-xs text-neutral-600">
-                      {result.errors.slice(0, 10).map((error, idx) => (
-                        <div key={idx} className="flex gap-3 px-3 py-2 border-b border-neutral-100 last:border-0">
-                          <span className="font-mono text-neutral-400 flex-shrink-0">Row {error.row}</span>
-                          <span className="text-red-600">{error.email || 'N/A'} — {error.error}</span>
-                        </div>
-                      ))}
-                      {result.errors.length > 10 && (
-                        <div className="px-3 py-2 text-neutral-500">
-                          +{result.errors.length - 10} more errors
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {status === 'failed' && (
-              <div className="flex items-start gap-2 text-sm">
-                <XCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-red-600">{errorMessage || 'Please check your CSV file and try again.'}</p>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            {status === 'idle' || status === 'failed' ? (
-              <>
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button type="button" onClick={handleUpload} disabled={!file || isUploading}>
-                  {isUploading ? 'Uploading...' : 'Import Contacts'}
-                </Button>
-              </>
-            ) : status === 'completed' ? (
-              <Button type="button" onClick={handleClose}>
-                Close
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" onClick={handleClose}>
-                Close
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog
-        open={showCloseConfirmDialog}
-        onOpenChange={setShowCloseConfirmDialog}
-        onConfirm={confirmClose}
-        title="Close Import"
-        description="Import is still in progress. Are you sure you want to close?"
-        confirmText="Close Anyway"
-        variant="destructive"
-      />
-    </>
-  );
-}
-
 type BulkSelector =
   | {mode: 'ids'; contactIds: string[]}
   | {mode: 'query'; filter: {search?: string; subscribed?: boolean}; excludeIds: string[]};
@@ -1275,6 +977,7 @@ interface BulkActionResult {
 }
 
 function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount, onSuccess}: BulkActionsDialogProps) {
+  const {t} = useTranslation();
   const [, setJobId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -1322,7 +1025,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
         }
 
         if (response.result) {
-          toast.success(buildToastSummary(response.result));
+          toast.success(buildToastSummary(response.result, t));
         }
 
         onSuccess();
@@ -1391,7 +1094,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
     onOpenChange(false);
   };
 
-  const copy = getOperationCopy(operation);
+  const copy = getOperationCopy(operation, t);
 
   const isQueueing = status === 'processing' && progress === 0;
   const dialogTitle =
@@ -1423,7 +1126,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
                 <p className="text-sm text-neutral-700 leading-relaxed">
                   {copy.confirmVerb}{' '}
                   <span className="font-medium text-neutral-900 tabular-nums">
-                    {targetCount.toLocaleString()} contact{targetCount !== 1 ? 's' : ''}
+                    {targetCount.toLocaleString()} {targetCount === 1 ? t('contacts.itemNoun') : t('contacts.noResultsNoun')}
                   </span>
                   ?
                   {copy.skipNote && <span className="text-neutral-500"> {copy.skipNote}</span>}
@@ -1432,14 +1135,13 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
                   <div className="flex items-start gap-2.5 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
                     <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={2.25} />
                     <p className="leading-relaxed">
-                      <span className="font-medium">This action cannot be undone.</span> Contacts and their event history will be permanently removed.
+                      <span className="font-medium">{t('contacts.bulkDialog.deleteWarningStrong')}</span>{' '}
+                      {t('contacts.bulkDialog.deleteWarning')}
                     </p>
                   </div>
                 )}
                 {selector.mode === 'query' && (
-                  <p className="text-xs text-neutral-500 leading-relaxed">
-                    Contacts are evaluated when the job runs — any added in the meantime may also be included.
-                  </p>
+                  <p className="text-xs text-neutral-500 leading-relaxed">{t('contacts.bulkDialog.queryNote')}</p>
                 )}
               </div>
             )}
@@ -1451,8 +1153,10 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
                     {isQueueing && <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-400" />}
                     <span>
                       {isQueueing
-                        ? 'Queued — starting up…'
-                        : `${copy.processingLabel} ${targetCount.toLocaleString()} contact${targetCount !== 1 ? 's' : ''}`}
+                        ? t('contacts.bulkDialog.queued')
+                        : `${copy.processingLabel} ${targetCount.toLocaleString()} ${
+                            targetCount === 1 ? t('contacts.itemNoun') : t('contacts.noResultsNoun')
+                          }`}
                     </span>
                   </span>
                   <span
@@ -1481,7 +1185,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
             {status === 'failed' && (
               <div className="flex items-start gap-2.5 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 motion-safe:animate-in motion-safe:fade-in-50 motion-safe:duration-200">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.25} />
-                <p className="leading-relaxed">{errorMessage || 'Something went wrong. Please try again.'}</p>
+                <p className="leading-relaxed">{errorMessage || t('contacts.bulkDialog.failedGeneric')}</p>
               </div>
             )}
           </div>
@@ -1490,7 +1194,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
             {status === 'idle' ? (
               <>
                 <Button type="button" variant="outline" onClick={handleClose}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   type="button"
@@ -1498,16 +1202,16 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
                   disabled={isProcessing}
                   variant={operation === 'delete' ? 'destructive' : 'default'}
                 >
-                  {isProcessing ? 'Starting…' : copy.confirmButton}
+                  {isProcessing ? t('contacts.bulkDialog.starting') : copy.confirmButton}
                 </Button>
               </>
             ) : status === 'failed' ? (
               <>
                 <Button type="button" variant="outline" onClick={handleClose}>
-                  Close
+                  {t('common.close')}
                 </Button>
                 <Button type="button" onClick={handleRetry} variant={operation === 'delete' ? 'destructive' : 'default'}>
-                  Try again
+                  {t('common.tryAgain')}
                 </Button>
               </>
             ) : (
@@ -1516,7 +1220,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
                 onClick={handleClose}
                 variant={status === 'completed' ? 'default' : 'outline'}
               >
-                {status === 'completed' ? 'Done' : 'Hide'}
+                {status === 'completed' ? t('contacts.bulkDialog.done') : t('contacts.bulkDialog.hide')}
               </Button>
             )}
           </DialogFooter>
@@ -1527,9 +1231,9 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
         open={showCloseConfirmDialog}
         onOpenChange={setShowCloseConfirmDialog}
         onConfirm={confirmClose}
-        title="Hide this dialog?"
-        description="The job will keep running in the background. You won't see the result here, but the contacts will still be updated."
-        confirmText="Hide"
+        title={t('contacts.bulkDialog.closeConfirm.title')}
+        description={t('contacts.bulkDialog.closeConfirm.description')}
+        confirmText={t('contacts.bulkDialog.closeConfirm.confirmText')}
         variant="default"
       />
     </>
@@ -1554,81 +1258,58 @@ interface OperationCopy {
   skipNote: string | null;
 }
 
-function getOperationCopy(operation: 'subscribe' | 'unsubscribe' | 'delete' | null): OperationCopy {
-  switch (operation) {
-    case 'subscribe':
-      return {
-        title: 'Subscribe contacts',
-        progressTitle: 'Subscribing…',
-        completedTitle: 'Subscribed',
-        failedTitle: "Couldn't subscribe contacts",
-        confirmVerb: 'Subscribe',
-        confirmButton: 'Subscribe',
-        processingLabel: 'Subscribing',
-        changedVerb: 'subscribed',
-        summaryNoun: 'subscribed',
-        alreadyState: 'already subscribed',
-        skipNote: 'Already-subscribed contacts will be skipped.',
-      };
-    case 'unsubscribe':
-      return {
-        title: 'Unsubscribe contacts',
-        progressTitle: 'Unsubscribing…',
-        completedTitle: 'Unsubscribed',
-        failedTitle: "Couldn't unsubscribe contacts",
-        confirmVerb: 'Unsubscribe',
-        confirmButton: 'Unsubscribe',
-        processingLabel: 'Unsubscribing',
-        changedVerb: 'unsubscribed',
-        summaryNoun: 'unsubscribed',
-        alreadyState: 'already unsubscribed',
-        skipNote: 'Already-unsubscribed contacts will be skipped.',
-      };
-    case 'delete':
-      return {
-        title: 'Delete contacts',
-        progressTitle: 'Deleting…',
-        completedTitle: 'Deleted',
-        failedTitle: "Couldn't delete contacts",
-        confirmVerb: 'Permanently delete',
-        confirmButton: 'Delete',
-        processingLabel: 'Deleting',
-        changedVerb: 'deleted',
-        summaryNoun: 'removed',
-        alreadyState: null,
-        skipNote: null,
-      };
-    default:
-      return {
-        title: 'Process contacts',
-        progressTitle: 'Processing…',
-        completedTitle: 'Done',
-        failedTitle: 'Operation failed',
-        confirmVerb: 'Process',
-        confirmButton: 'Process',
-        processingLabel: 'Processing',
-        changedVerb: 'processed',
-        summaryNoun: 'processed',
-        alreadyState: null,
-        skipNote: null,
-      };
+function getOperationCopy(operation: 'subscribe' | 'unsubscribe' | 'delete' | null, t: TranslateFn): OperationCopy {
+  if (operation === 'subscribe' || operation === 'unsubscribe' || operation === 'delete') {
+    const base = `contacts.operations.${operation}`;
+    // subscribe/unsubscribe can leave contacts unchanged (already in the target
+    // state); delete cannot, so it has no "already"/"skip" copy.
+    const hasAlready = operation !== 'delete';
+    return {
+      title: t(`${base}.title`),
+      progressTitle: t(`${base}.progressTitle`),
+      completedTitle: t(`${base}.completedTitle`),
+      failedTitle: t(`${base}.failedTitle`),
+      confirmVerb: t(`${base}.confirmVerb`),
+      confirmButton: t(`${base}.confirmButton`),
+      processingLabel: t(`${base}.processingLabel`),
+      changedVerb: t(`${base}.changedVerb`),
+      summaryNoun: t(`${base}.summaryNoun`),
+      alreadyState: hasAlready ? t(`${base}.alreadyState`) : null,
+      skipNote: hasAlready ? t(`${base}.skipNote`) : null,
+    };
   }
+  return {
+    title: t('common.loading'),
+    progressTitle: t('common.loading'),
+    completedTitle: t('common.success'),
+    failedTitle: t('common.error'),
+    confirmVerb: t('common.confirm'),
+    confirmButton: t('common.confirm'),
+    processingLabel: t('common.loading'),
+    changedVerb: '',
+    summaryNoun: '',
+    alreadyState: null,
+    skipNote: null,
+  };
 }
 
-function buildToastSummary(result: BulkActionResult): string {
-  const copy = getOperationCopy(result.operation);
+function buildToastSummary(result: BulkActionResult, t: TranslateFn): string {
+  const copy = getOperationCopy(result.operation, t);
   const parts: string[] = [];
   if (result.successCount > 0) parts.push(`${result.successCount.toLocaleString()} ${copy.changedVerb}`);
   if (result.unchangedCount > 0 && copy.alreadyState) {
     parts.push(`${result.unchangedCount.toLocaleString()} ${copy.alreadyState}`);
   }
-  if (result.failureCount > 0) parts.push(`${result.failureCount.toLocaleString()} failed`);
-  if (parts.length === 0) return 'No contacts to update';
+  if (result.failureCount > 0) {
+    parts.push(`${result.failureCount.toLocaleString()} ${t('contacts.bulkDialog.failedCount')}`);
+  }
+  if (parts.length === 0) return t('contacts.bulkDialog.noContactsToUpdate');
   return parts.join(' · ');
 }
 
 function BulkResultSummary({result}: {result: BulkActionResult}) {
-  const copy = getOperationCopy(result.operation);
+  const {t} = useTranslation();
+  const copy = getOperationCopy(result.operation, t);
   const {successCount, unchangedCount, failureCount} = result;
   const noChanges = successCount === 0 && failureCount === 0 && unchangedCount > 0;
   const total = successCount + unchangedCount + failureCount;
@@ -1654,7 +1335,7 @@ function BulkResultSummary({result}: {result: BulkActionResult}) {
     }
   }
   if (failureCount > 0) {
-    rows.push({key: 'failed', label: 'Failed', count: failureCount, tone: 'danger'});
+    rows.push({key: 'failed', label: t('contacts.bulkDialog.failedRow'), count: failureCount, tone: 'danger'});
   }
 
   return (
@@ -1714,7 +1395,7 @@ function BulkResultSummary({result}: {result: BulkActionResult}) {
 
       {total > 1 && rows.length > 1 && (
         <div className="px-4 flex items-baseline justify-between text-xs text-neutral-500">
-          <span>Total processed</span>
+          <span>{t('contacts.bulkDialog.totalProcessed')}</span>
           <span className="tabular-nums font-medium text-neutral-700">{total.toLocaleString()}</span>
         </div>
       )}
@@ -1722,7 +1403,7 @@ function BulkResultSummary({result}: {result: BulkActionResult}) {
       {result.errors && result.errors.length > 0 && (
         <details className="group">
           <summary className="cursor-pointer text-xs text-neutral-500 hover:text-neutral-700 select-none px-4">
-            Show error details ({result.errors.length.toLocaleString()})
+            {t('contacts.bulkDialog.showErrorDetails', {count: result.errors.length.toLocaleString()})}
           </summary>
           <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-neutral-200 divide-y divide-neutral-100 text-xs">
             {result.errors.slice(0, 10).map((error, idx) => (
@@ -1732,7 +1413,7 @@ function BulkResultSummary({result}: {result: BulkActionResult}) {
             ))}
             {result.errors.length > 10 && (
               <div className="px-3 py-2 text-neutral-500">
-                +{(result.errors.length - 10).toLocaleString()} more
+                {t('contacts.bulkDialog.moreErrors', {count: (result.errors.length - 10).toLocaleString()})}
               </div>
             )}
           </div>

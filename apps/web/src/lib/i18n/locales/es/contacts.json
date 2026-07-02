@@ -3,8 +3,8 @@
   "subtitle": "Gestiona tus suscriptores de correo y sus datos.",
   "countMatching": "{count} coincidencias",
   "countTotal": "{count} en total",
-  "importCsv": "Importar CSV",
-  "import": "Importar",
+  "importCsv": "Importar",
+  "importShort": "Importar",
   "addContact": "Añadir contacto",
   "searchPlaceholder": "Buscar por correo...",
   "clearSearch": "Limpiar búsqueda",
@@ -29,9 +29,10 @@
   "selectAllMatching": "Seleccionar los {count}",
   "selectAllMatchingFiltered": "Seleccionar las {count} coincidencias",
   "allMatchingSelected": "Todas las coincidencias seleccionadas",
+  "selectedCount": "{count} seleccionados",
   "bulk": {
-    "subscribe": "Suscribir",
-    "unsubscribe": "Cancelar suscripción",
+    "subscribe": "Marcar como marketing",
+    "unsubscribe": "Quitar de marketing",
     "delete": "Eliminar"
   },
   "empty": {
@@ -81,6 +82,90 @@
       "confirmText": "Cerrar de todos modos"
     }
   },
+  "import": {
+    "title": "Importar contactos",
+    "steps": {
+      "upload": "Subir",
+      "map": "Asignar columnas",
+      "mode": "Modo de importación",
+      "progress": "Importando",
+      "result": "Resultado",
+      "history": "Historial"
+    },
+    "upload": {
+      "dropHint": "Arrastre y suelte un archivo CSV o XLSX aquí, o haga clic para seleccionarlo.",
+      "choose": "Elegir archivo",
+      "analyzing": "Analizando archivo...",
+      "invalidType": "Seleccione un archivo CSV o XLSX",
+      "tooLarge": "El tamaño del archivo debe ser menor de 10 MB",
+      "viewHistory": "Ver historial",
+      "analyzeError": "No se pudo analizar el archivo"
+    },
+    "map": {
+      "title": "Asigne cada columna a un campo del contacto. Exactamente una columna debe corresponder al correo.",
+      "column": "Columna",
+      "sample": "Ejemplo",
+      "mapTo": "Asignar a",
+      "fieldEmail": "Correo",
+      "fieldSubscribed": "Suscripción",
+      "fieldData": "Campo personalizado",
+      "fieldIgnore": "Ignorar",
+      "customKey": "Clave del campo",
+      "emailRequired": "Asigne exactamente una columna al correo para continuar.",
+      "dupExisting": "{count} contactos ya existen y podrían actualizarse.",
+      "dupInFile": "{count} filas están duplicadas dentro del archivo."
+    },
+    "mode": {
+      "title": "Elija cómo gestionar los contactos.",
+      "create": "Crear",
+      "createHelp": "Solo añade contactos nuevos. Los existentes se omiten.",
+      "update": "Actualizar",
+      "updateHelp": "Solo actualiza contactos existentes. Los nuevos se omiten.",
+      "upsert": "Crear y actualizar",
+      "upsertHelp": "Añade los contactos nuevos y actualiza los existentes.",
+      "confirm": "Confirmar importación"
+    },
+    "progress": {
+      "title": "Importando contactos",
+      "processing": "Procesando contactos...",
+      "created": "Creados",
+      "updated": "Actualizados",
+      "skipped": "Omitidos",
+      "failed": "Con error",
+      "failedError": "La importación falló. Revise su archivo e inténtelo de nuevo."
+    },
+    "result": {
+      "title": "Importación completada",
+      "summary": "Importación completada.",
+      "created": "{count} creados",
+      "updated": "{count} actualizados",
+      "skipped": "{count} omitidos",
+      "failed": "{count} con error",
+      "errorsTitle": "Errores",
+      "undo": "Deshacer importación",
+      "undoing": "Deshaciendo...",
+      "undone": "Importación deshecha.",
+      "undoError": "No se pudo deshacer la importación",
+      "notUndoable": "Esta importación ya no se puede deshacer.",
+      "importAnother": "Importar otro archivo"
+    },
+    "history": {
+      "title": "Importaciones recientes",
+      "empty": "Aún no hay importaciones.",
+      "date": "Fecha",
+      "status": "Estado",
+      "undo": "Deshacer",
+      "back": "Volver",
+      "loadError": "No se pudo cargar el historial de importaciones"
+    },
+    "status": {
+      "processing": "Procesando",
+      "completed": "Completada",
+      "failed": "Con error",
+      "undoing": "Deshaciendo",
+      "undone": "Deshecha"
+    }
+  },
   "bulkDialog": {
     "confirmContacts": "{count} contacto",
     "confirmContactsPlural": "{count} contactos",
@@ -96,38 +181,60 @@
     "done": "Listo",
     "hide": "Ocultar",
     "failedRow": "Con error",
+    "failedCount": "con error",
+    "noContactsToUpdate": "No hay contactos que actualizar",
     "closeConfirm": {
       "title": "¿Ocultar este diálogo?",
       "description": "El trabajo seguirá ejecutándose en segundo plano. No verás el resultado aquí, pero los contactos se actualizarán igualmente.",
       "confirmText": "Ocultar"
     }
   },
+  "addToSegment": {
+    "title": "Añadir a segmento",
+    "description": "Añadir {count} contactos a un segmento.",
+    "selectSegment": "Seleccione un segmento",
+    "createNew": "➕ Crear un segmento nuevo",
+    "newSegmentName": "Nombre del nuevo segmento",
+    "newSegmentPlaceholder": "p. ej. Clientes VIP",
+    "noStaticSegments": "No hay segmentos estáticos todavía. Cree uno.",
+    "staticOnlyHint": "Solo puede añadir contactos a segmentos estáticos (no a los dinámicos, que se calculan por filtros).",
+    "loading": "Cargando…",
+    "add": "Añadir",
+    "adding": "Añadiendo…",
+    "processing": "Añadiendo contactos al segmento…",
+    "successTitle": "✓ Contactos añadidos al segmento",
+    "successBody": "{count} contactos añadidos al segmento.",
+    "errorTitle": "No se pudieron añadir los contactos al segmento",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "memberCount": "{count} miembros"
+  },
   "operations": {
     "subscribe": {
-      "title": "Suscribir contactos",
-      "progressTitle": "Suscribiendo…",
-      "completedTitle": "Suscritos",
-      "failedTitle": "No se pudo suscribir a los contactos",
-      "confirmVerb": "Suscribir",
-      "confirmButton": "Suscribir",
-      "processingLabel": "Suscribiendo",
-      "changedVerb": "suscritos",
-      "summaryNoun": "suscritos",
-      "alreadyState": "ya suscritos",
-      "skipNote": "Los contactos ya suscritos se omitirán."
+      "title": "Marcar contactos como marketing",
+      "progressTitle": "Marcando como marketing…",
+      "completedTitle": "Marcados como marketing",
+      "failedTitle": "No se pudo marcar los contactos como marketing",
+      "confirmVerb": "Marcar como marketing",
+      "confirmButton": "Marcar como marketing",
+      "processingLabel": "Marcando como marketing",
+      "changedVerb": "marcados como marketing",
+      "summaryNoun": "marcados como marketing",
+      "alreadyState": "ya de marketing",
+      "skipNote": "Los contactos que ya son de marketing se omitirán."
     },
     "unsubscribe": {
-      "title": "Cancelar la suscripción de los contactos",
-      "progressTitle": "Cancelando suscripción…",
-      "completedTitle": "Suscripción cancelada",
-      "failedTitle": "No se pudo cancelar la suscripción de los contactos",
-      "confirmVerb": "Cancelar la suscripción de",
-      "confirmButton": "Cancelar suscripción",
-      "processingLabel": "Cancelando la suscripción de",
-      "changedVerb": "con suscripción cancelada",
-      "summaryNoun": "con suscripción cancelada",
-      "alreadyState": "ya sin suscripción",
-      "skipNote": "Los contactos que ya están sin suscripción se omitirán."
+      "title": "Quitar contactos de marketing",
+      "progressTitle": "Quitando de marketing…",
+      "completedTitle": "Quitados de marketing",
+      "failedTitle": "No se pudo quitar los contactos de marketing",
+      "confirmVerb": "Quitar de marketing a",
+      "confirmButton": "Quitar de marketing",
+      "processingLabel": "Quitando de marketing a",
+      "changedVerb": "quitados de marketing",
+      "summaryNoun": "quitados de marketing",
+      "alreadyState": "ya sin marketing",
+      "skipNote": "Los contactos que ya están sin marketing se omitirán."
     },
     "delete": {
       "title": "Eliminar contactos",

@@ -1,25 +1,53 @@
 import {Controller, Delete, Get, Middleware, Patch, Post} from '@overnightjs/core';
 import type {NextFunction, Request, Response} from 'express';
 import multer from 'multer';
-import {ContactSchemas} from '@plunk/shared';
+import {ContactSchemas, ImportSchemas} from '@plunk/shared';
 import type {BulkContactActionSelector} from '@plunk/types';
 import signale from 'signale';
+import {prisma} from '../database/prisma.js';
 import {requireAuth, requireEmailVerified} from '../middleware/auth.js';
 import {ContactService} from '../services/ContactService.js';
+import {ImportService} from '../services/ImportService.js';
 import {QueueService} from '../services/QueueService.js';
 import {CatchAsync} from '../utils/asyncHandler.js';
 
-// Configure multer for file uploads (memory storage)
+// Fields returned for import history rows (excludes the large rawData blob).
+const IMPORT_SUMMARY_SELECT = {
+  id: true,
+  filename: true,
+  fileType: true,
+  mode: true,
+  status: true,
+  totalRows: true,
+  createdCount: true,
+  updatedCount: true,
+  skippedCount: true,
+  failureCount: true,
+  undoable: true,
+  createdAt: true,
+  completedAt: true,
+  undoneAt: true,
+} as const;
+
+// Configure multer for file uploads (memory storage). Accepts CSV and XLSX.
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max file size
+    fileSize: 10 * 1024 * 1024, // 10MB max file size
   },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+    const name = file.originalname.toLowerCase();
+    const allowed =
+      name.endsWith('.csv') ||
+      name.endsWith('.xlsx') ||
+      name.endsWith('.xls') ||
+      file.mimetype === 'text/csv' ||
+      file.mimetype === 'application/vnd.ms-excel' ||
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (allowed) {
       cb(null, true);
     } else {
-      cb(new Error('Only CSV files are allowed'));
+      cb(new Error('Only CSV or XLSX files are allowed'));
     }
   },
 });
@@ -112,6 +140,28 @@ export class Contacts {
         error: error instanceof Error ? error.message : 'Failed to get field values',
       });
     }
+  }
+
+  /**
+   * GET /contacts/imports
+   * List recent imports for the project (history).
+   * Declared before GET /contacts/:id so the literal "imports" path is not
+   * captured by the :id route.
+   */
+  @Get('imports')
+  @Middleware([requireAuth, requireEmailVerified])
+  @CatchAsync
+  public async listImports(req: Request, res: Response, _next: NextFunction) {
+    const auth = res.locals.auth;
+
+    const imports = await prisma.contactImport.findMany({
+      where: {projectId: auth.projectId!, status: {not: 'PREVIEW'}},
+      orderBy: {createdAt: 'desc'},
+      take: 50,
+      select: IMPORT_SUMMARY_SELECT,
+    });
+
+    return res.status(200).json(imports);
   }
 
   /**
@@ -310,68 +360,123 @@ export class Contacts {
   }
 
   /**
-   * POST /contacts/import
-   * Import contacts from CSV file
+   * POST /contacts/import/analyze
+   * Parse an uploaded CSV/XLSX file and return a preview (columns, sample rows,
+   * suggested column mapping and duplicate counts) for the mapping wizard.
    */
-  @Post('import')
-  @Middleware([requireAuth, upload.single('file')])
+  @Post('import/analyze')
+  @Middleware([requireAuth, requireEmailVerified, upload.single('file')])
   @CatchAsync
-  public async importCsv(req: Request, res: Response, _next: NextFunction) {
+  public async analyzeImport(req: Request, res: Response, _next: NextFunction) {
     const auth = res.locals.auth;
 
     if (!req.file) {
-      return res.status(400).json({error: 'CSV file is required'});
+      return res.status(400).json({error: 'A CSV or XLSX file is required'});
     }
 
-    try {
-      // Convert file buffer to base64 for storage in queue
-      const csvData = req.file.buffer.toString('base64');
-      const filename = req.file.originalname;
-
-      // Queue import job
-      const job = await QueueService.queueImport(auth.projectId!, csvData, filename);
-
-      return res.status(202).json({
-        message: 'Import queued successfully',
-        jobId: job.id,
-      });
-    } catch (error) {
-      signale.error('[CONTACTS] Failed to queue import:', error);
-      return res.status(500).json({
-        error: error instanceof Error ? error.message : 'Failed to queue import',
-      });
+    const fileType = ImportService.detectFileType(req.file.originalname);
+    if (!fileType) {
+      return res.status(400).json({error: 'Unsupported file type. Upload a .csv or .xlsx file.'});
     }
+
+    const preview = await ImportService.analyze(auth.projectId!, req.file.buffer, req.file.originalname, fileType);
+    return res.status(200).json(preview);
   }
 
   /**
-   * GET /contacts/import/:jobId
-   * Get import job status
+   * POST /contacts/import/:id/confirm
+   * Confirm a previewed import with the chosen column mapping and mode, then
+   * queue the import job.
    */
-  @Get('import/:jobId')
+  @Post('import/:id/confirm')
+  @Middleware([requireAuth, requireEmailVerified])
+  @CatchAsync
+  public async confirmImport(req: Request, res: Response, _next: NextFunction) {
+    const auth = res.locals.auth;
+    const importId = req.params.id;
+    if (!importId) {
+      return res.status(400).json({error: 'Import ID is required'});
+    }
+
+    const parsed = ImportSchemas.confirm.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({error: parsed.error.errors[0]?.message ?? 'Invalid import configuration'});
+    }
+
+    const record = await prisma.contactImport.findFirst({
+      where: {id: importId, projectId: auth.projectId!},
+    });
+    if (!record) {
+      return res.status(404).json({error: 'Import not found'});
+    }
+    if (record.status !== 'PREVIEW') {
+      return res.status(409).json({error: 'This import has already been processed'});
+    }
+
+    await prisma.contactImport.update({
+      where: {id: importId},
+      data: {mode: parsed.data.mode, mapping: parsed.data.mapping},
+    });
+
+    const job = await QueueService.queueImport(auth.projectId!, importId);
+    return res.status(202).json({importId, jobId: job.id});
+  }
+
+  /**
+   * POST /contacts/import/:id/undo
+   * Roll back a completed import.
+   */
+  @Post('import/:id/undo')
+  @Middleware([requireAuth, requireEmailVerified])
+  @CatchAsync
+  public async undoImport(req: Request, res: Response, _next: NextFunction) {
+    const auth = res.locals.auth;
+    const importId = req.params.id;
+    if (!importId) {
+      return res.status(400).json({error: 'Import ID is required'});
+    }
+
+    const record = await prisma.contactImport.findFirst({
+      where: {id: importId, projectId: auth.projectId!},
+    });
+    if (!record) {
+      return res.status(404).json({error: 'Import not found'});
+    }
+    if (record.status !== 'COMPLETED') {
+      return res.status(409).json({error: 'Only completed imports can be undone'});
+    }
+    if (!record.undoable) {
+      return res.status(409).json({error: 'This import is too large to undo'});
+    }
+
+    const job = await QueueService.queueImportUndo(auth.projectId!, importId);
+    return res.status(202).json({importId, jobId: job.id});
+  }
+
+  /**
+   * GET /contacts/import/:id
+   * Get an import's status: the persisted record plus live job progress.
+   */
+  @Get('import/:id')
   @Middleware([requireAuth, requireEmailVerified])
   @CatchAsync
   public async getImportStatus(req: Request, res: Response, _next: NextFunction) {
     const auth = res.locals.auth;
-    const jobId = req.params.jobId;
-
-    if (!jobId) {
-      return res.status(400).json({error: 'Job ID is required'});
+    const importId = req.params.id;
+    if (!importId) {
+      return res.status(400).json({error: 'Import ID is required'});
     }
 
-    try {
-      const status = await QueueService.getImportJobStatus(jobId, auth.projectId!);
-
-      if (!status) {
-        return res.status(404).json({error: 'Import job not found'});
-      }
-
-      return res.status(200).json(status);
-    } catch (error) {
-      signale.error('[CONTACTS] Failed to get import status:', error);
-      return res.status(500).json({
-        error: error instanceof Error ? error.message : 'Failed to get import status',
-      });
+    const record = await prisma.contactImport.findFirst({
+      where: {id: importId, projectId: auth.projectId!},
+      select: {...IMPORT_SUMMARY_SELECT, errors: true},
+    });
+    if (!record) {
+      return res.status(404).json({error: 'Import not found'});
     }
+
+    const job = await QueueService.getImportJobStatus(importId, auth.projectId!);
+    return res.status(200).json({import: record, job});
   }
 
   /**
@@ -459,6 +564,47 @@ export class Contacts {
   @CatchAsync
   public async bulkDelete(req: Request, res: Response, _next: NextFunction) {
     return queueBulkAction(req, res, 'delete');
+  }
+
+  /**
+   * POST /contacts/bulk-add-to-segment
+   * Queue adding the selected contacts to a static segment.
+   * Body: { segmentId, ...bulkAction selector (ids | query) }
+   */
+  @Post('bulk-add-to-segment')
+  @Middleware([requireAuth, requireEmailVerified])
+  @CatchAsync
+  public async bulkAddToSegment(req: Request, res: Response, _next: NextFunction) {
+    const auth = res.locals.auth;
+
+    const segmentId = (req.body ?? {}).segmentId;
+    if (!segmentId || typeof segmentId !== 'string') {
+      return res.status(400).json({error: 'segmentId is required'});
+    }
+
+    const parsed = ContactSchemas.bulkAction.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({error: parsed.error.errors[0]?.message ?? 'Invalid bulk action payload'});
+    }
+
+    const segment = await prisma.segment.findFirst({
+      where: {id: segmentId, projectId: auth.projectId!},
+      select: {id: true, type: true},
+    });
+    if (!segment) {
+      return res.status(404).json({error: 'Segment not found'});
+    }
+    if (segment.type !== 'STATIC') {
+      return res.status(400).json({error: 'Contacts can only be added to static segments'});
+    }
+
+    const selector: BulkContactActionSelector =
+      parsed.data.mode === 'ids'
+        ? {mode: 'ids', contactIds: parsed.data.contactIds}
+        : {mode: 'query', filter: parsed.data.filter, excludeIds: parsed.data.excludeIds};
+
+    const job = await QueueService.queueBulkContactAction(auth.projectId!, selector, 'add-to-segment', segmentId);
+    return res.status(202).json({message: 'Bulk add to segment queued successfully', jobId: job.id});
   }
 
   /**

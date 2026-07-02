@@ -6,8 +6,10 @@ import type {
   ApiRequestCleanupJobData,
   BulkContactActionJobData,
   BulkContactActionSelector,
+  BulkContactOperation,
   CampaignBatchJobData,
   ContactImportJobData,
+  ContactImportUndoJobData,
   DomainVerificationJobData,
   MeterEventJobData,
   ScheduledCampaignJobData,
@@ -106,6 +108,19 @@ export const importQueue = new Queue<ContactImportJobData>('import', {
     },
     removeOnComplete: 50, // Keep last 50 completed imports
     removeOnFail: 100, // Keep last 100 failed imports
+  },
+});
+
+export const importUndoQueue = new Queue<ContactImportUndoJobData>('import-undo', {
+  connection: redisConnection,
+  defaultJobOptions: {
+    attempts: 2, // Limited retries for undo operations
+    backoff: {
+      type: 'exponential',
+      delay: 5000,
+    },
+    removeOnComplete: 50,
+    removeOnFail: 100,
   },
 });
 
@@ -303,30 +318,43 @@ export class QueueService {
   }
 
   /**
-   * Queue contact import job
+   * Queue a confirmed contact import. The worker loads the stored file, column
+   * mapping and mode from the ContactImport row referenced by importId.
    */
-  public static async queueImport(
-    projectId: string,
-    csvData: string,
-    filename: string,
-  ): Promise<Job<ContactImportJobData>> {
+  public static async queueImport(projectId: string, importId: string): Promise<Job<ContactImportJobData>> {
     return importQueue.add(
       'import-contacts',
-      {projectId, csvData, filename},
+      {projectId, importId},
       {
-        jobId: `import-${projectId}-${Date.now()}`,
+        jobId: `import-${importId}`,
       },
     );
   }
 
   /**
-   * Get import job status and progress
-   * @param jobId - The job ID
+   * Queue an undo (rollback) of a completed import.
+   */
+  public static async queueImportUndo(
+    projectId: string,
+    importId: string,
+  ): Promise<Job<ContactImportUndoJobData>> {
+    return importUndoQueue.add(
+      'undo-import',
+      {projectId, importId},
+      {
+        jobId: `import-undo-${importId}`,
+      },
+    );
+  }
+
+  /**
+   * Get import job status and progress for a given import.
+   * @param importId - The ContactImport id (the queue job id is derived from it)
    * @param projectId - The project ID to verify authorization
    * @returns Job status or null if not found or unauthorized
    */
-  public static async getImportJobStatus(jobId: string, projectId: string) {
-    const job = await importQueue.getJob(jobId);
+  public static async getImportJobStatus(importId: string, projectId: string) {
+    const job = await importQueue.getJob(`import-${importId}`);
 
     if (!job) {
       return null;
@@ -375,11 +403,12 @@ export class QueueService {
   public static async queueBulkContactAction(
     projectId: string,
     selector: BulkContactActionSelector,
-    operation: 'subscribe' | 'unsubscribe' | 'delete',
+    operation: BulkContactOperation,
+    segmentId?: string,
   ): Promise<Job<BulkContactActionJobData>> {
     return bulkContactQueue.add(
       'bulk-contact-action',
-      {projectId, operation, selector},
+      {projectId, operation, selector, segmentId},
       {
         jobId: `bulk-${operation}-${projectId}-${Date.now()}`,
       },

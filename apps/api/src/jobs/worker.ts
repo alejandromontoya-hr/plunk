@@ -14,6 +14,7 @@ import {createBulkContactWorker} from './bulk-contact-processor.js';
 import {createCampaignWorker} from './campaign-processor.js';
 import {createDomainVerificationWorker} from './domain-verification-processor.js';
 import {createEmailWorker} from './email-processor.js';
+import {createImportUndoWorker} from './import-undo-processor.js';
 import {createImportWorker} from './import-processor.js';
 import {createMeterWorker} from './meter-processor.js';
 import {createScheduledCampaignWorker} from './scheduled-processor.js';
@@ -50,6 +51,11 @@ async function startWorkers() {
     const importWorker = createImportWorker();
     workers.push({name: 'import', worker: importWorker});
     signale.success('[WORKER] Import worker started');
+
+    // Start import undo worker
+    const importUndoWorker = createImportUndoWorker();
+    workers.push({name: 'import-undo', worker: importUndoWorker});
+    signale.success('[WORKER] Import undo worker started');
 
     // Start bulk contact action worker
     const bulkContactWorker = createBulkContactWorker();

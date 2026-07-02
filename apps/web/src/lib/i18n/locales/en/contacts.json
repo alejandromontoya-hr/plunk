@@ -3,8 +3,8 @@
   "subtitle": "Manage your email subscribers and their data.",
   "countMatching": "{count} matching",
   "countTotal": "{count} total",
-  "importCsv": "Import CSV",
-  "import": "Import",
+  "importCsv": "Import",
+  "importShort": "Import",
   "addContact": "Add Contact",
   "searchPlaceholder": "Search by email...",
   "clearSearch": "Clear search",
@@ -29,9 +29,10 @@
   "selectAllMatching": "Select all {count}",
   "selectAllMatchingFiltered": "Select all {count} matching",
   "allMatchingSelected": "All matching selected",
+  "selectedCount": "{count} selected",
   "bulk": {
-    "subscribe": "Subscribe",
-    "unsubscribe": "Unsubscribe",
+    "subscribe": "Mark as marketing",
+    "unsubscribe": "Remove from marketing",
     "delete": "Delete"
   },
   "empty": {
@@ -81,6 +82,90 @@
       "confirmText": "Close Anyway"
     }
   },
+  "import": {
+    "title": "Import contacts",
+    "steps": {
+      "upload": "Upload",
+      "map": "Map columns",
+      "mode": "Import mode",
+      "progress": "Importing",
+      "result": "Result",
+      "history": "History"
+    },
+    "upload": {
+      "dropHint": "Drag and drop a CSV or XLSX file here, or click to browse.",
+      "choose": "Choose file",
+      "analyzing": "Analyzing file...",
+      "invalidType": "Please select a CSV or XLSX file",
+      "tooLarge": "File size must be less than 10MB",
+      "viewHistory": "View history",
+      "analyzeError": "Failed to analyze file"
+    },
+    "map": {
+      "title": "Match each column to a contact field. Exactly one column must map to Email.",
+      "column": "Column",
+      "sample": "Sample",
+      "mapTo": "Map to",
+      "fieldEmail": "Email",
+      "fieldSubscribed": "Subscription",
+      "fieldData": "Custom field",
+      "fieldIgnore": "Ignore",
+      "customKey": "Field key",
+      "emailRequired": "Map exactly one column to Email to continue.",
+      "dupExisting": "{count} contacts already exist and may be updated.",
+      "dupInFile": "{count} rows are duplicated within the file."
+    },
+    "mode": {
+      "title": "Choose how to handle contacts.",
+      "create": "Create",
+      "createHelp": "Only add new contacts. Existing ones are skipped.",
+      "update": "Update",
+      "updateHelp": "Only update existing contacts. New ones are skipped.",
+      "upsert": "Create and update",
+      "upsertHelp": "Add new contacts and update existing ones.",
+      "confirm": "Confirm import"
+    },
+    "progress": {
+      "title": "Importing contacts",
+      "processing": "Processing contacts...",
+      "created": "Created",
+      "updated": "Updated",
+      "skipped": "Skipped",
+      "failed": "Failed",
+      "failedError": "Import failed. Please check your file and try again."
+    },
+    "result": {
+      "title": "Import complete",
+      "summary": "Import complete.",
+      "created": "{count} created",
+      "updated": "{count} updated",
+      "skipped": "{count} skipped",
+      "failed": "{count} failed",
+      "errorsTitle": "Errors",
+      "undo": "Undo import",
+      "undoing": "Undoing...",
+      "undone": "Import undone.",
+      "undoError": "Failed to undo import",
+      "notUndoable": "This import can no longer be undone.",
+      "importAnother": "Import another file"
+    },
+    "history": {
+      "title": "Recent imports",
+      "empty": "No imports yet.",
+      "date": "Date",
+      "status": "Status",
+      "undo": "Undo",
+      "back": "Back",
+      "loadError": "Failed to load import history"
+    },
+    "status": {
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "undoing": "Undoing",
+      "undone": "Undone"
+    }
+  },
   "bulkDialog": {
     "confirmContacts": "{count} contact",
     "confirmContactsPlural": "{count} contacts",
@@ -96,38 +181,60 @@
     "done": "Done",
     "hide": "Hide",
     "failedRow": "Failed",
+    "failedCount": "failed",
+    "noContactsToUpdate": "No contacts to update",
     "closeConfirm": {
       "title": "Hide this dialog?",
       "description": "The job will keep running in the background. You won't see the result here, but the contacts will still be updated.",
       "confirmText": "Hide"
     }
   },
+  "addToSegment": {
+    "title": "Add to segment",
+    "description": "Add {count} contacts to a segment.",
+    "selectSegment": "Select a segment",
+    "createNew": "➕ Create a new segment",
+    "newSegmentName": "New segment name",
+    "newSegmentPlaceholder": "e.g. VIP customers",
+    "noStaticSegments": "No static segments yet. Create one.",
+    "staticOnlyHint": "You can only add contacts to static segments (not dynamic ones, which are computed from filters).",
+    "loading": "Loading…",
+    "add": "Add",
+    "adding": "Adding…",
+    "processing": "Adding contacts to the segment…",
+    "successTitle": "✓ Contacts added to the segment",
+    "successBody": "{count} contacts added to the segment.",
+    "errorTitle": "Couldn't add contacts to the segment",
+    "close": "Close",
+    "cancel": "Cancel",
+    "memberCount": "{count} members"
+  },
   "operations": {
     "subscribe": {
-      "title": "Subscribe contacts",
-      "progressTitle": "Subscribing…",
-      "completedTitle": "Subscribed",
-      "failedTitle": "Couldn't subscribe contacts",
-      "confirmVerb": "Subscribe",
-      "confirmButton": "Subscribe",
-      "processingLabel": "Subscribing",
-      "changedVerb": "subscribed",
-      "summaryNoun": "subscribed",
-      "alreadyState": "already subscribed",
-      "skipNote": "Already-subscribed contacts will be skipped."
+      "title": "Mark contacts as marketing",
+      "progressTitle": "Marking as marketing…",
+      "completedTitle": "Marked as marketing",
+      "failedTitle": "Couldn't mark contacts as marketing",
+      "confirmVerb": "Mark as marketing",
+      "confirmButton": "Mark as marketing",
+      "processingLabel": "Marking as marketing",
+      "changedVerb": "marked as marketing",
+      "summaryNoun": "marked as marketing",
+      "alreadyState": "already marketing",
+      "skipNote": "Contacts already marked as marketing will be skipped."
     },
     "unsubscribe": {
-      "title": "Unsubscribe contacts",
-      "progressTitle": "Unsubscribing…",
-      "completedTitle": "Unsubscribed",
-      "failedTitle": "Couldn't unsubscribe contacts",
-      "confirmVerb": "Unsubscribe",
-      "confirmButton": "Unsubscribe",
-      "processingLabel": "Unsubscribing",
-      "changedVerb": "unsubscribed",
-      "summaryNoun": "unsubscribed",
-      "alreadyState": "already unsubscribed",
-      "skipNote": "Already-unsubscribed contacts will be skipped."
+      "title": "Remove contacts from marketing",
+      "progressTitle": "Removing from marketing…",
+      "completedTitle": "Removed from marketing",
+      "failedTitle": "Couldn't remove contacts from marketing",
+      "confirmVerb": "Remove from marketing",
+      "confirmButton": "Remove from marketing",
+      "processingLabel": "Removing from marketing",
+      "changedVerb": "removed from marketing",
+      "summaryNoun": "removed from marketing",
+      "alreadyState": "already non-marketing",
+      "skipNote": "Contacts already removed from marketing will be skipped."
     },
     "delete": {
       "title": "Delete contacts",

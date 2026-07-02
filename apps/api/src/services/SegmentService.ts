@@ -409,6 +409,66 @@ export class SegmentService {
   }
 
   /**
+   * Add contacts to a static segment by contact id (used by bulk actions from
+   * the contacts table). Verifies the segment is STATIC, skips contacts from
+   * other projects, reactivates prior members, and refreshes the member count.
+   * Returns the number of contacts now active in the segment for this batch.
+   */
+  public static async addContactsByIds(
+    projectId: string,
+    segmentId: string,
+    contactIds: string[],
+  ): Promise<{added: number}> {
+    const segment = await this.get(projectId, segmentId);
+
+    if (segment.type !== 'STATIC') {
+      throw new HttpException(400, 'Can only add contacts to STATIC segments');
+    }
+
+    if (contactIds.length === 0) {
+      return {added: 0};
+    }
+
+    // Only accept contacts that actually belong to this project.
+    const contacts = await prisma.contact.findMany({
+      where: {projectId, id: {in: contactIds}},
+      select: {id: true},
+    });
+    if (contacts.length === 0) {
+      return {added: 0};
+    }
+    const ids = contacts.map(c => c.id);
+
+    const existingMemberships = await prisma.segmentMembership.findMany({
+      where: {segmentId, contactId: {in: ids}},
+      select: {contactId: true},
+    });
+    const existingIds = new Set(existingMemberships.map(m => m.contactId));
+
+    const newContactIds = ids.filter(id => !existingIds.has(id));
+    const reEntryIds = ids.filter(id => existingIds.has(id));
+
+    if (newContactIds.length > 0) {
+      await prisma.segmentMembership.createMany({
+        data: newContactIds.map(contactId => ({segmentId, contactId, enteredAt: new Date()})),
+        skipDuplicates: true,
+      });
+    }
+
+    if (reEntryIds.length > 0) {
+      await prisma.segmentMembership.updateMany({
+        where: {segmentId, contactId: {in: reEntryIds}},
+        data: {exitedAt: null, enteredAt: new Date()},
+      });
+    }
+
+    const memberCount = await prisma.segmentMembership.count({where: {segmentId, exitedAt: null}});
+    await prisma.segment.update({where: {id: segmentId}, data: {memberCount}});
+
+    return {added: ids.length};
+  }
+
+  /**
    * Remove contacts from a static segment by email
    */
   public static async removeContacts(
