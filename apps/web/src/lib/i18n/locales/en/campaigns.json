@@ -123,9 +123,9 @@
     "transactional": "Transactional",
     "transactionalDescription": "All contacts, no subscription check or footer",
     "headless": "Headless",
-    "headlessDescription": "Subscribed contacts, no Plunk footer",
+    "headlessDescription": "Subscribed contacts, no Sagy footer",
     "noUnsubscribeTitle": "No unsubscribe link detected",
-    "noUnsubscribeBody": "You are responsible for providing recipients a way to opt out. Use the Plunk variables below to build your own footer."
+    "noUnsubscribeBody": "You are responsible for providing recipients a way to opt out. Use the Sagy variables below to build your own footer."
   },
   "emailSettings": {
     "title": "Email Settings",
@@ -201,7 +201,7 @@
   },
   "scheduleDialog": {
     "title": "Schedule for later",
-    "description": "Pick a time and Plunk will send it for you. Times shown in {timezone}.",
+    "description": "Pick a time and Sagy will send it for you. Times shown in {timezone}.",
     "quickOptions": "Quick options",
     "in1h": "In 1 hour",
     "in3h": "In 3 hours",

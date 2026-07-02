@@ -1,0 +1,231 @@
+{
+  "seoTitle": "Workflows",
+  "list": {
+    "title": "Workflows",
+    "subtitle": "Automate your email campaigns with powerful workflows.",
+    "totalCount": "{count} total workflows",
+    "searchPlaceholder": "Search workflows...",
+    "clearSearch": "Clear search",
+    "createWorkflow": "Create Workflow",
+    "createShort": "Create",
+    "selectAll": "Select all rows on this page",
+    "selectRow": "Select {name}",
+    "openWorkflow": "Open {name}",
+    "triggersOn": "Triggers on",
+    "stepsSuffix": "steps",
+    "executionsSuffix": "executions",
+    "updatedPrefix": "Updated {time}",
+    "deleteSelected": "Delete selected",
+    "itemNoun": "workflow",
+    "itemNounPlural": "workflows",
+    "emptyTitle": "No workflows yet",
+    "emptyDescription": "Automate emails triggered by contact events.",
+    "columns": {
+      "select": "Select",
+      "name": "Name",
+      "trigger": "Trigger",
+      "status": "Status",
+      "steps": "Steps",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "pagination": {
+      "showing": "Showing {from} to {to} of {total} workflows",
+      "page": "Page {page} of {totalPages}"
+    },
+    "actions": {
+      "enable": "Enable workflow",
+      "disable": "Disable workflow",
+      "edit": "Edit workflow",
+      "duplicate": "Duplicate workflow",
+      "delete": "Delete workflow"
+    },
+    "deleteDialog": {
+      "title": "Delete Workflow",
+      "description": "Are you sure you want to delete this workflow? This action cannot be undone.",
+      "confirm": "Delete"
+    },
+    "bulkDeleteDialog": {
+      "title": "Delete {count} workflow",
+      "titlePlural": "Delete {count} workflows",
+      "description": "Are you sure you want to delete the selected workflows? This action cannot be undone. Workflows with active executions will block the operation.",
+      "confirm": "Delete"
+    }
+  },
+  "create": {
+    "title": "Create New Workflow",
+    "nameLabel": "Name *",
+    "namePlaceholder": "Welcome Email Sequence",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Send a series of welcome emails to new subscribers",
+    "triggerEventLabel": "Trigger Event *",
+    "triggerEventPlaceholder": "e.g., contact.created, email.opened",
+    "triggerEventHint": "The event that triggers this workflow to start for a contact",
+    "useCustomEvent": "Use “{value}”",
+    "allowReentryLabel": "Allow Re-entry",
+    "allowReentryHint": "When enabled, contacts can enter this workflow multiple times.",
+    "submit": "Create Workflow",
+    "submitting": "Creating..."
+  },
+  "editor": {
+    "back": "Back",
+    "settings": "Settings",
+    "deleteWorkflow": "Delete workflow",
+    "enable": "Enable",
+    "disable": "Disable",
+    "activeExecutionsBanner": {
+      "titleEnabled": "Workflow is active with running executions",
+      "titleDisabled": "Workflow has active executions",
+      "intro": "This workflow has {count} active execution.",
+      "introPlural": "This workflow has {count} active executions.",
+      "disabledNote": "Even though the workflow is disabled, existing executions will continue.",
+      "protectIntro": "To protect running workflows, you cannot:",
+      "cannotDeleteSteps": "Delete steps or transitions",
+      "cannotModifyConfig": "Modify step configurations (email templates, conditions, etc.)",
+      "cannotChangeTrigger": "Change the workflow trigger",
+      "outro": "You can still rename steps and adjust their position. To make configuration changes, wait for executions to complete or cancel them from the Executions tab."
+    },
+    "validationBanner": {
+      "title": "Workflow has validation errors",
+      "intro": "Fix the following issues before enabling this workflow:"
+    },
+    "disabledBanner": {
+      "title": "Workflow is disabled",
+      "description": "Contacts won't be processed until this workflow is enabled.",
+      "enable": "Enable"
+    },
+    "tabs": {
+      "builder": "Workflow Builder",
+      "executions": "Executions"
+    },
+    "builder": {
+      "title": "Workflow Builder",
+      "description": "Click the + buttons to add and connect steps to your workflow."
+    },
+    "executions": {
+      "title": "Workflow Executions",
+      "description": "View and manage all executions of this workflow",
+      "cancelAllActive": "Cancel All Active ({count})",
+      "emptyTitle": "No executions yet",
+      "emptyDescription": "This workflow hasn't been executed yet. Enable it to start processing contacts.",
+      "columns": {
+        "contact": "Contact",
+        "status": "Status",
+        "currentStep": "Current Step",
+        "started": "Started",
+        "actions": "Actions"
+      },
+      "cancel": "Cancel"
+    },
+    "settings": {
+      "title": "Workflow Settings",
+      "nameLabel": "Name *",
+      "descriptionLabel": "Description",
+      "triggerEventLabel": "Trigger Event *",
+      "triggerEventPlaceholder": "e.g., contact.created, email.opened",
+      "triggerEventHint": "The event that triggers this workflow to start for a contact",
+      "useCustomEvent": "Use “{value}”",
+      "allowReentryLabel": "Allow Re-entry",
+      "allowReentryHint": "When enabled, contacts can enter this workflow multiple times. When disabled, contacts can only enter once, ever.",
+      "submit": "Save Changes",
+      "submitting": "Saving..."
+    },
+    "cancelOneDialog": {
+      "title": "Cancel Execution",
+      "descriptionIntro": "Are you sure you want to cancel the workflow execution for {contact}?",
+      "thisContact": "this contact",
+      "descriptionNote": "The contact will not receive any remaining emails or actions from this workflow. This action cannot be undone.",
+      "descriptionFallback": "Are you sure you want to cancel this execution?",
+      "confirm": "Cancel Execution",
+      "keepRunning": "Keep Running"
+    },
+    "cancelAllDialog": {
+      "title": "Cancel All Active Executions",
+      "descriptionIntro": "Are you sure you want to cancel all {count} active execution?",
+      "descriptionIntroPlural": "Are you sure you want to cancel all {count} active executions?",
+      "descriptionNote": "All contacts currently in this workflow will be stopped and won't receive any remaining emails or actions. This action cannot be undone.",
+      "confirm": "Cancel {count} Execution",
+      "confirmPlural": "Cancel {count} Executions",
+      "keepRunning": "Keep Running"
+    },
+    "deleteDialog": {
+      "title": "Delete Workflow",
+      "description": "Are you sure you want to delete this workflow? This action cannot be undone.",
+      "confirm": "Delete Workflow"
+    },
+    "validation": {
+      "noSteps": "Workflow must have at least one step",
+      "missingTemplate": "\"{name}\" step is missing an email template",
+      "missingDelay": "\"{name}\" step is missing delay configuration (amount or unit)",
+      "missingConditionField": "\"{name}\" step is missing condition field",
+      "needsBranch": "\"{name}\" step needs at least one branch",
+      "missingConditionConfig": "\"{name}\" step is missing condition configuration (field or operator)",
+      "missingConditionValue": "\"{name}\" step is missing a value for the condition",
+      "missingEventName": "\"{name}\" step is missing event name",
+      "missingWebhookUrl": "\"{name}\" step is missing webhook URL",
+      "missingContactUpdates": "\"{name}\" step is missing contact updates or a subscription action",
+      "notConnected": "\"{name}\" step is not connected to the workflow",
+      "noTrigger": "Workflow must have a trigger step",
+      "missingBranchConnections": "\"{name}\" condition step is missing connections for: {branches}",
+      "missingYesNoBranches": "\"{name}\" condition step must have both YES and NO branches connected",
+      "defaultBranch": "Default",
+      "cannotEnableTitle": "Cannot enable workflow"
+    }
+  },
+  "status": {
+    "active": "Active",
+    "disabled": "Disabled",
+    "COMPLETED": "COMPLETED",
+    "FAILED": "FAILED",
+    "WAITING": "WAITING",
+    "RUNNING": "RUNNING",
+    "PENDING": "PENDING",
+    "CANCELLED": "CANCELLED"
+  },
+  "visualizer": {
+    "emptyTitle": "No workflow steps yet",
+    "emptyDescription": "Add steps to your workflow to see the visualization",
+    "stepSummary": "{count} step",
+    "stepSummaryPlural": "{count} steps",
+    "transitionSummary": "{count} transition",
+    "transitionSummaryPlural": "{count} transitions",
+    "expand": "Expand to fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "noTransitions": "No transitions found. Connect your steps to see the flow.",
+    "endWorkflow": "End Workflow",
+    "wait": "Wait {amount} {unit}",
+    "ifElseBranch": "If/Else Branch",
+    "branchYes": "Yes",
+    "branchNo": "No",
+    "stepTypes": {
+      "TRIGGER": "Trigger",
+      "SEND_EMAIL": "Send Email",
+      "DELAY": "Delay",
+      "WAIT_FOR_EVENT": "Wait for Event",
+      "CONDITION": "Condition",
+      "EXIT": "Exit",
+      "WEBHOOK": "Webhook",
+      "UPDATE_CONTACT": "Update Contact"
+    }
+  },
+  "toast": {
+    "deleteSuccess": "Workflow deleted successfully",
+    "deleteError": "Failed to delete workflow",
+    "duplicateSuccess": "Workflow duplicated successfully",
+    "duplicateError": "Failed to duplicate workflow",
+    "enabledSuccess": "Workflow enabled successfully",
+    "disabledSuccess": "Workflow disabled successfully",
+    "toggleError": "Failed to toggle workflow",
+    "bulkDeleteSuccess": "{count} workflow deleted",
+    "bulkDeleteSuccessPlural": "{count} workflows deleted",
+    "bulkDeleteError": "Failed to delete workflows",
+    "createSuccess": "Workflow created successfully",
+    "createError": "Failed to create workflow",
+    "executionCancelSuccess": "Execution cancelled successfully",
+    "executionCancelError": "Failed to cancel execution",
+    "cancelAllSuccess": "Successfully cancelled {count} execution(s)",
+    "cancelAllError": "Failed to cancel executions",
+    "updateSuccess": "Workflow updated successfully",
+    "updateError": "Failed to update workflow"
+  }
+}

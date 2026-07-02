@@ -2,6 +2,8 @@ import {Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectVa
 import {useState} from 'react';
 import {toast} from 'sonner';
 
+import {useTranslation} from '../../lib/i18n';
+
 import {type EditStepDialogProps, getStepConfig, StepDialogShell, useStepUpdate} from './shared';
 
 type DelayUnit = 'minutes' | 'hours' | 'days';
@@ -17,7 +19,14 @@ function isDelayUnit(value: unknown): value is DelayUnit {
 }
 
 export function DelayStepDialog({step, workflowId, open, onOpenChange, onSuccess}: EditStepDialogProps) {
+  const {t} = useTranslation();
   const config = getStepConfig(step);
+
+  const unitLabels: Record<DelayUnit, string> = {
+    minutes: t('workflowSteps.delay.unitMinutes'),
+    hours:   t('workflowSteps.delay.unitHours'),
+    days:    t('workflowSteps.delay.unitDays'),
+  };
 
   const [name, setName] = useState(step.name);
   const [delayAmount, setDelayAmount] = useState(String(config.amount ?? '24'));
@@ -30,7 +39,12 @@ export function DelayStepDialog({step, workflowId, open, onOpenChange, onSuccess
 
     const amount = parseInt(delayAmount, 10);
     if (amount > MAX_DELAY_BY_UNIT[delayUnit]) {
-      toast.error(`Delay cannot exceed 365 days (${MAX_DELAY_BY_UNIT[delayUnit]} ${delayUnit})`);
+      toast.error(
+        t('workflowSteps.delay.maxError', {
+          max: MAX_DELAY_BY_UNIT[delayUnit],
+          unit: unitLabels[delayUnit].toLowerCase(),
+        }),
+      );
       return;
     }
 
@@ -57,7 +71,7 @@ export function DelayStepDialog({step, workflowId, open, onOpenChange, onSuccess
     >
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="editDelayAmount">Amount</Label>
+          <Label htmlFor="editDelayAmount">{t('workflowSteps.delay.amount')}</Label>
           <Input
             id="editDelayAmount"
             type="number"
@@ -70,15 +84,15 @@ export function DelayStepDialog({step, workflowId, open, onOpenChange, onSuccess
           />
         </div>
         <div>
-          <Label htmlFor="editDelayUnit">Unit</Label>
+          <Label htmlFor="editDelayUnit">{t('workflowSteps.delay.unit')}</Label>
           <Select value={delayUnit} onValueChange={value => setDelayUnit(value as DelayUnit)}>
             <SelectTrigger id="editDelayUnit" className="mt-1.5">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="minutes">Minutes</SelectItem>
-              <SelectItem value="hours">Hours</SelectItem>
-              <SelectItem value="days">Days</SelectItem>
+              <SelectItem value="minutes">{t('workflowSteps.delay.unitMinutes')}</SelectItem>
+              <SelectItem value="hours">{t('workflowSteps.delay.unitHours')}</SelectItem>
+              <SelectItem value="days">{t('workflowSteps.delay.unitDays')}</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -1,9 +1,12 @@
 import {Label, Select, SelectContent, SelectItemWithDescription, SelectTrigger, SelectValue} from '@plunk/ui';
 import {useState} from 'react';
 
+import {useTranslation} from '../../lib/i18n';
+
 import {type EditStepDialogProps, getStepConfig, StepDialogShell, useStepUpdate} from './shared';
 
 export function ExitStepDialog({step, workflowId, open, onOpenChange, onSuccess}: EditStepDialogProps) {
+  const {t} = useTranslation();
   const config = getStepConfig(step);
 
   const [name, setName] = useState(step.name);
@@ -36,20 +39,20 @@ export function ExitStepDialog({step, workflowId, open, onOpenChange, onSuccess}
       isSubmitting={isSubmitting}
     >
       <div>
-        <Label htmlFor="editExitReason">Exit Reason (optional)</Label>
+        <Label htmlFor="editExitReason">{t('workflowSteps.exit.exitReason')}</Label>
         <Select value={exitReason} onValueChange={setExitReason}>
           <SelectTrigger id="editExitReason" className="mt-1.5">
-            <SelectValue placeholder="Select exit reason..." />
+            <SelectValue placeholder={t('workflowSteps.exit.selectReasonPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItemWithDescription value="completed" title="Completed" description="Contact finished the workflow successfully" />
-            <SelectItemWithDescription value="unsubscribed" title="Unsubscribed" description="Contact unsubscribed from communications" />
-            <SelectItemWithDescription value="not_eligible" title="Not Eligible" description="Contact doesn't meet the required criteria" />
-            <SelectItemWithDescription value="opted_out" title="Opted Out" description="Contact opted out of this workflow" />
-            <SelectItemWithDescription value="goal_achieved" title="Goal Achieved" description="Workflow goal was met before completion" />
-            <SelectItemWithDescription value="duplicate" title="Duplicate" description="Contact was already in this workflow" />
-            <SelectItemWithDescription value="error" title="Error" description="A technical issue occurred" />
-            <SelectItemWithDescription value="other" title="Other" description="Custom or unlisted reason" />
+            <SelectItemWithDescription value="completed" title={t('workflowSteps.exit.reasons.completedTitle')} description={t('workflowSteps.exit.reasons.completedDescription')} />
+            <SelectItemWithDescription value="unsubscribed" title={t('workflowSteps.exit.reasons.unsubscribedTitle')} description={t('workflowSteps.exit.reasons.unsubscribedDescription')} />
+            <SelectItemWithDescription value="not_eligible" title={t('workflowSteps.exit.reasons.notEligibleTitle')} description={t('workflowSteps.exit.reasons.notEligibleDescription')} />
+            <SelectItemWithDescription value="opted_out" title={t('workflowSteps.exit.reasons.optedOutTitle')} description={t('workflowSteps.exit.reasons.optedOutDescription')} />
+            <SelectItemWithDescription value="goal_achieved" title={t('workflowSteps.exit.reasons.goalAchievedTitle')} description={t('workflowSteps.exit.reasons.goalAchievedDescription')} />
+            <SelectItemWithDescription value="duplicate" title={t('workflowSteps.exit.reasons.duplicateTitle')} description={t('workflowSteps.exit.reasons.duplicateDescription')} />
+            <SelectItemWithDescription value="error" title={t('workflowSteps.exit.reasons.errorTitle')} description={t('workflowSteps.exit.reasons.errorDescription')} />
+            <SelectItemWithDescription value="other" title={t('workflowSteps.exit.reasons.otherTitle')} description={t('workflowSteps.exit.reasons.otherDescription')} />
           </SelectContent>
         </Select>
       </div>

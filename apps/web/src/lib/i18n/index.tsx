@@ -9,6 +9,10 @@ import enContacts from './locales/en/contacts.json';
 import enSegments from './locales/en/segments.json';
 import enCampaigns from './locales/en/campaigns.json';
 import enTemplates from './locales/en/templates.json';
+import enActivity from './locales/en/activity.json';
+import enAnalytics from './locales/en/analytics.json';
+import enWorkflows from './locales/en/workflows.json';
+import enWorkflowSteps from './locales/en/workflowSteps.json';
 
 // Spanish namespaces
 import esCommon from './locales/es/common.json';
@@ -19,6 +23,10 @@ import esContacts from './locales/es/contacts.json';
 import esSegments from './locales/es/segments.json';
 import esCampaigns from './locales/es/campaigns.json';
 import esTemplates from './locales/es/templates.json';
+import esActivity from './locales/es/activity.json';
+import esAnalytics from './locales/es/analytics.json';
+import esWorkflows from './locales/es/workflows.json';
+import esWorkflowSteps from './locales/es/workflowSteps.json';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Messages = Record<string, any>;
@@ -32,13 +40,56 @@ function buildMessages(
   segments: Messages,
   campaigns: Messages,
   templates: Messages,
+  activity: Messages,
+  analytics: Messages,
+  workflows: Messages,
+  workflowSteps: Messages,
 ): Messages {
-  return {common, nav, auth, dashboard, contacts, segments, campaigns, templates};
+  return {
+    common,
+    nav,
+    auth,
+    dashboard,
+    contacts,
+    segments,
+    campaigns,
+    templates,
+    activity,
+    analytics,
+    workflows,
+    workflowSteps,
+  };
 }
 
 const MESSAGES: Record<string, Messages> = {
-  en: buildMessages(enCommon, enNav, enAuth, enDashboard, enContacts, enSegments, enCampaigns, enTemplates),
-  es: buildMessages(esCommon, esNav, esAuth, esDashboard, esContacts, esSegments, esCampaigns, esTemplates),
+  en: buildMessages(
+    enCommon,
+    enNav,
+    enAuth,
+    enDashboard,
+    enContacts,
+    enSegments,
+    enCampaigns,
+    enTemplates,
+    enActivity,
+    enAnalytics,
+    enWorkflows,
+    enWorkflowSteps,
+  ),
+  es: buildMessages(
+    esCommon,
+    esNav,
+    esAuth,
+    esDashboard,
+    esContacts,
+    esSegments,
+    esCampaigns,
+    esTemplates,
+    esActivity,
+    esAnalytics,
+    esWorkflows,
+    esWorkflowSteps,
+  ),
 };
 
 export interface UiLanguage {

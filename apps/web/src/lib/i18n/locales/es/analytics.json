@@ -1,0 +1,75 @@
+{
+  "title": "Analíticas",
+  "subtitle": "Información completa sobre el rendimiento de sus correos, las métricas de interacción y las estadísticas de entrega.",
+  "ranges": {
+    "placeholder": "Seleccionar periodo",
+    "last7Days": "Últimos 7 días",
+    "last30Days": "Últimos 30 días",
+    "last90Days": "Últimos 90 días"
+  },
+  "errors": {
+    "loadFailed": "No se pudieron cargar los datos de analíticas. Inténtelo de nuevo."
+  },
+  "metrics": {
+    "totalEmails": "Correos totales",
+    "lastNDays": "Últimos {days} días",
+    "openRate": "Tasa de apertura",
+    "opensCount": "{count} aperturas",
+    "clickRate": "Tasa de clic",
+    "clicksCount": "{count} clics",
+    "activeCampaigns": "Campañas activas",
+    "totalCampaigns": "{count} campañas en total",
+    "workflows": "Flujos de trabajo",
+    "automationsTriggered": "Automatizaciones activadas",
+    "totalEvents": "Eventos totales",
+    "customEventsTracked": "Eventos personalizados registrados"
+  },
+  "charts": {
+    "emailsSent": "Correos enviados",
+    "opens": "Aperturas",
+    "clicks": "Clics",
+    "openRate": "Tasa de apertura",
+    "volumeTitle": "Tendencias de volumen de correo",
+    "volumeDescription": "Envíos, aperturas y clics diarios durante el periodo seleccionado",
+    "engagementTitle": "Tendencias de tasa de interacción",
+    "engagementDescription": "Porcentaje de tasa de apertura a lo largo del tiempo"
+  },
+  "empty": {
+    "noEmailTitle": "Aún no hay datos de correo",
+    "noEmailDescription": "Envíe su primer correo para ver las analíticas aquí.",
+    "noEngagementTitle": "No hay datos de interacción",
+    "noEngagementDescription": "Las métricas de interacción aparecerán cuando se abran los correos."
+  },
+  "insights": {
+    "title": "Análisis de rendimiento",
+    "description": "Métricas clave y recomendaciones",
+    "openRate": "Tasa de apertura",
+    "openRateGood": "¡Su tasa de apertura está por encima del promedio del sector!",
+    "openRateBad": "Considere mejorar los asuntos para aumentar las tasas de apertura.",
+    "clickRate": "Tasa de clic",
+    "clickRateGood": "¡Excelente rendimiento de clics!",
+    "clickRateBad": "Añada llamadas a la acción más atractivas para aumentar los clics.",
+    "engagement": "Interacción",
+    "workflowsStarted": "{count} flujos de trabajo iniciados",
+    "engagementBad": "Configure flujos de trabajo para automatizar sus campañas de correo."
+  },
+  "events": {
+    "activityTitle": "Actividad de eventos",
+    "activityDescription": "Eventos personalizados y disparadores",
+    "totalEvents": "Eventos totales",
+    "activityNote": "Eventos activados por sus contactos durante los últimos {days} días. Estos pueden activar flujos de trabajo y automatizaciones.",
+    "topTitle": "Eventos principales",
+    "topDescription": "Eventos activados con más frecuencia en los últimos {days} días",
+    "occurrences": "{count} ocurrencias"
+  },
+  "campaigns": {
+    "title": "Rendimiento de campañas",
+    "description": "Campañas con mejor rendimiento en los últimos {days} días",
+    "campaign": "Campaña",
+    "sent": "Enviados",
+    "opened": "Abiertos",
+    "clicked": "Con clic",
+    "openRate": "Tasa de apertura",
+    "clickRate": "Tasa de clic"
+  }
+}

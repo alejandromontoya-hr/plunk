@@ -282,8 +282,8 @@ export default function CreateCampaignPage() {
               {/* Email Settings */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Email Settings</CardTitle>
-                  <CardDescription>Configure sender information and subject</CardDescription>
+                  <CardTitle>{t('campaigns.emailSettings.title')}</CardTitle>
+                  <CardDescription>{t('campaigns.emailSettings.description')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <EmailSettings
@@ -298,11 +298,11 @@ export default function CreateCampaignPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="subject">
-                      Email Subject <span className="text-red-500">*</span>
+                      {t('campaigns.emailSettings.subjectLabel')} <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="subject"
-                      placeholder="e.g., Introducing our Spring Sale!"
+                      placeholder={t('campaigns.emailSettings.subjectPlaceholder')}
                       value={subject}
                       onChange={e => setSubject(e.target.value)}
                       required
@@ -314,8 +314,8 @@ export default function CreateCampaignPage() {
               {/* Email Content */}
               <Card className="overflow-visible">
                 <CardHeader>
-                  <CardTitle>Email Content</CardTitle>
-                  <CardDescription>Design your email message</CardDescription>
+                  <CardTitle>{t('campaigns.emailContent.title')}</CardTitle>
+                  <CardDescription>{t('campaigns.emailContent.description')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <EmailEditor value={body} onChange={setBody} />
@@ -325,13 +325,13 @@ export default function CreateCampaignPage() {
               {/* Audience */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Audience</CardTitle>
-                  <CardDescription>Choose who will receive this campaign</CardDescription>
+                  <CardTitle>{t('campaigns.audience.title')}</CardTitle>
+                  <CardDescription>{t('campaigns.audience.description')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="audienceType">
-                      Audience Type <span className="text-red-500">*</span>
+                      {t('campaigns.audience.typeLabel')} <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={audienceType}
@@ -339,18 +339,18 @@ export default function CreateCampaignPage() {
                       required
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select audience type" />
+                        <SelectValue placeholder={t('campaigns.audience.typePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItemWithDescription
                           value={CampaignAudienceType.ALL}
-                          title={campaignType === TemplateType.TRANSACTIONAL ? 'All Contacts' : 'All Subscribed Contacts'}
-                          description={campaignType === TemplateType.TRANSACTIONAL ? 'Send to all contacts regardless of subscription status' : "Send to everyone who hasn't unsubscribed"}
+                          title={campaignType === TemplateType.TRANSACTIONAL ? t('campaigns.audience.allContacts') : t('campaigns.audience.allSubscribedContacts')}
+                          description={campaignType === TemplateType.TRANSACTIONAL ? t('campaigns.audience.allContactsDescription') : t('campaigns.audience.allSubscribedDescription')}
                         />
                         <SelectItemWithDescription
                           value={CampaignAudienceType.SEGMENT}
-                          title="Specific Segment"
-                          description="Target a defined group of contacts"
+                          title={t('campaigns.audience.specificSegment')}
+                          description={t('campaigns.audience.specificSegmentDescription')}
                         />
                       </SelectContent>
                     </Select>
@@ -359,11 +359,11 @@ export default function CreateCampaignPage() {
                   {audienceType === CampaignAudienceType.SEGMENT && (
                     <div className="space-y-2">
                       <Label htmlFor="segment">
-                        Select Segment <span className="text-red-500">*</span>
+                        {t('campaigns.audience.selectSegmentLabel')} <span className="text-red-500">*</span>
                       </Label>
                       <Select value={segmentId} onValueChange={setSegmentId} required>
                         <SelectTrigger>
-                          <SelectValue placeholder="Choose a segment" />
+                          <SelectValue placeholder={t('campaigns.audience.selectSegmentPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                           {segments?.map(segment => (
@@ -371,22 +371,22 @@ export default function CreateCampaignPage() {
                               key={segment.id}
                               value={segment.id}
                               title={segment.name}
-                              description={`${segment.memberCount.toLocaleString()} contacts`}
+                              description={t('campaigns.audience.segmentContacts', {count: segment.memberCount.toLocaleString()})}
                             />
                           ))}
                         </SelectContent>
                       </Select>
                       {segments?.length === 0 && (
                         <p className="text-sm text-neutral-500">
-                          No segments found.{' '}
+                          {t('campaigns.audience.noSegmentsFound')}{' '}
                           <Link href="/segments/new" className="underline">
-                            Create one first
+                            {t('campaigns.audience.createOneFirst')}
                           </Link>
                         </p>
                       )}
                       {estimatedRecipients > 0 && (
                         <p className="text-sm text-neutral-500">
-                          <span className="font-medium text-neutral-900">{estimatedRecipients.toLocaleString()} recipients</span> in this segment
+                          <span className="font-medium text-neutral-900">{t('campaigns.audience.recipientsInSegment', {count: estimatedRecipients.toLocaleString()})}</span> {t('campaigns.audience.inThisSegment')}
                         </p>
                       )}
                     </div>
@@ -397,10 +397,10 @@ export default function CreateCampaignPage() {
               {/* Actions */}
               <div className="flex justify-end gap-3">
                 <Button asChild variant="outline">
-                  <Link href="/campaigns">Cancel</Link>
+                  <Link href="/campaigns">{t('common.cancel')}</Link>
                 </Button>
                 <Button type="submit" disabled={saving}>
-                  {saving ? 'Creating...' : 'Create Campaign'}
+                  {saving ? t('campaigns.create.creating') : t('campaigns.create.submit')}
                 </Button>
               </div>
             </div>

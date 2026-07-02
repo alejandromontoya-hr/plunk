@@ -37,7 +37,7 @@
     "descriptions": {
       "marketing": "Contactos suscritos, incluye enlace para cancelar la suscripción",
       "transactional": "Todos los contactos, sin verificación de suscripción ni pie de página",
-      "headless": "Contactos suscritos, sin pie de página de Plunk"
+      "headless": "Contactos suscritos, sin pie de página de Sagy"
     }
   },
   "create": {
@@ -76,7 +76,7 @@
   },
   "unsubscribeWarning": {
     "title": "No se detectó un enlace para cancelar la suscripción",
-    "body": "Usted es responsable de ofrecer a los destinatarios una forma de cancelar la suscripción. Use las variables de Plunk a continuación para crear su propio pie de página."
+    "body": "Usted es responsable de ofrecer a los destinatarios una forma de cancelar la suscripción. Use las variables de Sagy a continuación para crear su propio pie de página."
   },
   "deleteDialog": {
     "title": "Eliminar plantilla",

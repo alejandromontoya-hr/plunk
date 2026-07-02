@@ -37,7 +37,7 @@
     "descriptions": {
       "marketing": "Subscribed contacts, includes unsubscribe link",
       "transactional": "All contacts, no subscription check or footer",
-      "headless": "Subscribed contacts, no Plunk footer"
+      "headless": "Subscribed contacts, no Sagy footer"
     }
   },
   "create": {
@@ -76,7 +76,7 @@
   },
   "unsubscribeWarning": {
     "title": "No unsubscribe link detected",
-    "body": "You are responsible for providing recipients a way to opt out. Use the Plunk variables below to build your own footer."
+    "body": "You are responsible for providing recipients a way to opt out. Use the Sagy variables below to build your own footer."
   },
   "deleteDialog": {
     "title": "Delete Template",

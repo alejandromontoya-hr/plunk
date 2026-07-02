@@ -64,8 +64,8 @@
       "sentError": "Failed to send verification email. Please try again."
     },
     "upgrade": {
-      "title": "Upgrade to remove Plunk branding",
-      "description": "Your emails currently include Plunk branding. Upgrade to a subscription to remove it.",
+      "title": "Upgrade to remove Sagy branding",
+      "description": "Your emails currently include Sagy branding. Upgrade to a subscription to remove it.",
       "upgradeNow": "Upgrade Now"
     }
   },
@@ -95,11 +95,52 @@
   },
   "apiKeys": {
     "title": "API Keys",
-    "description": "Use these keys to integrate with Plunk",
+    "description": "Use these keys to integrate with Sagy",
     "publicKey": "Public Key",
     "publicKeyDescription": "Use this key for client-side integrations",
     "secretKey": "Secret Key",
     "secretKeyDescription": "Keep this key secure and never expose it publicly",
     "noProject": "No project selected"
+  },
+  "quickStart": {
+    "title": "Quick Start",
+    "subtitle": "Get started with Sagy in minutes",
+    "projectSetUp": "Your project is set up",
+    "fullySetUp": "Your project is fully set up",
+    "allSet": "All set!",
+    "allSetDescription": "Domain verified, contacts imported, campaigns running. Everything is set up correctly.",
+    "needHelp": "Need help?",
+    "joinDiscord": "Join Discord",
+    "copied": "Copied!",
+    "emailSupport": "Email support",
+    "domain": {
+      "title": "Verify Your Domain",
+      "description": "Essential for email deliverability and avoiding spam",
+      "linkText": "Add Domain"
+    },
+    "contacts": {
+      "title": "Add Your First Contacts",
+      "description": "Import your subscriber list to start sending emails",
+      "linkText": "Add Contacts"
+    },
+    "campaign": {
+      "title": "Send Your First Campaign",
+      "description": "Create and send your first email campaign",
+      "linkText": "Create Campaign"
+    },
+    "workflows": {
+      "title": "Set Up Automation",
+      "description": "Create automated workflows to engage your audience",
+      "linkText": "Create Workflow"
+    },
+    "subscription": {
+      "title": "Upgrade Your Plan",
+      "description": "Remove Sagy branding and unlock more features",
+      "linkText": "Upgrade"
+    },
+    "reengagement": {
+      "title": "Re-engage Your Audience",
+      "description": "It's been {days} days since your last campaign"
+    }
   }
 }

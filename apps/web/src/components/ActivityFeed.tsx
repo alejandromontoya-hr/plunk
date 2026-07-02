@@ -1,6 +1,7 @@
 import {Button, EmptyState, IconSpinner} from '@plunk/ui';
 import type {Activity, CursorPaginatedResponse} from '@plunk/types';
 import {network} from '../lib/network';
+import {useTranslation} from '../lib/i18n';
 import {ActivityItem} from './ActivityItem';
 import {Activity as ActivityIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useState} from 'react';
@@ -12,6 +13,7 @@ export interface ActivityFeedProps {
 }
 
 export function ActivityFeed({typeFilter, dateRangeDays = 30, contactId}: ActivityFeedProps) {
+  const {t} = useTranslation();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [upcomingActivities, setUpcomingActivities] = useState<Activity[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
@@ -86,14 +88,14 @@ export function ActivityFeed({typeFilter, dateRangeDays = 30, contactId}: Activi
         setNextCursor(result.cursor);
         setHasMore(result.hasMore);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load activities');
+        setError(err instanceof Error ? err.message : t('activity.feed.loadError'));
         console.error('Error fetching activities:', err);
       } finally {
         setIsLoading(false);
         setIsLoadingMore(false);
       }
     },
-    [typeFilter, startDate, contactId],
+    [typeFilter, startDate, contactId, t],
   );
 
   // Fetch upcoming activities
@@ -178,7 +180,7 @@ export function ActivityFeed({typeFilter, dateRangeDays = 30, contactId}: Activi
       <div className="text-center py-12">
         <p className="text-red-600 text-sm">{error}</p>
         <Button onClick={() => fetchActivities()} variant="outline" className="mt-4">
-          Try Again
+          {t('common.tryAgain')}
         </Button>
       </div>
     );
@@ -188,8 +190,8 @@ export function ActivityFeed({typeFilter, dateRangeDays = 30, contactId}: Activi
     return (
       <EmptyState
         icon={ActivityIcon}
-        title="No activity yet"
-        description="Events will appear here as contacts interact with your emails."
+        title={t('activity.empty.title')}
+        description={t('activity.empty.description')}
       />
     );
   }
@@ -215,10 +217,10 @@ export function ActivityFeed({typeFilter, dateRangeDays = 30, contactId}: Activi
             {isLoadingMore ? (
               <>
                 <IconSpinner size="sm" className="mr-2" />
-                Loading...
+                {t('common.loading')}
               </>
             ) : (
-              'Load More'
+              t('activity.feed.loadMore')
             )}
           </Button>
         </div>
@@ -231,7 +233,7 @@ export function ActivityFeed({typeFilter, dateRangeDays = 30, contactId}: Activi
             <div className="w-full border-t border-neutral-300" />
           </div>
           <div className="relative flex justify-center">
-            <span className="bg-white px-4 text-sm font-medium text-neutral-500">Upcoming Scheduled</span>
+            <span className="bg-white px-4 text-sm font-medium text-neutral-500">{t('activity.feed.upcomingScheduled')}</span>
           </div>
         </div>
       )}
@@ -251,7 +253,7 @@ export function ActivityFeed({typeFilter, dateRangeDays = 30, contactId}: Activi
       {/* End of results indicator */}
       {!hasMore && activities.length > 0 && upcomingActivities.length === 0 && (
         <div className="text-center pt-4">
-          <p className="text-sm text-neutral-400">You&apos;ve reached the end of the activity feed</p>
+          <p className="text-sm text-neutral-400">{t('activity.feed.endOfFeed')}</p>
         </div>
       )}
     </div>

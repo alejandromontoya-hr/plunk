@@ -144,7 +144,7 @@ export default function Login() {
                   className="p-8"
                 >
                   <div className="flex flex-col gap-6">
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col items-center gap-1.5 text-center">
                       <h1 className="text-2xl font-bold tracking-tight">{t('auth.login.title')}</h1>
                       <p className="text-sm text-neutral-500">{t('auth.login.subtitle')}</p>
                     </div>

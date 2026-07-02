@@ -20,6 +20,7 @@ import {
 import {EmptyState} from '@plunk/ui';
 import {DashboardLayout} from '../../components/DashboardLayout';
 import {useAnalytics} from '../../lib/hooks/useAnalytics';
+import {useTranslation} from '../../lib/i18n';
 import useSWR from 'swr';
 import {
   Activity,
@@ -35,34 +36,35 @@ import {
 } from 'lucide-react';
 import {NextSeo} from 'next-seo';
 import {useMemo, useState} from 'react';
-import {Area, AreaChart, CartesianGrid, Line, LineChart, XAxis, YAxis} from 'recharts'; // Chart configurations with sleek blue theme
-
-// Chart configurations with sleek blue theme
-const volumeChartConfig = {
-  emails: {
-    label: 'Emails Sent',
-    color: 'hsl(221.2 83.2% 53.3%)', // Vibrant blue
-  },
-  opens: {
-    label: 'Opens',
-    color: 'hsl(142.1 76.2% 36.3%)', // Green
-  },
-  clicks: {
-    label: 'Clicks',
-    color: 'hsl(262.1 83.3% 57.8%)', // Purple
-  },
-} satisfies ChartConfig;
-
-const engagementChartConfig = {
-  openRate: {
-    label: 'Open Rate',
-    color: 'hsl(221.2 83.2% 53.3%)', // Vibrant blue to match
-  },
-} satisfies ChartConfig;
+import {Area, AreaChart, CartesianGrid, Line, LineChart, XAxis, YAxis} from 'recharts';
 
 export default function AnalyticsPage() {
+  const {t} = useTranslation();
   const [dateRange, setDateRange] = useState<string>('30');
   const days = parseInt(dateRange);
+
+  // Chart configurations with sleek blue theme
+  const volumeChartConfig = {
+    emails: {
+      label: t('analytics.charts.emailsSent'),
+      color: 'hsl(221.2 83.2% 53.3%)', // Vibrant blue
+    },
+    opens: {
+      label: t('analytics.charts.opens'),
+      color: 'hsl(142.1 76.2% 36.3%)', // Green
+    },
+    clicks: {
+      label: t('analytics.charts.clicks'),
+      color: 'hsl(262.1 83.3% 57.8%)', // Purple
+    },
+  } satisfies ChartConfig;
+
+  const engagementChartConfig = {
+    openRate: {
+      label: t('analytics.charts.openRate'),
+      color: 'hsl(221.2 83.2% 53.3%)', // Vibrant blue to match
+    },
+  } satisfies ChartConfig;
 
   const {stats, timeSeries, isLoading, error} = useAnalytics({days});
 
@@ -145,55 +147,59 @@ export default function AnalyticsPage() {
 
   const statsCards = [
     {
-      name: 'Total Emails',
+      name: t('analytics.metrics.totalEmails'),
       value: stats?.totalEmailsSent?.toLocaleString() || cumulativeTotals.emails.toLocaleString(),
       icon: Send,
-      description: `Last ${days} days`,
+      description: t('analytics.metrics.lastNDays', {days}),
       color: 'text-neutral-600',
       bgColor: 'bg-neutral-100',
       trend: stats?.totalEmailsSent ? (stats.totalEmailsSent > 0 ? 'positive' : 'neutral') : 'neutral',
     },
     {
-      name: 'Open Rate',
+      name: t('analytics.metrics.openRate'),
       value: stats?.openRate ? `${stats.openRate.toFixed(1)}%` : '0%',
       icon: Eye,
-      description: `${stats?.totalEmailsOpened?.toLocaleString() || cumulativeTotals.opens.toLocaleString()} opens`,
+      description: t('analytics.metrics.opensCount', {
+        count: stats?.totalEmailsOpened?.toLocaleString() || cumulativeTotals.opens.toLocaleString(),
+      }),
       color: 'text-neutral-600',
       bgColor: 'bg-neutral-100',
       trend: stats?.openRate && stats.openRate > 20 ? 'positive' : 'neutral',
     },
     {
-      name: 'Click Rate',
+      name: t('analytics.metrics.clickRate'),
       value: stats?.clickRate ? `${stats.clickRate.toFixed(1)}%` : '0%',
       icon: MousePointerClick,
-      description: `${stats?.totalEmailsClicked?.toLocaleString() || cumulativeTotals.clicks.toLocaleString()} clicks`,
+      description: t('analytics.metrics.clicksCount', {
+        count: stats?.totalEmailsClicked?.toLocaleString() || cumulativeTotals.clicks.toLocaleString(),
+      }),
       color: 'text-neutral-600',
       bgColor: 'bg-neutral-100',
       trend: stats?.clickRate && stats.clickRate > 3 ? 'positive' : 'neutral',
     },
     {
-      name: 'Active Campaigns',
+      name: t('analytics.metrics.activeCampaigns'),
       value: campaignStats?.active?.toLocaleString() || '0',
       icon: Megaphone,
-      description: `${campaignStats?.total || 0} total campaigns`,
+      description: t('analytics.metrics.totalCampaigns', {count: campaignStats?.total || 0}),
       color: 'text-neutral-600',
       bgColor: 'bg-neutral-100',
       trend: campaignStats?.active ? 'positive' : 'neutral',
     },
     {
-      name: 'Workflows',
+      name: t('analytics.metrics.workflows'),
       value: stats?.totalWorkflowsStarted?.toLocaleString() || '0',
       icon: Activity,
-      description: 'Automations triggered',
+      description: t('analytics.metrics.automationsTriggered'),
       color: 'text-neutral-600',
       bgColor: 'bg-neutral-100',
       trend: stats?.totalWorkflowsStarted && stats.totalWorkflowsStarted > 0 ? 'positive' : 'neutral',
     },
     {
-      name: 'Total Events',
+      name: t('analytics.metrics.totalEvents'),
       value: stats?.totalEvents?.toLocaleString() || '0',
       icon: Zap,
-      description: 'Custom events tracked',
+      description: t('analytics.metrics.customEventsTracked'),
       color: 'text-neutral-600',
       bgColor: 'bg-neutral-100',
       trend: stats?.totalEvents && stats.totalEvents > 0 ? 'positive' : 'neutral',
@@ -202,26 +208,24 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <NextSeo title="Analytics" />
+      <NextSeo title={t('analytics.title')} />
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Analytics</h1>
-              <p className="text-neutral-500 mt-2 text-sm sm:text-base">
-                Comprehensive insights into your email performance, engagement metrics, and delivery statistics.
-              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('analytics.title')}</h1>
+              <p className="text-neutral-500 mt-2 text-sm sm:text-base">{t('analytics.subtitle')}</p>
             </div>
             <div className="flex gap-3">
               <Select value={dateRange} onValueChange={setDateRange}>
                 <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Select period" />
+                  <SelectValue placeholder={t('analytics.ranges.placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="7">Last 7 days</SelectItem>
-                  <SelectItem value="30">Last 30 days</SelectItem>
-                  <SelectItem value="90">Last 90 days</SelectItem>
+                  <SelectItem value="7">{t('analytics.ranges.last7Days')}</SelectItem>
+                  <SelectItem value="30">{t('analytics.ranges.last30Days')}</SelectItem>
+                  <SelectItem value="90">{t('analytics.ranges.last90Days')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -233,7 +237,7 @@ export default function AnalyticsPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3 text-red-700">
                   <AlertCircle className="h-5 w-5" />
-                  <span>Failed to load analytics data. Please try again.</span>
+                  <span>{t('analytics.errors.loadFailed')}</span>
                 </div>
               </CardContent>
             </Card>
@@ -265,8 +269,8 @@ export default function AnalyticsPage() {
           {/* Email Volume Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Email Volume Trends</CardTitle>
-              <CardDescription>Daily email sends, opens, and clicks over the selected period</CardDescription>
+              <CardTitle>{t('analytics.charts.volumeTitle')}</CardTitle>
+              <CardDescription>{t('analytics.charts.volumeDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               {!hasData ? (
@@ -274,8 +278,8 @@ export default function AnalyticsPage() {
                   <EmptyState
                     className="py-0"
                     icon={Mail}
-                    title="No email data yet"
-                    description="Send your first email to see analytics here."
+                    title={t('analytics.empty.noEmailTitle')}
+                    description={t('analytics.empty.noEmailDescription')}
                   />
                 </div>
               ) : (
@@ -375,8 +379,8 @@ export default function AnalyticsPage() {
           {/* Engagement Rate Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Engagement Rate Trends</CardTitle>
-              <CardDescription>Open rate percentage over time</CardDescription>
+              <CardTitle>{t('analytics.charts.engagementTitle')}</CardTitle>
+              <CardDescription>{t('analytics.charts.engagementDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               {!hasData ? (
@@ -384,8 +388,8 @@ export default function AnalyticsPage() {
                   <EmptyState
                     className="py-0"
                     icon={Eye}
-                    title="No engagement data"
-                    description="Engagement metrics will appear once emails are opened."
+                    title={t('analytics.empty.noEngagementTitle')}
+                    description={t('analytics.empty.noEngagementDescription')}
                   />
                 </div>
               ) : (
@@ -415,7 +419,7 @@ export default function AnalyticsPage() {
                         <ChartTooltipContent
                           className="w-[150px]"
                           labelFormatter={(value: any) => value}
-                          formatter={(value: any) => [`${value}%`, 'Open Rate']}
+                          formatter={(value: any) => [`${value}%`, t('analytics.charts.openRate')]}
                         />
                       }
                       cursor={{
@@ -452,8 +456,8 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Performance Insights</CardTitle>
-                <CardDescription>Key metrics and recommendations</CardDescription>
+                <CardTitle>{t('analytics.insights.title')}</CardTitle>
+                <CardDescription>{t('analytics.insights.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -461,11 +465,11 @@ export default function AnalyticsPage() {
                     <CheckCircle2 className="h-4 w-4 text-neutral-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">Open Rate</p>
+                    <p className="text-sm font-medium text-neutral-900">{t('analytics.insights.openRate')}</p>
                     <p className="text-sm text-neutral-500">
                       {stats?.openRate && stats.openRate > 20
-                        ? 'Your open rate is above industry average!'
-                        : 'Consider improving subject lines to increase open rates.'}
+                        ? t('analytics.insights.openRateGood')
+                        : t('analytics.insights.openRateBad')}
                     </p>
                   </div>
                 </div>
@@ -474,11 +478,11 @@ export default function AnalyticsPage() {
                     <BarChart3 className="h-4 w-4 text-neutral-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">Click Rate</p>
+                    <p className="text-sm font-medium text-neutral-900">{t('analytics.insights.clickRate')}</p>
                     <p className="text-sm text-neutral-500">
                       {stats?.clickRate && stats.clickRate > 3
-                        ? 'Great click-through performance!'
-                        : 'Add more compelling calls-to-action to boost clicks.'}
+                        ? t('analytics.insights.clickRateGood')
+                        : t('analytics.insights.clickRateBad')}
                     </p>
                   </div>
                 </div>
@@ -487,11 +491,11 @@ export default function AnalyticsPage() {
                     <Zap className="h-4 w-4 text-neutral-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">Engagement</p>
+                    <p className="text-sm font-medium text-neutral-900">{t('analytics.insights.engagement')}</p>
                     <p className="text-sm text-neutral-500">
                       {stats?.totalWorkflowsStarted
-                        ? `${stats.totalWorkflowsStarted.toLocaleString()} workflows started`
-                        : 'Set up workflows to automate your email campaigns.'}
+                        ? t('analytics.insights.workflowsStarted', {count: stats.totalWorkflowsStarted.toLocaleString()})
+                        : t('analytics.insights.engagementBad')}
                     </p>
                   </div>
                 </div>
@@ -500,24 +504,21 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Event Activity</CardTitle>
-                <CardDescription>Custom events and triggers</CardDescription>
+                <CardTitle>{t('analytics.events.activityTitle')}</CardTitle>
+                <CardDescription>{t('analytics.events.activityDescription')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-2xl font-bold text-neutral-900">{stats?.totalEvents?.toLocaleString() || '0'}</p>
-                    <p className="text-sm text-neutral-500">Total Events</p>
+                    <p className="text-sm text-neutral-500">{t('analytics.events.totalEvents')}</p>
                   </div>
                   <div className="h-12 w-12 rounded-lg bg-neutral-100 flex items-center justify-center">
                     <Zap className="h-6 w-6 text-neutral-600" />
                   </div>
                 </div>
                 <div className="pt-4 border-t">
-                  <p className="text-sm text-neutral-500">
-                    Events triggered by your contacts over the last {days} days. These can trigger workflows and
-                    automations.
-                  </p>
+                  <p className="text-sm text-neutral-500">{t('analytics.events.activityNote', {days})}</p>
                 </div>
               </CardContent>
             </Card>
@@ -527,20 +528,32 @@ export default function AnalyticsPage() {
           {topCampaigns && topCampaigns.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Campaign Performance</CardTitle>
-                <CardDescription>Top performing campaigns in the last {days} days</CardDescription>
+                <CardTitle>{t('analytics.campaigns.title')}</CardTitle>
+                <CardDescription>{t('analytics.campaigns.description', {days})}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Campaign</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Sent</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Opened</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Clicked</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Open Rate</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Click Rate</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                          {t('analytics.campaigns.campaign')}
+                        </th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">
+                          {t('analytics.campaigns.sent')}
+                        </th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">
+                          {t('analytics.campaigns.opened')}
+                        </th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">
+                          {t('analytics.campaigns.clicked')}
+                        </th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">
+                          {t('analytics.campaigns.openRate')}
+                        </th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">
+                          {t('analytics.campaigns.clickRate')}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -594,8 +607,8 @@ export default function AnalyticsPage() {
           {topEvents && topEvents.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Top Events</CardTitle>
-                <CardDescription>Most frequently triggered events in the last {days} days</CardDescription>
+                <CardTitle>{t('analytics.events.topTitle')}</CardTitle>
+                <CardDescription>{t('analytics.events.topDescription', {days})}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -607,7 +620,9 @@ export default function AnalyticsPage() {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-neutral-900">{event.name}</p>
-                          <p className="text-xs text-muted-foreground">{event.count.toLocaleString()} occurrences</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t('analytics.events.occurrences', {count: event.count.toLocaleString()})}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

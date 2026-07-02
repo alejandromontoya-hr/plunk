@@ -123,9 +123,9 @@
     "transactional": "Transaccional",
     "transactionalDescription": "Todos los contactos, sin verificación de suscripción ni pie de página",
     "headless": "Headless",
-    "headlessDescription": "Contactos suscritos, sin pie de página de Plunk",
+    "headlessDescription": "Contactos suscritos, sin pie de página de Sagy",
     "noUnsubscribeTitle": "No se detectó ningún enlace para cancelar la suscripción",
-    "noUnsubscribeBody": "Usted es responsable de ofrecer a los destinatarios una forma de cancelar la suscripción. Use las variables de Plunk a continuación para crear su propio pie de página."
+    "noUnsubscribeBody": "Usted es responsable de ofrecer a los destinatarios una forma de cancelar la suscripción. Use las variables de Sagy a continuación para crear su propio pie de página."
   },
   "emailSettings": {
     "title": "Configuración del correo",
@@ -201,7 +201,7 @@
   },
   "scheduleDialog": {
     "title": "Programar para más tarde",
-    "description": "Elija una hora y Plunk la enviará por usted. Horas mostradas en {timezone}.",
+    "description": "Elija una hora y Sagy la enviará por usted. Horas mostradas en {timezone}.",
     "quickOptions": "Opciones rápidas",
     "in1h": "En 1 hora",
     "in3h": "En 3 horas",

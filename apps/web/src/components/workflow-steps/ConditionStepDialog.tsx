@@ -5,6 +5,8 @@ import {useMemo, useState} from 'react';
 import {toast} from 'sonner';
 import useSWR from 'swr';
 
+import {useTranslation} from '../../lib/i18n';
+
 import {type EditStepDialogProps, getStepConfig, type StepWithTemplate, StepDialogShell, useStepUpdate} from './shared';
 
 type FieldType = 'string' | 'number' | 'boolean' | 'date';
@@ -25,21 +27,21 @@ interface BranchInput {
 
 interface OperatorOption {
   value: string;
-  label: string;
+  labelKey: string;
   types: FieldType[];
 }
 
 const ALL_OPERATORS: OperatorOption[] = [
-  {value: 'equals',             label: 'Equals',                 types: ['string', 'number', 'boolean', 'date']},
-  {value: 'notEquals',          label: 'Not Equals',             types: ['string', 'number', 'boolean', 'date']},
-  {value: 'contains',           label: 'Contains',               types: ['string']},
-  {value: 'notContains',        label: 'Does not contain',       types: ['string']},
-  {value: 'greaterThan',        label: 'Greater than',           types: ['number', 'date']},
-  {value: 'lessThan',           label: 'Less than',              types: ['number', 'date']},
-  {value: 'greaterThanOrEqual', label: 'Greater than or equal',  types: ['number', 'date']},
-  {value: 'lessThanOrEqual',    label: 'Less than or equal',     types: ['number', 'date']},
-  {value: 'exists',             label: 'Exists',                 types: ['string', 'number', 'boolean', 'date']},
-  {value: 'notExists',          label: 'Does not exist',         types: ['string', 'number', 'boolean', 'date']},
+  {value: 'equals',             labelKey: 'equals',             types: ['string', 'number', 'boolean', 'date']},
+  {value: 'notEquals',          labelKey: 'notEquals',          types: ['string', 'number', 'boolean', 'date']},
+  {value: 'contains',           labelKey: 'contains',           types: ['string']},
+  {value: 'notContains',        labelKey: 'notContains',        types: ['string']},
+  {value: 'greaterThan',        labelKey: 'greaterThan',        types: ['number', 'date']},
+  {value: 'lessThan',           labelKey: 'lessThan',           types: ['number', 'date']},
+  {value: 'greaterThanOrEqual', labelKey: 'greaterThanOrEqual', types: ['number', 'date']},
+  {value: 'lessThanOrEqual',    labelKey: 'lessThanOrEqual',    types: ['number', 'date']},
+  {value: 'exists',             labelKey: 'exists',             types: ['string', 'number', 'boolean', 'date']},
+  {value: 'notExists',          labelKey: 'notExists',          types: ['string', 'number', 'boolean', 'date']},
 ];
 
 const NO_VALUE_OPERATORS = ['exists', 'notExists'];
@@ -108,6 +110,7 @@ function hasBinaryConnections(step: StepWithTemplate): boolean {
 }
 
 export function ConditionStepDialog({step, workflowId, open, onOpenChange, onSuccess}: EditStepDialogProps) {
+  const {t} = useTranslation();
   const config = getStepConfig(step);
 
   const [name, setName] = useState(step.name);
@@ -185,11 +188,11 @@ export function ConditionStepDialog({step, workflowId, open, onOpenChange, onSuc
     if (conditionMode === 'multi') {
       const validBranches = conditionBranches.filter(b => b.name.trim());
       if (validBranches.length === 0) {
-        toast.error('At least one branch with a name is required');
+        toast.error(t('workflowSteps.condition.atLeastOneBranchError'));
         return;
       }
       if (!conditionField) {
-        toast.error('Please select a field');
+        toast.error(t('workflowSteps.condition.selectFieldError'));
         return;
       }
 
@@ -301,9 +304,10 @@ function ConditionModeToggle({
   blocksBinaryToMulti,
   showWiringWarning,
 }: ConditionModeToggleProps) {
+  const {t} = useTranslation();
   return (
     <div>
-      <Label className="text-sm font-medium mb-2 block">Condition Mode</Label>
+      <Label className="text-sm font-medium mb-2 block">{t('workflowSteps.condition.conditionMode')}</Label>
       <div className="flex gap-2">
         <button
           type="button"
@@ -317,7 +321,7 @@ function ConditionModeToggle({
                 : 'border-neutral-200 text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50'
           }`}
         >
-          Simple (If/Else)
+          {t('workflowSteps.condition.simpleMode')}
         </button>
         <button
           type="button"
@@ -331,31 +335,30 @@ function ConditionModeToggle({
                 : 'border-neutral-200 text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50'
           }`}
         >
-          Multi-branch (Switch)
+          {t('workflowSteps.condition.multiMode')}
         </button>
       </div>
       <p className="text-xs text-neutral-500 mt-1.5">
         {mode === 'binary'
-          ? 'Evaluates a single condition with Yes/No paths'
-          : 'Match a field against multiple values, each routing to its own branch'}
+          ? t('workflowSteps.condition.simpleModeHelp')
+          : t('workflowSteps.condition.multiModeHelp')}
       </p>
       {blocksMultiToBinary && (
         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
           <AlertTriangle className="h-3 w-3 inline mr-1" />
-          Cannot switch to simple mode: branches have connected nodes. Disconnect all branch connections first.
+          {t('workflowSteps.condition.blocksMultiToBinary')}
         </div>
       )}
       {blocksBinaryToMulti && (
         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
           <AlertTriangle className="h-3 w-3 inline mr-1" />
-          Cannot switch to multi-branch mode: Yes/No branches have connected nodes. Disconnect all branch connections
-          first.
+          {t('workflowSteps.condition.blocksBinaryToMulti')}
         </div>
       )}
       {showWiringWarning && (
         <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
           <AlertTriangle className="h-3 w-3 inline mr-1" />
-          Changing mode will disconnect existing branches. You will need to rewire them.
+          {t('workflowSteps.condition.wiringWarning')}
         </div>
       )}
     </div>
@@ -370,6 +373,7 @@ interface ConditionFieldPickerProps {
 }
 
 function ConditionFieldPicker({value, onChange, availableFields, loading}: ConditionFieldPickerProps) {
+  const {t} = useTranslation();
   const grouped = useMemo(() => {
     return availableFields.reduce<Record<string, AvailableField[]>>((acc, field) => {
       if (!acc[field.category]) acc[field.category] = [];
@@ -380,16 +384,16 @@ function ConditionFieldPicker({value, onChange, availableFields, loading}: Condi
 
   return (
     <div>
-      <Label htmlFor="editConditionField">Field to Check *</Label>
+      <Label htmlFor="editConditionField">{t('workflowSteps.condition.fieldToCheck')}</Label>
       {loading ? (
         <div className="flex items-center gap-2 px-3 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-500 mt-1.5">
           <IconSpinner size="sm" />
-          Loading fields...
+          {t('workflowSteps.condition.loadingFields')}
         </div>
       ) : availableFields.length > 0 ? (
         <Select value={value} onValueChange={onChange} required>
           <SelectTrigger id="editConditionField" className="mt-1.5">
-            <SelectValue placeholder="Select a field..." />
+            <SelectValue placeholder={t('workflowSteps.condition.selectFieldPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             {Object.entries(grouped).map(([category, fields]) => (
@@ -416,7 +420,7 @@ function ConditionFieldPicker({value, onChange, availableFields, loading}: Condi
           value={value}
           onChange={e => onChange(e.target.value)}
           required
-          placeholder="e.g., contact.subscribed or contact.data.plan"
+          placeholder={t('workflowSteps.condition.fieldPlaceholder')}
           className="mt-1.5"
         />
       )}
@@ -443,10 +447,11 @@ function BinaryCondition({
   fieldType,
   needsValue,
 }: BinaryConditionProps) {
+  const {t} = useTranslation();
   return (
     <>
       <div>
-        <Label htmlFor="editConditionOperator">Operator</Label>
+        <Label htmlFor="editConditionOperator">{t('workflowSteps.condition.operator')}</Label>
         <Select value={operator} onValueChange={onOperatorChange}>
           <SelectTrigger id="editConditionOperator" className="mt-1.5">
             <SelectValue />
@@ -454,7 +459,7 @@ function BinaryCondition({
           <SelectContent>
             {validOperators.map(op => (
               <SelectItem key={op.value} value={op.value}>
-                {op.label}
+                {t(`workflowSteps.condition.operators.${op.labelKey}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -463,7 +468,7 @@ function BinaryCondition({
 
       {needsValue && (
         <div>
-          <Label htmlFor="editConditionValue">Value</Label>
+          <Label htmlFor="editConditionValue">{t('workflowSteps.condition.value')}</Label>
           <ConditionValueInput fieldType={fieldType} value={value} onChange={onValueChange} />
         </div>
       )}
@@ -478,6 +483,7 @@ interface ConditionValueInputProps {
 }
 
 function ConditionValueInput({fieldType, value, onChange}: ConditionValueInputProps) {
+  const {t} = useTranslation();
   if (fieldType === 'boolean') {
     return (
       <Select value={value || 'true'} onValueChange={onChange}>
@@ -485,8 +491,8 @@ function ConditionValueInput({fieldType, value, onChange}: ConditionValueInputPr
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="true">True</SelectItem>
-          <SelectItem value="false">False</SelectItem>
+          <SelectItem value="true">{t('workflowSteps.condition.booleanTrue')}</SelectItem>
+          <SelectItem value="false">{t('workflowSteps.condition.booleanFalse')}</SelectItem>
         </SelectContent>
       </Select>
     );
@@ -494,7 +500,11 @@ function ConditionValueInput({fieldType, value, onChange}: ConditionValueInputPr
 
   const inputType = fieldType === 'number' ? 'number' : fieldType === 'date' ? 'datetime-local' : 'text';
   const placeholder =
-    fieldType === 'number' ? 'e.g., 100' : fieldType === 'date' ? '' : 'e.g., premium, active';
+    fieldType === 'number'
+      ? t('workflowSteps.condition.valueNumberPlaceholder')
+      : fieldType === 'date'
+        ? ''
+        : t('workflowSteps.condition.valueStringPlaceholder');
 
   return (
     <Input
@@ -518,18 +528,18 @@ interface MultiBranchEditorProps {
 }
 
 function MultiBranchEditor({branches, validOperators, onUpdateBranch, onRemoveBranch, onAddBranch}: MultiBranchEditorProps) {
+  const {t} = useTranslation();
   return (
     <div className="space-y-3">
-      <Label>Branches</Label>
-      <p className="text-xs text-neutral-500">
-        Each branch defines a condition. The first matching branch is taken. Contacts not matching any branch follow the
-        Default path.
-      </p>
+      <Label>{t('workflowSteps.condition.branches')}</Label>
+      <p className="text-xs text-neutral-500">{t('workflowSteps.condition.branchesHelp')}</p>
 
       {branches.map((branch, idx) => (
         <div key={branch.id} className="p-3 border border-neutral-200 rounded-lg space-y-3 bg-neutral-50/50">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-neutral-500">Branch {idx + 1}</span>
+            <span className="text-xs font-semibold text-neutral-500">
+              {t('workflowSteps.condition.branchLabel', {index: idx + 1})}
+            </span>
             {branches.length > 1 && (
               <Button
                 type="button"
@@ -544,19 +554,19 @@ function MultiBranchEditor({branches, validOperators, onUpdateBranch, onRemoveBr
           </div>
 
           <div>
-            <Label className="text-xs">Name *</Label>
+            <Label className="text-xs">{t('workflowSteps.condition.branchName')}</Label>
             <Input
               type="text"
               value={branch.name}
               onChange={e => onUpdateBranch(branch.id, {name: e.target.value})}
-              placeholder="e.g., Premium, Free, Enterprise"
+              placeholder={t('workflowSteps.condition.branchNamePlaceholder')}
               className="mt-1 h-8 text-sm"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-xs">Operator</Label>
+              <Label className="text-xs">{t('workflowSteps.condition.operator')}</Label>
               <Select
                 value={branch.operator}
                 onValueChange={val => onUpdateBranch(branch.id, {operator: val})}
@@ -567,7 +577,7 @@ function MultiBranchEditor({branches, validOperators, onUpdateBranch, onRemoveBr
                 <SelectContent>
                   {validOperators.map(op => (
                     <SelectItem key={op.value} value={op.value}>
-                      {op.label}
+                      {t(`workflowSteps.condition.operators.${op.labelKey}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -576,12 +586,12 @@ function MultiBranchEditor({branches, validOperators, onUpdateBranch, onRemoveBr
 
             {!NO_VALUE_OPERATORS.includes(branch.operator) && (
               <div>
-                <Label className="text-xs">Value</Label>
+                <Label className="text-xs">{t('workflowSteps.condition.value')}</Label>
                 <Input
                   type="text"
                   value={branch.value}
                   onChange={e => onUpdateBranch(branch.id, {value: e.target.value})}
-                  placeholder="Value..."
+                  placeholder={t('workflowSteps.condition.branchValuePlaceholder')}
                   className="mt-1 h-8 text-sm"
                 />
               </div>
@@ -597,15 +607,16 @@ function MultiBranchEditor({branches, validOperators, onUpdateBranch, onRemoveBr
           className="flex items-center gap-1.5 text-sm text-neutral-700 hover:text-neutral-900 font-medium"
         >
           <Plus className="h-3.5 w-3.5" />
-          Add Branch
+          {t('workflowSteps.condition.addBranch')}
         </button>
       )}
 
       <div className="p-2 bg-neutral-100 rounded-lg text-xs text-neutral-600 flex items-start gap-2">
         <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
         <span>
-          Branches are evaluated in order. The first match wins. Contacts not matching any branch will follow the{' '}
-          <strong>Default</strong> path.
+          {t('workflowSteps.condition.branchesEvaluatedInfoPrefix')}
+          <strong>{t('workflowSteps.condition.branchesEvaluatedInfoDefault')}</strong>
+          {t('workflowSteps.condition.branchesEvaluatedInfoSuffix')}
         </span>
       </div>
     </div>

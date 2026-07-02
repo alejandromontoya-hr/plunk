@@ -4,29 +4,8 @@ import {WorkflowSchemas} from '@plunk/shared';
 import {useState} from 'react';
 import {toast} from 'sonner';
 
+import {useTranslation} from '../../lib/i18n';
 import {network} from '../../lib/network';
-
-export const STEP_TYPE_LABELS: Record<WorkflowStep['type'], string> = {
-  TRIGGER:        'Trigger',
-  SEND_EMAIL:     'Send Email',
-  DELAY:          'Delay',
-  WAIT_FOR_EVENT: 'Wait for Event',
-  CONDITION:      'Condition',
-  EXIT:           'Exit',
-  WEBHOOK:        'Webhook',
-  UPDATE_CONTACT: 'Update Contact',
-};
-
-export const STEP_TYPE_DESCRIPTIONS: Record<WorkflowStep['type'], string> = {
-  TRIGGER:        'Starts the workflow when a specific event is received.',
-  SEND_EMAIL:     'Sends an email to the contact using a template you choose.',
-  DELAY:          'Pauses the workflow for a set amount of time before continuing.',
-  WAIT_FOR_EVENT: 'Waits until the contact triggers a specific event, then continues.',
-  CONDITION:      'Splits the flow based on contact data — each path leads to different steps.',
-  EXIT:           'Ends the workflow for the contact.',
-  WEBHOOK:        "Makes an HTTP request to an external URL with the contact's data.",
-  UPDATE_CONTACT: "Sets or updates fields on the contact's profile.",
-};
 
 export type StepWithTemplate = WorkflowStep & {
   template?: {id: string; name: string} | null;
@@ -47,6 +26,7 @@ export interface UpdateStepInput {
 }
 
 export function useStepUpdate(workflowId: string, stepId: string) {
+  const {t} = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const update = async (input: UpdateStepInput): Promise<boolean> => {
@@ -57,10 +37,10 @@ export function useStepUpdate(workflowId: string, stepId: string) {
         `/workflows/${workflowId}/steps/${stepId}`,
         input as Parameters<typeof network.fetch>[2],
       );
-      toast.success('Step updated successfully');
+      toast.success(t('workflowSteps.shared.stepUpdated'));
       return true;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update step');
+      toast.error(error instanceof Error ? error.message : t('workflowSteps.shared.failedToUpdate'));
       return false;
     } finally {
       setIsSubmitting(false);
@@ -97,25 +77,27 @@ export function StepDialogShell({
   isSubmitting,
   children,
 }: StepDialogShellProps) {
+  const {t} = useTranslation();
+  const typeLabel = t(`workflowSteps.types.${step.type}.label`);
+  const typeDescription = t(`workflowSteps.types.${step.type}.description`);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit {STEP_TYPE_LABELS[step.type] ?? step.type}</DialogTitle>
-          {STEP_TYPE_DESCRIPTIONS[step.type] && (
-            <p className="text-sm text-neutral-500 mt-1">{STEP_TYPE_DESCRIPTIONS[step.type]}</p>
-          )}
+          <DialogTitle>{t('workflowSteps.shared.editTitle', {type: typeLabel})}</DialogTitle>
+          {typeDescription && <p className="text-sm text-neutral-500 mt-1">{typeDescription}</p>}
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-5">
           <div>
-            <Label htmlFor="editStepName">Step Name</Label>
+            <Label htmlFor="editStepName">{t('workflowSteps.shared.stepName')}</Label>
             <Input
               id="editStepName"
               type="text"
               value={name}
               onChange={e => onNameChange(e.target.value)}
               required
-              placeholder="e.g., Send Welcome Email"
+              placeholder={t('workflowSteps.shared.stepNamePlaceholder')}
               className="mt-1.5"
             />
           </div>
@@ -124,10 +106,10 @@ export function StepDialogShell({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
+              {isSubmitting ? t('common.saving') : t('workflowSteps.shared.saveChanges')}
             </Button>
           </DialogFooter>
         </form>

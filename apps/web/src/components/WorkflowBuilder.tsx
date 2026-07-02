@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import dagre from 'dagre';
+import {type TranslateFn, useTranslation} from '../lib/i18n';
 import {network} from '../lib/network';
 import {toast} from 'sonner';
 import {Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@plunk/ui';
@@ -59,17 +60,6 @@ interface WorkflowBuilderProps {
   })[];
   onUpdate: () => void;
 }
-
-const STEP_TYPE_LABELS: Record<string, string> = {
-  TRIGGER: 'Trigger',
-  SEND_EMAIL: 'Send Email',
-  DELAY: 'Delay',
-  WAIT_FOR_EVENT: 'Wait for Event',
-  CONDITION: 'Condition',
-  EXIT: 'Exit',
-  WEBHOOK: 'Webhook',
-  UPDATE_CONTACT: 'Update Contact',
-};
 
 const STEP_TYPE_ICONS = {
   TRIGGER: GitBranch,
@@ -112,13 +102,13 @@ function getExpectedBranches(config: any): string[] {
   return ['yes', 'no'];
 }
 
-function getBranchLabel(config: any, branchId: string): string {
+function getBranchLabel(config: any, branchId: string, t: TranslateFn): string {
   if (config?.mode === 'multi') {
-    if (branchId === 'default') return 'Default';
+    if (branchId === 'default') return t('workflowSteps.builder.branchDefault');
     const branch = config.branches?.find((b: any) => b.id === branchId);
     return branch?.name || branchId;
   }
-  return branchId === 'yes' ? 'Yes' : 'No';
+  return branchId === 'yes' ? t('workflowSteps.builder.branchYes') : t('workflowSteps.builder.branchNo');
 }
 
 const BRANCH_COLORS = ['#16a34a', '#dc2626', '#2563eb', '#d97706', '#7c3aed', '#0891b2', '#be185d', '#059669'];
@@ -248,6 +238,7 @@ function CustomNode({
     config?: any;
   };
 }) {
+  const {t} = useTranslation();
   const Icon = data.icon;
   const color = data.color;
   const bgColor = data.bgColor;
@@ -282,7 +273,7 @@ function CustomNode({
               variant="outline"
               size="icon"
               className="h-7 w-7"
-              title="Edit trigger settings"
+              title={t('workflowSteps.builder.editTriggerSettings')}
             >
               <Settings className="h-3.5 w-3.5" />
             </Button>
@@ -298,7 +289,7 @@ function CustomNode({
               variant="outline"
               size="icon"
               className="h-7 w-7"
-              title="Edit step"
+              title={t('workflowSteps.builder.editStep')}
             >
               <Settings className="h-3.5 w-3.5" />
             </Button>
@@ -310,7 +301,7 @@ function CustomNode({
               variant="outline"
               size="icon"
               className="h-7 w-7 hover:bg-red-50 hover:border-red-400"
-              title="Delete step"
+              title={t('workflowSteps.builder.deleteStep')}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -334,7 +325,7 @@ function CustomNode({
                 color,
               }}
             >
-              {STEP_TYPE_LABELS[data.type] ?? data.type}
+              {t(`workflowSteps.types.${data.type}.label`)}
             </span>
           </div>
         </div>
@@ -349,7 +340,7 @@ function CustomNode({
               onClick={e => e.stopPropagation()}
               onMouseDown={e => e.stopPropagation()}
               className="nodrag flex items-center gap-2 text-xs text-neutral-600 hover:text-blue-600 hover:bg-blue-50 -mx-2 px-2 py-1 rounded transition-colors group/template"
-              title="Open template in a new tab"
+              title={t('workflowSteps.builder.openTemplateNewTab')}
             >
               <Mail className="h-3 w-3 shrink-0" />
               <span className="truncate flex-1">{data.template.name}</span>
@@ -362,7 +353,7 @@ function CustomNode({
             <div className="flex items-center gap-2 text-xs text-neutral-600">
               <Timer className="h-3 w-3" />
               <span>
-                Wait {data.config.amount} {data.config.unit}
+                {t('workflowSteps.builder.waitDuration', {amount: data.config.amount, unit: data.config.unit})}
               </span>
             </div>
           </div>
@@ -381,8 +372,12 @@ function CustomNode({
               </div>
               {data.config.mode === 'multi' ? (
                 <div className="text-[10px] text-neutral-500 ml-4">
-                  {data.config.branches?.length || 0} branch{(data.config.branches?.length || 0) !== 1 ? 'es' : ''} +
-                  default
+                  {t(
+                    (data.config.branches?.length || 0) === 1
+                      ? 'workflowSteps.builder.branchCount'
+                      : 'workflowSteps.builder.branchCount_plural',
+                    {count: data.config.branches?.length || 0},
+                  )}
                 </div>
               ) : (
                 <div className="text-[10px] text-neutral-500 ml-4">
@@ -436,16 +431,17 @@ const nodeTypes = {
 
 // Step type options for adding new steps
 const STEP_TYPE_OPTIONS = [
-  {value: 'SEND_EMAIL', label: 'Send Email', icon: Mail, color: STEP_TYPE_COLORS.SEND_EMAIL},
-  {value: 'DELAY', label: 'Delay', icon: Clock, color: STEP_TYPE_COLORS.DELAY},
-  {value: 'WAIT_FOR_EVENT', label: 'Wait for Event', icon: Clock, color: STEP_TYPE_COLORS.WAIT_FOR_EVENT},
-  {value: 'CONDITION', label: 'Condition', icon: GitBranch, color: STEP_TYPE_COLORS.CONDITION},
-  {value: 'WEBHOOK', label: 'Webhook', icon: Webhook, color: STEP_TYPE_COLORS.WEBHOOK},
-  {value: 'UPDATE_CONTACT', label: 'Update Contact', icon: UserCog, color: STEP_TYPE_COLORS.UPDATE_CONTACT},
-  {value: 'EXIT', label: 'Exit', icon: LogOut, color: STEP_TYPE_COLORS.EXIT},
+  {value: 'SEND_EMAIL', icon: Mail, color: STEP_TYPE_COLORS.SEND_EMAIL},
+  {value: 'DELAY', icon: Clock, color: STEP_TYPE_COLORS.DELAY},
+  {value: 'WAIT_FOR_EVENT', icon: Clock, color: STEP_TYPE_COLORS.WAIT_FOR_EVENT},
+  {value: 'CONDITION', icon: GitBranch, color: STEP_TYPE_COLORS.CONDITION},
+  {value: 'WEBHOOK', icon: Webhook, color: STEP_TYPE_COLORS.WEBHOOK},
+  {value: 'UPDATE_CONTACT', icon: UserCog, color: STEP_TYPE_COLORS.UPDATE_CONTACT},
+  {value: 'EXIT', icon: LogOut, color: STEP_TYPE_COLORS.EXIT},
 ];
 
 export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderProps) {
+  const {t} = useTranslation();
   const [addStepContext, setAddStepContext] = useState<{
     fromStepId: string | null;
     branch?: string;
@@ -543,7 +539,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
               position: {x: 0, y: 0},
               draggable: false,
               data: {
-                label: getBranchLabel(step.config, branchId),
+                label: getBranchLabel(step.config, branchId, t),
                 onClick: () => setAddStepContext({fromStepId: step.id, branch: branchId}),
               },
             });
@@ -567,7 +563,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
     });
 
     return nodes;
-  }, [steps, handleEditStep, handleDeleteStepClick]);
+  }, [steps, handleEditStep, handleDeleteStepClick, t]);
 
   // Convert transitions to React Flow edges
   const rawEdges: Edge[] = useMemo(() => {
@@ -584,7 +580,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
               : undefined;
 
           const branchColor = branch ? getBranchColor(step.config, branch) : '#94a3b8';
-          const branchLabel = branch ? getBranchLabel(step.config, branch) : undefined;
+          const branchLabel = branch ? getBranchLabel(step.config, branch, t) : undefined;
 
           edges.push({
             id: transition.id,
@@ -635,7 +631,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
 
           if (!hasBranch) {
             const color = getBranchColor(step.config, branchId);
-            const label = getBranchLabel(step.config, branchId);
+            const label = getBranchLabel(step.config, branchId, t);
 
             edges.push({
               id: `${step.id}-add-${branchId}-edge`,
@@ -669,7 +665,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
     });
 
     return edges;
-  }, [steps]);
+  }, [steps, t]);
 
   // Apply dagre layout
   const {nodes: layoutedNodes, edges: layoutedEdges} = useMemo(() => {
@@ -700,7 +696,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
         // Validate that this branch doesn't already have a transition
         const fromStep = steps.find(s => s.id === addStepContext.fromStepId);
         if (!fromStep) {
-          toast.error('Parent step not found');
+          toast.error(t('workflowSteps.builder.parentStepNotFound'));
           return;
         }
 
@@ -716,7 +712,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
             );
           });
           if (existingBranchTransition) {
-            toast.error(`The ${addStepContext.branch} branch already has a connection`);
+            toast.error(t('workflowSteps.builder.branchAlreadyConnected', {branch: addStepContext.branch}));
             return;
           }
         }
@@ -727,7 +723,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
           `/workflows/${workflowId}/steps`,
           {
             type: stepType as WorkflowStep['type'],
-            name: `New ${stepType.toLowerCase().replace('_', ' ')}`,
+            name: t('workflowSteps.builder.newStepName', {type: t(`workflowSteps.types.${stepType}.label`)}),
             position: {x: 0, y: 0}, // Will be auto-positioned by dagre layout
             config: {},
             autoConnect: false, // We manually create transitions to preserve branch information
@@ -753,7 +749,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
           },
         );
 
-        toast.success('Step added successfully');
+        toast.success(t('workflowSteps.builder.stepAdded'));
         setAddStepContext(null);
         onUpdate();
 
@@ -763,11 +759,11 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
           window.dispatchEvent(event);
         }, 100);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to add step');
+        toast.error(error instanceof Error ? error.message : t('workflowSteps.builder.failedToAddStep'));
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [addStepContext, workflowId, onUpdate],
+    [addStepContext, workflowId, onUpdate, t],
   );
 
   // Get all steps that will be affected by deleting a step (the step itself + all downstream steps)
@@ -812,17 +808,17 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
       if (deleteMode === 'cascade') {
         const affectedSteps = getAffectedSteps(stepToDelete);
         if (affectedSteps.length > 1) {
-          toast.success(`Deleted ${affectedSteps.length} steps`);
+          toast.success(t('workflowSteps.builder.stepsDeleted', {count: affectedSteps.length}));
         } else {
-          toast.success('Step deleted');
+          toast.success(t('workflowSteps.builder.stepDeleted'));
         }
       } else {
-        toast.success('Step removed from flow');
+        toast.success(t('workflowSteps.builder.stepRemovedFromFlow'));
       }
 
       onUpdate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete step');
+      toast.error(error instanceof Error ? error.message : t('workflowSteps.builder.failedToDeleteStep'));
     } finally {
       setStepToDelete(null);
     }
@@ -833,8 +829,8 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
     return (
       <div className="bg-neutral-50 border-2 border-dashed border-neutral-300 rounded-lg p-12 text-center">
         <GitBranch className="h-16 w-16 text-neutral-400 mx-auto mb-4" />
-        <p className="text-neutral-600 font-medium">No workflow steps yet</p>
-        <p className="text-sm text-neutral-500 mt-2">Add your first step to get started</p>
+        <p className="text-neutral-600 font-medium">{t('workflowSteps.builder.emptyTitle')}</p>
+        <p className="text-sm text-neutral-500 mt-2">{t('workflowSteps.builder.emptySubtitle')}</p>
       </div>
     );
   }
@@ -897,11 +893,21 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
             <div className="flex items-center gap-3">
               <GitBranch className="h-4 w-4 text-neutral-700" />
               <div className="text-sm">
-                <span className="font-semibold text-neutral-900">{steps.length}</span>
-                <span className="text-neutral-600"> step{steps.length !== 1 ? 's' : ''}</span>
+                <span className="text-neutral-600">
+                  {t(
+                    steps.length === 1 ? 'workflowSteps.builder.stepCount' : 'workflowSteps.builder.stepCount_plural',
+                    {count: steps.length},
+                  )}
+                </span>
                 <span className="text-neutral-400 mx-2">·</span>
-                <span className="font-semibold text-neutral-900">{rawEdges.length}</span>
-                <span className="text-neutral-600"> connection{rawEdges.length !== 1 ? 's' : ''}</span>
+                <span className="text-neutral-600">
+                  {t(
+                    rawEdges.length === 1
+                      ? 'workflowSteps.builder.connectionCount'
+                      : 'workflowSteps.builder.connectionCount_plural',
+                    {count: rawEdges.length},
+                  )}
+                </span>
               </div>
             </div>
           </Panel>
@@ -909,7 +915,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
             <button
               onClick={() => setIsExpanded(e => !e)}
               className="bg-white border border-neutral-200 rounded-lg shadow-md p-2 hover:bg-neutral-50 transition-colors"
-              title={isExpanded ? 'Exit fullscreen' : 'Expand to fullscreen'}
+              title={isExpanded ? t('workflowSteps.builder.exitFullscreen') : t('workflowSteps.builder.expandFullscreen')}
             >
               {isExpanded ? (
                 <Minimize2 className="h-4 w-4 text-neutral-600" />
@@ -925,7 +931,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
             >
               <div className="flex items-center gap-2 text-sm text-neutral-600">
                 <Lightbulb className="h-4 w-4" />
-                <span>Click the + buttons to add and connect steps.</span>
+                <span>{t('workflowSteps.builder.connectHint')}</span>
               </div>
             </Panel>
           )}
@@ -936,7 +942,7 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
       <Dialog open={!!addStepContext} onOpenChange={open => !open && setAddStepContext(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Step</DialogTitle>
+            <DialogTitle>{t('workflowSteps.builder.addStepTitle')}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3 py-4">
             {STEP_TYPE_OPTIONS.map(option => {
@@ -955,14 +961,16 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
                   >
                     <Icon className="h-6 w-6" style={{color: option.color}} />
                   </div>
-                  <span className="text-sm font-medium text-neutral-900">{option.label}</span>
+                  <span className="text-sm font-medium text-neutral-900">
+                    {t(`workflowSteps.types.${option.value}.label`)}
+                  </span>
                 </button>
               );
             })}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddStepContext(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -981,12 +989,12 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Remove &quot;{stepToDeleteData?.name}&quot;</DialogTitle>
+                  <DialogTitle>{t('workflowSteps.builder.removeTitle', {name: stepToDeleteData?.name ?? ''})}</DialogTitle>
                 </DialogHeader>
 
                 {canSplice ? (
                   <div className="space-y-3 py-1">
-                    <p className="text-sm text-neutral-600">How would you like to remove this step?</p>
+                    <p className="text-sm text-neutral-600">{t('workflowSteps.builder.removeQuestion')}</p>
                     <div className="space-y-2">
                       <button
                         onClick={() => setDeleteMode('splice')}
@@ -996,10 +1004,11 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
                             : 'border-neutral-200 hover:border-neutral-300'
                         }`}
                       >
-                        <p className="text-sm font-medium text-neutral-900">Remove from flow</p>
+                        <p className="text-sm font-medium text-neutral-900">
+                          {t('workflowSteps.builder.removeFromFlow')}
+                        </p>
                         <p className="text-xs text-neutral-500 mt-0.5">
-                          Delete this step and connect its parent directly to its child. The rest of the workflow is
-                          preserved.
+                          {t('workflowSteps.builder.removeFromFlowDescription')}
                         </p>
                       </button>
                       <button
@@ -1011,10 +1020,15 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
                         }`}
                       >
                         <p className="text-sm font-medium text-neutral-900">
-                          Delete with {downstreamSteps.length} downstream {downstreamSteps.length === 1 ? 'step' : 'steps'}
+                          {t(
+                            downstreamSteps.length === 1
+                              ? 'workflowSteps.builder.deleteWithDownstream'
+                              : 'workflowSteps.builder.deleteWithDownstream_plural',
+                            {count: downstreamSteps.length},
+                          )}
                         </p>
                         <p className="text-xs text-neutral-500 mt-0.5">
-                          Permanently removes this step and everything below it. This cannot be undone.
+                          {t('workflowSteps.builder.deleteWithDownstreamDescription')}
                         </p>
                       </button>
                     </div>
@@ -1022,27 +1036,29 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
                 ) : isCondition && hasChildren ? (
                   <div className="space-y-3 py-1">
                     <p className="text-sm text-neutral-600">
-                      Removing a condition step will also delete all {downstreamSteps.length} downstream{' '}
-                      {downstreamSteps.length === 1 ? 'step' : 'steps'} across its branches:
+                      {t(
+                        downstreamSteps.length === 1
+                          ? 'workflowSteps.builder.conditionDeleteWarning'
+                          : 'workflowSteps.builder.conditionDeleteWarning_plural',
+                        {count: downstreamSteps.length},
+                      )}
                     </p>
                     <ul className="list-disc list-inside text-sm text-neutral-600 max-h-32 overflow-y-auto bg-neutral-50 p-3 rounded border border-neutral-200">
                       {downstreamSteps.map(step => (
                         <li key={step.id}>
-                          {step.name} ({STEP_TYPE_LABELS[step.type] ?? step.type})
+                          {step.name} ({t(`workflowSteps.types.${step.type}.label`)})
                         </li>
                       ))}
                     </ul>
-                    <p className="text-sm font-medium text-red-600">This action cannot be undone.</p>
+                    <p className="text-sm font-medium text-red-600">{t('workflowSteps.builder.cannotBeUndone')}</p>
                   </div>
                 ) : (
-                  <p className="text-sm text-neutral-600 py-1">
-                    Are you sure you want to delete this step? This action cannot be undone.
-                  </p>
+                  <p className="text-sm text-neutral-600 py-1">{t('workflowSteps.builder.confirmDeleteSingle')}</p>
                 )}
 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     variant={deleteMode === 'cascade' || !canSplice ? 'destructive' : 'default'}
@@ -1052,8 +1068,10 @@ export function WorkflowBuilder({workflowId, steps, onUpdate}: WorkflowBuilderPr
                     }}
                   >
                     {canSplice && deleteMode === 'splice'
-                      ? 'Remove from flow'
-                      : `Delete ${hasChildren ? `${affectedSteps.length} steps` : 'step'}`}
+                      ? t('workflowSteps.builder.removeFromFlow')
+                      : hasChildren
+                        ? t('workflowSteps.builder.deleteStepsButton', {count: affectedSteps.length})
+                        : t('workflowSteps.builder.deleteStepButton')}
                   </Button>
                 </DialogFooter>
               </DialogContent>

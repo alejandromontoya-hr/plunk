@@ -44,6 +44,7 @@ import {
   type DataTableView,
 } from '../../components/data-table';
 import {network} from '../../lib/network';
+import {useTranslation} from '../../lib/i18n';
 import {formatRelativeTime} from '../../lib/dateUtils';
 import {useColumnVisibility} from '../../lib/hooks/useColumnVisibility';
 import {usePersistentState} from '../../lib/hooks/usePersistentState';
@@ -67,11 +68,9 @@ const VIEW_STORAGE_KEY = 'plunk:workflows:view';
 const COLUMNS_STORAGE_KEY = 'plunk:workflows:columns';
 
 // Fixed-value options for the Status column's faceted filter (table view) and
-// the card-view pill row. Single source of truth for both.
-const STATUS_OPTIONS: ReadonlyArray<{value: Exclude<StatusFilter, 'ALL'>; label: string}> = [
-  {value: 'active', label: 'Active'},
-  {value: 'disabled', label: 'Disabled'},
-];
+// the card-view pill row. Single source of truth for both. Labels are resolved
+// via `t()` at render (see STATUS_VALUES usage below).
+const STATUS_VALUES: ReadonlyArray<Exclude<StatusFilter, 'ALL'>> = ['active', 'disabled'];
 
 // Name + Actions are locked-visible (see lockedColumnIds below). `select` is
 // also locked. Everything starts visible.
@@ -86,6 +85,7 @@ const DEFAULT_COLUMN_VISIBILITY: VisibilityState = {
 };
 
 export default function WorkflowsPage() {
+  const {t} = useTranslation();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -137,10 +137,10 @@ export default function WorkflowsPage() {
 
     try {
       await network.fetch('DELETE', `/workflows/${workflowToDelete}`);
-      toast.success('Workflow deleted successfully');
+      toast.success(t('workflows.toast.deleteSuccess'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete workflow');
+      toast.error(error instanceof Error ? error.message : t('workflows.toast.deleteError'));
     } finally {
       setWorkflowToDelete(null);
     }
@@ -149,10 +149,10 @@ export default function WorkflowsPage() {
   const handleDuplicate = async (workflowId: string) => {
     try {
       await network.fetch('POST', `/workflows/${workflowId}/duplicate`);
-      toast.success('Workflow duplicated successfully');
+      toast.success(t('workflows.toast.duplicateSuccess'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to duplicate workflow');
+      toast.error(error instanceof Error ? error.message : t('workflows.toast.duplicateError'));
     }
   };
 
@@ -161,10 +161,10 @@ export default function WorkflowsPage() {
       await network.fetch<Workflow, typeof WorkflowSchemas.update>('PATCH', `/workflows/${workflowId}`, {
         enabled: !currentlyEnabled,
       });
-      toast.success(`Workflow ${!currentlyEnabled ? 'enabled' : 'disabled'} successfully`);
+      toast.success(!currentlyEnabled ? t('workflows.toast.enabledSuccess') : t('workflows.toast.disabledSuccess'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to toggle workflow');
+      toast.error(error instanceof Error ? error.message : t('workflows.toast.toggleError'));
     }
   };
 
@@ -183,11 +183,15 @@ export default function WorkflowsPage() {
         },
       );
       const count = result?.deleted ?? selectedIds.length;
-      toast.success(`${count} workflow${count === 1 ? '' : 's'} deleted`);
+      toast.success(
+        count === 1
+          ? t('workflows.toast.bulkDeleteSuccess', {count})
+          : t('workflows.toast.bulkDeleteSuccessPlural', {count}),
+      );
       setRowSelection({});
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete workflows');
+      toast.error(error instanceof Error ? error.message : t('workflows.toast.bulkDeleteError'));
     } finally {
       // ConfirmDialog closes itself after onConfirm resolves.
       setBulkDeleteStatus('idle');
@@ -205,10 +209,10 @@ export default function WorkflowsPage() {
         id: 'select',
         enableSorting: false,
         enableHiding: false, // Selection column is locked-visible.
-        meta: {label: 'Select', headClassName: 'w-10', cellClassName: 'w-10'} satisfies DataTableColumnMeta,
+        meta: {label: t('workflows.list.columns.select'), headClassName: 'w-10', cellClassName: 'w-10'} satisfies DataTableColumnMeta,
         header: ({table}) => (
           <Checkbox
-            aria-label="Select all rows on this page"
+            aria-label={t('workflows.list.selectAll')}
             checked={
               table.getIsAllPageRowsSelected()
                 ? true
@@ -221,7 +225,7 @@ export default function WorkflowsPage() {
         ),
         cell: ({row}) => (
           <Checkbox
-            aria-label={`Select ${row.original.name}`}
+            aria-label={t('workflows.list.selectRow', {name: row.original.name})}
             checked={row.getIsSelected()}
             // Capture shift-key state before the toggle, then apply range
             // selection on change (see useShiftClickSelection below).
@@ -237,8 +241,8 @@ export default function WorkflowsPage() {
         id: 'name',
         accessorKey: 'name',
         enableHiding: false, // Name column is locked-visible.
-        meta: {label: 'Name'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Name</DataTableColumnHeader>,
+        meta: {label: t('workflows.list.columns.name')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('workflows.list.columns.name')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <Link
             href={`/workflows/${row.original.id}`}
@@ -251,8 +255,8 @@ export default function WorkflowsPage() {
       {
         id: 'trigger',
         enableSorting: false, // No backend sort field for trigger.
-        meta: {label: 'Trigger'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Trigger</DataTableColumnHeader>,
+        meta: {label: t('workflows.list.columns.trigger')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('workflows.list.columns.trigger')}</DataTableColumnHeader>,
         cell: ({row}) => {
           const eventName = triggerEventName(row.original);
           return eventName ? (
@@ -268,7 +272,7 @@ export default function WorkflowsPage() {
       {
         id: 'status',
         enableSorting: false, // Status is faceted-filtered, not sorted.
-        meta: {label: 'Status'} satisfies DataTableColumnMeta,
+        meta: {label: t('workflows.list.columns.status')} satisfies DataTableColumnMeta,
         header: ({column}) => (
           <DataTableColumnHeader
             column={column}
@@ -276,9 +280,12 @@ export default function WorkflowsPage() {
             // filter (Prisma `enabled` boolean). Matches the campaigns Status facet.
             filter={
               <DataTableFacetedFilter
-                title="Status"
+                title={t('workflows.list.columns.status')}
                 multiple={false}
-                options={STATUS_OPTIONS.map(s => ({value: s.value, label: s.label}))}
+                options={STATUS_VALUES.map(value => ({
+                  value,
+                  label: value === 'active' ? t('workflows.status.active') : t('workflows.status.disabled'),
+                }))}
                 selected={statusFilter === 'ALL' ? [] : [statusFilter]}
                 onChange={next => {
                   setStatusFilter((next[0] as StatusFilter) ?? 'ALL');
@@ -287,7 +294,7 @@ export default function WorkflowsPage() {
               />
             }
           >
-            Status
+            {t('workflows.list.columns.status')}
           </DataTableColumnHeader>
         ),
         cell: ({row}) => (
@@ -295,12 +302,12 @@ export default function WorkflowsPage() {
             {row.original.enabled ? (
               <>
                 <Power className="h-3 w-3 mr-1" />
-                Active
+                {t('workflows.status.active')}
               </>
             ) : (
               <>
                 <PowerOff className="h-3 w-3 mr-1" />
-                Disabled
+                {t('workflows.status.disabled')}
               </>
             )}
           </Badge>
@@ -313,12 +320,12 @@ export default function WorkflowsPage() {
         // on the first click, so flip to descending first.
         enableSorting: true,
         sortDescFirst: true,
-        meta: {label: 'Steps'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Steps</DataTableColumnHeader>,
+        meta: {label: t('workflows.list.columns.steps')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('workflows.list.columns.steps')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <span className="text-sm text-neutral-700">
             <strong className="font-semibold text-neutral-900">{row.original._count?.steps ?? 0}</strong>
-            <span className="text-neutral-400 ml-1 text-xs">steps</span>
+            <span className="text-neutral-400 ml-1 text-xs">{t('workflows.list.stepsSuffix')}</span>
           </span>
         ),
       },
@@ -328,8 +335,8 @@ export default function WorkflowsPage() {
         // ISO-string values sort ascending on first click by default; flip so
         // the first click on "Updated" surfaces the most recently edited rows.
         sortDescFirst: true,
-        meta: {label: 'Updated'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Updated</DataTableColumnHeader>,
+        meta: {label: t('workflows.list.columns.updated')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('workflows.list.columns.updated')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <div className="group relative inline-block cursor-help text-sm text-neutral-500 whitespace-nowrap">
             {formatRelativeTime(row.original.updatedAt)}
@@ -343,29 +350,29 @@ export default function WorkflowsPage() {
         id: 'actions',
         enableSorting: false,
         enableHiding: false, // Actions column is locked-visible.
-        meta: {label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right'} satisfies DataTableColumnMeta,
-        header: () => <span className="flex justify-end">Actions</span>,
+        meta: {label: t('workflows.list.columns.actions'), headClassName: 'text-right', cellClassName: 'text-right'} satisfies DataTableColumnMeta,
+        header: () => <span className="flex justify-end">{t('workflows.list.columns.actions')}</span>,
         cell: ({row}) => (
           <div className="flex items-center justify-end gap-1">
             <Button
               variant="ghost"
               size="sm"
-              title={row.original.enabled ? 'Disable workflow' : 'Enable workflow'}
-              aria-label={row.original.enabled ? 'Disable workflow' : 'Enable workflow'}
+              title={row.original.enabled ? t('workflows.list.actions.disable') : t('workflows.list.actions.enable')}
+              aria-label={row.original.enabled ? t('workflows.list.actions.disable') : t('workflows.list.actions.enable')}
               onClick={() => handleToggleEnabled(row.original.id, row.original.enabled)}
             >
               {row.original.enabled ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
             </Button>
-            <Button asChild variant="ghost" size="sm" title="Edit workflow">
-              <Link href={`/workflows/${row.original.id}`} aria-label="Edit workflow">
+            <Button asChild variant="ghost" size="sm" title={t('workflows.list.actions.edit')}>
+              <Link href={`/workflows/${row.original.id}`} aria-label={t('workflows.list.actions.edit')}>
                 <Edit className="h-4 w-4" />
               </Link>
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              title="Duplicate workflow"
-              aria-label="Duplicate workflow"
+              title={t('workflows.list.actions.duplicate')}
+              aria-label={t('workflows.list.actions.duplicate')}
               onClick={() => handleDuplicate(row.original.id)}
             >
               <Copy className="h-4 w-4" />
@@ -373,8 +380,8 @@ export default function WorkflowsPage() {
             <Button
               variant="ghost"
               size="sm"
-              title="Delete workflow"
-              aria-label="Delete workflow"
+              title={t('workflows.list.actions.delete')}
+              aria-label={t('workflows.list.actions.delete')}
               onClick={() => {
                 setWorkflowToDelete(row.original.id);
                 setShowDeleteDialog(true);
@@ -389,7 +396,7 @@ export default function WorkflowsPage() {
     // Re-creating columns on every render is cheap and avoids stale-closure bugs
     // for the toggle/delete/duplicate handlers and the status-facet state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [statusFilter],
+    [statusFilter, t],
   );
 
   const table = useReactTable<WorkflowRow>({
@@ -426,22 +433,22 @@ export default function WorkflowsPage() {
 
   return (
     <>
-      <NextSeo title="Workflows" />
+      <NextSeo title={t('workflows.seoTitle')} />
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Workflows</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('workflows.list.title')}</h1>
               <p className="text-neutral-500 mt-2 text-sm sm:text-base">
-                Automate your email campaigns with powerful workflows.{' '}
-                {data?.total ? `${data.total} total workflows` : ''}
+                {t('workflows.list.subtitle')}{' '}
+                {data?.total ? t('workflows.list.totalCount', {count: data.total}) : ''}
               </p>
             </div>
             <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
               <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Create Workflow</span>
-              <span className="sm:hidden">Create</span>
+              <span className="hidden sm:inline">{t('workflows.list.createWorkflow')}</span>
+              <span className="sm:hidden">{t('workflows.list.createShort')}</span>
             </Button>
           </div>
 
@@ -458,7 +465,7 @@ export default function WorkflowsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
               <Input
                 type="text"
-                placeholder="Search workflows..."
+                placeholder={t('workflows.list.searchPlaceholder')}
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 className="pl-10 pr-10 h-8 text-xs"
@@ -466,7 +473,7 @@ export default function WorkflowsPage() {
               {searchInput && (
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t('workflows.list.clearSearch')}
                   onClick={() => {
                     setSearchInput('');
                     setSearch('');
@@ -481,9 +488,12 @@ export default function WorkflowsPage() {
             <div className="flex items-center gap-2 shrink-0">
               {view === 'card' && (
                 <DataTableFilter
-                  title="Status"
+                  title={t('workflows.list.columns.status')}
                   multiple={false}
-                  options={STATUS_OPTIONS.map(s => ({value: s.value, label: s.label}))}
+                  options={STATUS_VALUES.map(value => ({
+                    value,
+                    label: value === 'active' ? t('workflows.status.active') : t('workflows.status.disabled'),
+                  }))}
                   selected={statusFilter === 'ALL' ? [] : [statusFilter]}
                   onChange={next => {
                     setStatusFilter((next[0] as StatusFilter) ?? 'ALL');
@@ -503,7 +513,7 @@ export default function WorkflowsPage() {
               there). Wires the delete action; the children slot stays open for
               future bulk operations. */}
           {view === 'table' && (
-            <BulkActionBar selectedCount={selectedIds.length} itemNoun="workflow" onClear={() => setRowSelection({})}>
+            <BulkActionBar selectedCount={selectedIds.length} itemNoun={t('workflows.list.itemNoun')} onClear={() => setRowSelection({})}>
               <Button
                 type="button"
                 variant="destructive"
@@ -512,7 +522,7 @@ export default function WorkflowsPage() {
                 disabled={bulkDeleteStatus === 'loading'}
               >
                 <Trash2 className="h-4 w-4" />
-                Delete selected
+                {t('workflows.list.deleteSelected')}
               </Button>
             </BulkActionBar>
           )}
@@ -533,17 +543,17 @@ export default function WorkflowsPage() {
                   {hasActiveFilters ? (
                     // Items exist, but the active search/status filters matched
                     // none — offer a one-click recovery.
-                    <NoResultsState icon={WorkflowIcon} itemNoun="workflows" onClear={clearFilters} />
+                    <NoResultsState icon={WorkflowIcon} itemNoun={t('workflows.list.itemNounPlural')} onClear={clearFilters} />
                   ) : (
                     // Genuinely empty project — first-run state.
                     <EmptyState
                       icon={WorkflowIcon}
-                      title="No workflows yet"
-                      description="Automate emails triggered by contact events."
+                      title={t('workflows.list.emptyTitle')}
+                      description={t('workflows.list.emptyDescription')}
                       action={
                         <Button onClick={() => setShowCreateDialog(true)}>
                           <Plus className="h-4 w-4" />
-                          Create Workflow
+                          {t('workflows.list.createWorkflow')}
                         </Button>
                       }
                     />
@@ -560,15 +570,15 @@ export default function WorkflowsPage() {
                         href={`/workflows/${workflow.id}`}
                         data-card-link=""
                         className="flex-1 block p-6 pb-4 hover:bg-neutral-50/50 transition-colors rounded-t-xl focus-visible:outline-none"
-                        aria-label={`Open ${workflow.name}`}
+                        aria-label={t('workflows.list.openWorkflow', {name: workflow.name})}
                       >
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <h3 className="font-semibold text-neutral-900 leading-snug">{workflow.name}</h3>
                           <Badge variant={workflow.enabled ? 'success' : 'neutral'} className="shrink-0 mt-0.5">
                             {workflow.enabled ? (
-                              <><Power className="h-3 w-3 mr-1" />Active</>
+                              <><Power className="h-3 w-3 mr-1" />{t('workflows.status.active')}</>
                             ) : (
-                              <><PowerOff className="h-3 w-3 mr-1" />Disabled</>
+                              <><PowerOff className="h-3 w-3 mr-1" />{t('workflows.status.disabled')}</>
                             )}
                           </Badge>
                         </div>
@@ -577,7 +587,7 @@ export default function WorkflowsPage() {
                           'eventName' in workflow.triggerConfig && (
                             <div className="flex items-center gap-1.5 text-xs text-neutral-500 mb-3">
                               <Zap className="h-3 w-3 shrink-0" />
-                              <span>Triggers on</span>
+                              <span>{t('workflows.list.triggersOn')}</span>
                               <code className="font-mono bg-neutral-100 px-1.5 py-0.5 rounded text-neutral-700">
                                 {String(workflow.triggerConfig.eventName)}
                               </code>
@@ -586,12 +596,12 @@ export default function WorkflowsPage() {
                         <div className="flex items-center gap-4 text-sm">
                           <span>
                             <strong className="font-semibold text-neutral-900">{workflow._count?.steps ?? 0}</strong>
-                            <span className="text-neutral-400 ml-1 text-xs">steps</span>
+                            <span className="text-neutral-400 ml-1 text-xs">{t('workflows.list.stepsSuffix')}</span>
                           </span>
                           <span className="h-3 w-px bg-neutral-200" />
                           <span>
                             <strong className="font-semibold text-neutral-900">{workflow._count?.executions ?? 0}</strong>
-                            <span className="text-neutral-400 ml-1 text-xs">executions</span>
+                            <span className="text-neutral-400 ml-1 text-xs">{t('workflows.list.executionsSuffix')}</span>
                           </span>
                         </div>
                       </Link>
@@ -599,7 +609,7 @@ export default function WorkflowsPage() {
                         <div className="flex items-center gap-1.5 text-xs text-neutral-400">
                           <Calendar className="h-3 w-3" />
                           <div className="group relative inline-block cursor-help">
-                            <span>Updated {formatRelativeTime(workflow.updatedAt)}</span>
+                            <span>{t('workflows.list.updatedPrefix', {time: formatRelativeTime(workflow.updatedAt)})}</span>
                             <div className="hidden group-hover:block absolute z-10 w-48 p-2 bg-neutral-900 text-white text-xs rounded shadow-md bottom-full left-0 mb-1 whitespace-nowrap">
                               {dayjs(workflow.updatedAt).format('DD MMMM YYYY, hh:mm')}
                             </div>
@@ -609,18 +619,18 @@ export default function WorkflowsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            title={workflow.enabled ? 'Disable workflow' : 'Enable workflow'}
+                            title={workflow.enabled ? t('workflows.list.actions.disable') : t('workflows.list.actions.enable')}
                             onClick={() => handleToggleEnabled(workflow.id, workflow.enabled)}
                           >
                             {workflow.enabled ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                           </Button>
-                          <Button asChild variant="ghost" size="sm" title="Edit workflow">
-                            <Link href={`/workflows/${workflow.id}`} aria-label="Edit workflow"><Edit className="h-4 w-4" /></Link>
+                          <Button asChild variant="ghost" size="sm" title={t('workflows.list.actions.edit')}>
+                            <Link href={`/workflows/${workflow.id}`} aria-label={t('workflows.list.actions.edit')}><Edit className="h-4 w-4" /></Link>
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="Duplicate workflow"
+                            title={t('workflows.list.actions.duplicate')}
                             onClick={() => handleDuplicate(workflow.id)}
                           >
                             <Copy className="h-4 w-4" />
@@ -628,7 +638,7 @@ export default function WorkflowsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="Delete workflow"
+                            title={t('workflows.list.actions.delete')}
                             onClick={() => {
                               setWorkflowToDelete(workflow.id);
                               setShowDeleteDialog(true);
@@ -646,15 +656,18 @@ export default function WorkflowsPage() {
                 {data && data.totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <p className="text-sm text-neutral-500">
-                      Showing {(page - 1) * data.pageSize + 1} to {Math.min(page * data.pageSize, data.total)} of{' '}
-                      {data.total} workflows
+                      {t('workflows.list.pagination.showing', {
+                        from: (page - 1) * data.pageSize + 1,
+                        to: Math.min(page * data.pageSize, data.total),
+                        total: data.total,
+                      })}
                     </p>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
-                        Previous
+                        {t('common.previous')}
                       </Button>
                       <span className="text-sm text-neutral-700">
-                        Page {page} of {data.totalPages}
+                        {t('workflows.list.pagination.page', {page, totalPages: data.totalPages})}
                       </span>
                       <Button
                         variant="outline"
@@ -662,7 +675,7 @@ export default function WorkflowsPage() {
                         onClick={() => setPage(p => p + 1)}
                         disabled={page === data.totalPages}
                       >
-                        Next
+                        {t('common.next')}
                       </Button>
                     </div>
                   </div>
@@ -681,15 +694,18 @@ export default function WorkflowsPage() {
                 {data && data.totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <p className="text-sm text-neutral-500">
-                      Showing {(page - 1) * data.pageSize + 1} to {Math.min(page * data.pageSize, data.total)} of{' '}
-                      {data.total} workflows
+                      {t('workflows.list.pagination.showing', {
+                        from: (page - 1) * data.pageSize + 1,
+                        to: Math.min(page * data.pageSize, data.total),
+                        total: data.total,
+                      })}
                     </p>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
-                        Previous
+                        {t('common.previous')}
                       </Button>
                       <span className="text-sm text-neutral-700">
-                        Page {page} of {data.totalPages}
+                        {t('workflows.list.pagination.page', {page, totalPages: data.totalPages})}
                       </span>
                       <Button
                         variant="outline"
@@ -697,7 +713,7 @@ export default function WorkflowsPage() {
                         onClick={() => setPage(p => p + 1)}
                         disabled={page === data.totalPages}
                       >
-                        Next
+                        {t('common.next')}
                       </Button>
                     </div>
                   </div>
@@ -714,9 +730,9 @@ export default function WorkflowsPage() {
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           onConfirm={handleDelete}
-          title="Delete Workflow"
-          description="Are you sure you want to delete this workflow? This action cannot be undone."
-          confirmText="Delete"
+          title={t('workflows.list.deleteDialog.title')}
+          description={t('workflows.list.deleteDialog.description')}
+          confirmText={t('workflows.list.deleteDialog.confirm')}
           variant="destructive"
         />
 
@@ -724,9 +740,13 @@ export default function WorkflowsPage() {
           open={showBulkDeleteDialog}
           onOpenChange={setShowBulkDeleteDialog}
           onConfirm={handleBulkDelete}
-          title={`Delete ${selectedIds.length} workflow${selectedIds.length === 1 ? '' : 's'}`}
-          description="Are you sure you want to delete the selected workflows? This action cannot be undone. Workflows with active executions will block the operation."
-          confirmText="Delete"
+          title={
+            selectedIds.length === 1
+              ? t('workflows.list.bulkDeleteDialog.title', {count: selectedIds.length})
+              : t('workflows.list.bulkDeleteDialog.titlePlural', {count: selectedIds.length})
+          }
+          description={t('workflows.list.bulkDeleteDialog.description')}
+          confirmText={t('workflows.list.bulkDeleteDialog.confirm')}
           variant="destructive"
           status={bulkDeleteStatus}
         />
@@ -742,6 +762,7 @@ interface CreateWorkflowDialogProps {
 }
 
 function CreateWorkflowDialog({open, onOpenChange, onSuccess}: CreateWorkflowDialogProps) {
+  const {t} = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [eventName, setEventName] = useState('');
@@ -767,7 +788,7 @@ function CreateWorkflowDialog({open, onOpenChange, onSuccess}: CreateWorkflowDia
         enabled: false,
       });
 
-      toast.success('Workflow created successfully');
+      toast.success(t('workflows.toast.createSuccess'));
       setName('');
       setDescription('');
       setEventName('');
@@ -778,7 +799,7 @@ function CreateWorkflowDialog({open, onOpenChange, onSuccess}: CreateWorkflowDia
       // Redirect to the workflow editor
       window.location.href = `/workflows/${workflow.id}`;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create workflow');
+      toast.error(error instanceof Error ? error.message : t('workflows.toast.createError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -788,35 +809,35 @@ function CreateWorkflowDialog({open, onOpenChange, onSuccess}: CreateWorkflowDia
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create New Workflow</DialogTitle>
+          <DialogTitle>{t('workflows.create.title')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="name">{t('workflows.create.nameLabel')}</Label>
             <Input
               id="name"
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               required
-              placeholder="Welcome Email Sequence"
+              placeholder={t('workflows.create.namePlaceholder')}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t('workflows.create.descriptionLabel')}</Label>
             <textarea
               id="description"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="Send a series of welcome emails to new subscribers"
+              placeholder={t('workflows.create.descriptionPlaceholder')}
               className="w-full px-3 py-2 border border-neutral-200 rounded-md text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               rows={3}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="createEventName">Trigger Event *</Label>
+            <Label htmlFor="createEventName">{t('workflows.create.triggerEventLabel')}</Label>
             {/* Combobox: 可自由輸入 event name，同時提供已追蹤 event 的下拉建議 */}
             <div className="relative">
               <Input
@@ -832,7 +853,7 @@ function CreateWorkflowDialog({open, onOpenChange, onSuccess}: CreateWorkflowDia
                   // 延遲關閉，讓 CommandItem 的 onSelect 有時間觸發
                   setTimeout(() => setEventPopoverOpen(false), 150);
                 }}
-                placeholder="e.g., contact.created, email.opened"
+                placeholder={t('workflows.create.triggerEventPlaceholder')}
                 required
                 autoComplete="off"
               />
@@ -864,7 +885,7 @@ function CreateWorkflowDialog({open, onOpenChange, onSuccess}: CreateWorkflowDia
                               setEventPopoverOpen(false);
                             }}
                           >
-                            Use &ldquo;{eventName.trim()}&rdquo;
+                            {t('workflows.create.useCustomEvent', {value: eventName.trim()})}
                           </CommandItem>
                         )}
                       </CommandGroup>
@@ -874,7 +895,7 @@ function CreateWorkflowDialog({open, onOpenChange, onSuccess}: CreateWorkflowDia
               )}
             </div>
             <p className="text-xs text-neutral-500 mt-1">
-              The event that triggers this workflow to start for a contact
+              {t('workflows.create.triggerEventHint')}
             </p>
           </div>
 
@@ -888,10 +909,10 @@ function CreateWorkflowDialog({open, onOpenChange, onSuccess}: CreateWorkflowDia
             />
             <div className="flex-1">
               <Label htmlFor="allowReentry" className="font-medium cursor-pointer">
-                Allow Re-entry
+                {t('workflows.create.allowReentryLabel')}
               </Label>
               <p className="text-xs text-neutral-500 mt-0.5">
-                When enabled, contacts can enter this workflow multiple times.
+                {t('workflows.create.allowReentryHint')}
               </p>
             </div>
           </div>
@@ -904,10 +925,10 @@ function CreateWorkflowDialog({open, onOpenChange, onSuccess}: CreateWorkflowDia
               disabled={isSubmitting}
               className="w-full sm:w-auto"
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-              {isSubmitting ? 'Creating...' : 'Create Workflow'}
+              {isSubmitting ? t('workflows.create.submitting') : t('workflows.create.submit')}
             </Button>
           </DialogFooter>
         </form>

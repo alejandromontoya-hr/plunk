@@ -64,8 +64,8 @@
       "sentError": "No se pudo enviar el correo de verificación. Inténtelo de nuevo."
     },
     "upgrade": {
-      "title": "Mejore su plan para quitar la marca de Plunk",
-      "description": "Actualmente sus correos incluyen la marca de Plunk. Mejore a una suscripción para quitarla.",
+      "title": "Mejore su plan para quitar la marca de Sagy",
+      "description": "Actualmente sus correos incluyen la marca de Sagy. Mejore a una suscripción para quitarla.",
       "upgradeNow": "Mejorar ahora"
     }
   },
@@ -95,11 +95,52 @@
   },
   "apiKeys": {
     "title": "Claves de API",
-    "description": "Use estas claves para integrarse con Plunk",
+    "description": "Use estas claves para integrarse con Sagy",
     "publicKey": "Clave pública",
     "publicKeyDescription": "Use esta clave para integraciones del lado del cliente",
     "secretKey": "Clave secreta",
     "secretKeyDescription": "Mantenga esta clave segura y nunca la exponga públicamente",
     "noProject": "Ningún proyecto seleccionado"
+  },
+  "quickStart": {
+    "title": "Inicio rápido",
+    "subtitle": "Comience con Sagy en minutos",
+    "projectSetUp": "Su proyecto está configurado",
+    "fullySetUp": "Su proyecto está completamente configurado",
+    "allSet": "¡Todo listo!",
+    "allSetDescription": "Dominio verificado, contactos importados y campañas en marcha. Todo está configurado correctamente.",
+    "needHelp": "¿Necesita ayuda?",
+    "joinDiscord": "Unirse a Discord",
+    "copied": "¡Copiado!",
+    "emailSupport": "Soporte por correo",
+    "domain": {
+      "title": "Verifique su dominio",
+      "description": "Esencial para la entrega de correos y para evitar el spam",
+      "linkText": "Añadir dominio"
+    },
+    "contacts": {
+      "title": "Añada sus primeros contactos",
+      "description": "Importe su lista de suscriptores para empezar a enviar correos",
+      "linkText": "Añadir contactos"
+    },
+    "campaign": {
+      "title": "Envíe su primera campaña",
+      "description": "Cree y envíe su primera campaña de correo",
+      "linkText": "Crear campaña"
+    },
+    "workflows": {
+      "title": "Configure la automatización",
+      "description": "Cree flujos de trabajo automatizados para captar a su audiencia",
+      "linkText": "Crear flujo"
+    },
+    "subscription": {
+      "title": "Mejore su plan",
+      "description": "Quite la marca de Sagy y desbloquee más funciones",
+      "linkText": "Mejorar"
+    },
+    "reengagement": {
+      "title": "Reconecte con su audiencia",
+      "description": "Han pasado {days} días desde su última campaña"
+    }
   }
 }
