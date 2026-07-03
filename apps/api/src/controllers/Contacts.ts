@@ -1,4 +1,5 @@
-import {Controller, Delete, Get, Middleware, Patch, Post} from '@overnightjs/core';
+import {Controller, Delete, Get, Middleware, Patch, Post, Put} from '@overnightjs/core';
+import {SubscriptionStatus} from '@plunk/db';
 import type {NextFunction, Request, Response} from 'express';
 import multer from 'multer';
 import {ContactSchemas, ImportSchemas} from '@plunk/shared';
@@ -9,6 +10,7 @@ import {requireAuth, requireEmailVerified} from '../middleware/auth.js';
 import {ContactService} from '../services/ContactService.js';
 import {ImportService} from '../services/ImportService.js';
 import {QueueService} from '../services/QueueService.js';
+import {TopicService} from '../services/TopicService.js';
 import {CatchAsync} from '../utils/asyncHandler.js';
 
 // Fields returned for import history rows (excludes the large rawData blob).
@@ -165,6 +167,21 @@ export class Contacts {
   }
 
   /**
+   * GET /contacts/topics
+   * List the project's subscription topics (ordered for display).
+   * Declared before GET /contacts/:id so the literal "topics" path is not
+   * captured by the :id route.
+   */
+  @Get('topics')
+  @Middleware([requireAuth, requireEmailVerified])
+  @CatchAsync
+  public async listTopics(req: Request, res: Response, _next: NextFunction) {
+    const auth = res.locals.auth;
+    const topics = await TopicService.list(auth.projectId!);
+    return res.status(200).json({topics});
+  }
+
+  /**
    * GET /contacts/:id
    * Get a specific contact by ID
    */
@@ -233,6 +250,55 @@ export class Contacts {
     const contact = await ContactService.update(auth.projectId!, contactId, {email, data, subscribed});
 
     return res.status(200).json(contact);
+  }
+
+  /**
+   * GET /contacts/:id/subscriptions
+   * Effective per-topic subscription status for a contact.
+   */
+  @Get(':id/subscriptions')
+  @Middleware([requireAuth, requireEmailVerified])
+  @CatchAsync
+  public async getSubscriptions(req: Request, res: Response, _next: NextFunction) {
+    const auth = res.locals.auth;
+    const contactId = req.params.id;
+
+    if (!contactId) {
+      return res.status(400).json({error: 'Contact ID is required'});
+    }
+
+    // Ensures the contact exists in this project (404s otherwise).
+    await ContactService.get(auth.projectId!, contactId);
+    const subscriptions = await TopicService.getContactSubscriptions(auth.projectId!, contactId);
+
+    return res.status(200).json({subscriptions});
+  }
+
+  /**
+   * PUT /contacts/:id/subscriptions/:topicId
+   * Subscribe/unsubscribe a contact to a specific topic. Body: { subscribed: boolean }.
+   */
+  @Put(':id/subscriptions/:topicId')
+  @Middleware([requireAuth, requireEmailVerified])
+  @CatchAsync
+  public async setSubscription(req: Request, res: Response, _next: NextFunction) {
+    const auth = res.locals.auth;
+    const contactId = req.params.id;
+    const topicId = req.params.topicId;
+    const {subscribed} = req.body ?? {};
+
+    if (!contactId || !topicId) {
+      return res.status(400).json({error: 'Contact ID and topic ID are required'});
+    }
+    if (typeof subscribed !== 'boolean') {
+      return res.status(400).json({error: 'subscribed must be a boolean'});
+    }
+
+    const status = subscribed ? SubscriptionStatus.SUBSCRIBED : SubscriptionStatus.UNSUBSCRIBED;
+    await TopicService.setSubscription(auth.projectId!, contactId, topicId, status, 'manual');
+
+    const subscriptions = await TopicService.getContactSubscriptions(auth.projectId!, contactId);
+    return res.status(200).json({subscriptions});
   }
 
   /**
@@ -333,6 +399,51 @@ export class Contacts {
       email: contact.email,
       subscribed: contact.subscribed,
     });
+  }
+
+  /**
+   * GET /contacts/public/:id/subscriptions
+   * PUBLIC: effective per-topic subscriptions for the preference page.
+   */
+  @Get('public/:id/subscriptions')
+  @CatchAsync
+  public async getPublicSubscriptions(req: Request, res: Response, _next: NextFunction) {
+    const contactId = req.params.id;
+
+    if (!contactId) {
+      return res.status(400).json({error: 'Contact ID is required'});
+    }
+
+    const subscriptions = await TopicService.getContactSubscriptionsPublic(contactId);
+    return res.status(200).json({subscriptions});
+  }
+
+  /**
+   * POST /contacts/public/:id/subscriptions/:topicId
+   * PUBLIC: update a single topic subscription from the preference page.
+   * Body: { subscribed: boolean }.
+   */
+  @Post('public/:id/subscriptions/:topicId')
+  @CatchAsync
+  public async setPublicSubscription(req: Request, res: Response, _next: NextFunction) {
+    const contactId = req.params.id;
+    const topicId = req.params.topicId;
+    const {subscribed} = req.body ?? {};
+
+    if (!contactId || !topicId) {
+      return res.status(400).json({error: 'Contact ID and topic ID are required'});
+    }
+    if (typeof subscribed !== 'boolean') {
+      return res.status(400).json({error: 'subscribed must be a boolean'});
+    }
+
+    // Derive the project from the contact — public callers are unauthenticated.
+    const contact = await ContactService.getById(contactId);
+    const status = subscribed ? SubscriptionStatus.SUBSCRIBED : SubscriptionStatus.UNSUBSCRIBED;
+    await TopicService.setSubscription(contact.projectId, contactId, topicId, status, 'email_link');
+
+    const subscriptions = await TopicService.getContactSubscriptionsPublic(contactId);
+    return res.status(200).json({subscriptions});
   }
 
   /**
@@ -608,6 +719,30 @@ export class Contacts {
   }
 
   /**
+   * POST /contacts/bulk-subscribe-topic
+   * Queue subscribing the selected contacts to a specific topic.
+   * Body: { topicId, ...bulkAction selector (ids | query) }
+   */
+  @Post('bulk-subscribe-topic')
+  @Middleware([requireAuth, requireEmailVerified])
+  @CatchAsync
+  public async bulkSubscribeTopic(req: Request, res: Response, _next: NextFunction) {
+    return queueBulkTopicAction(req, res, 'subscribe-topic');
+  }
+
+  /**
+   * POST /contacts/bulk-unsubscribe-topic
+   * Queue unsubscribing the selected contacts from a specific topic.
+   * Body: { topicId, ...bulkAction selector (ids | query) }
+   */
+  @Post('bulk-unsubscribe-topic')
+  @Middleware([requireAuth, requireEmailVerified])
+  @CatchAsync
+  public async bulkUnsubscribeTopic(req: Request, res: Response, _next: NextFunction) {
+    return queueBulkTopicAction(req, res, 'unsubscribe-topic');
+  }
+
+  /**
    * GET /contacts/bulk/:jobId
    * Get bulk action job status
    */
@@ -660,6 +795,47 @@ async function queueBulkAction(
 
   try {
     const job = await QueueService.queueBulkContactAction(auth.projectId!, selector, operation);
+    return res.status(202).json({
+      message: `Bulk ${operation} queued successfully`,
+      jobId: job.id,
+    });
+  } catch (error) {
+    signale.error(`[CONTACTS] Failed to queue bulk ${operation}:`, error);
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : `Failed to queue bulk ${operation}`,
+    });
+  }
+}
+
+async function queueBulkTopicAction(req: Request, res: Response, operation: 'subscribe-topic' | 'unsubscribe-topic') {
+  const auth = res.locals.auth;
+
+  const topicId = (req.body ?? {}).topicId;
+  if (!topicId || typeof topicId !== 'string') {
+    return res.status(400).json({error: 'topicId is required'});
+  }
+
+  const parsed = ContactSchemas.bulkAction.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({error: parsed.error.errors[0]?.message ?? 'Invalid bulk action payload'});
+  }
+
+  // Ensure the topic belongs to the authenticated project before queuing.
+  const topic = await prisma.topic.findFirst({
+    where: {id: topicId, projectId: auth.projectId!},
+    select: {id: true},
+  });
+  if (!topic) {
+    return res.status(404).json({error: 'Topic not found'});
+  }
+
+  const selector: BulkContactActionSelector =
+    parsed.data.mode === 'ids'
+      ? {mode: 'ids', contactIds: parsed.data.contactIds}
+      : {mode: 'query', filter: parsed.data.filter, excludeIds: parsed.data.excludeIds};
+
+  try {
+    const job = await QueueService.queueBulkContactAction(auth.projectId!, selector, operation, undefined, topicId);
     return res.status(202).json({
       message: `Bulk ${operation} queued successfully`,
       jobId: job.id,

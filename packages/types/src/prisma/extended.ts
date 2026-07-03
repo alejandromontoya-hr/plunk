@@ -80,3 +80,27 @@ export type StepConfig = Prisma.JsonValue;
  * Generic key-value result from step execution
  */
 export type StepResult = Record<string, unknown>;
+
+/**
+ * A topic paired with a contact's effective subscription status.
+ * Mirrors the API shape returned by TopicService.getContactSubscriptions.
+ */
+export interface TopicSubscriptionSummary {
+  topic: {
+    id: string;
+    key: string;
+    name: string;
+    description: string | null;
+    transactional: boolean;
+    position: number;
+  };
+  status: 'SUBSCRIBED' | 'UNSUBSCRIBED';
+}
+
+/**
+ * Contact enriched with its per-topic subscription summary, as returned by the
+ * contacts list endpoint (the topic chips shown in the table).
+ */
+export interface ContactWithSubscriptions extends Contact {
+  subscriptions: TopicSubscriptionSummary[];
+}

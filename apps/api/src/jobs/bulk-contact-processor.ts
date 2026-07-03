@@ -3,7 +3,7 @@
  * Processes bulk subscribe, unsubscribe, and delete operations
  */
 
-import {Prisma} from '@plunk/db';
+import {Prisma, SubscriptionStatus} from '@plunk/db';
 import type {BulkContactActionJobData, BulkContactActionSelector, BulkContactOperation} from '@plunk/types';
 import {type Job, Worker} from 'bullmq';
 import signale from 'signale';
@@ -11,6 +11,7 @@ import signale from 'signale';
 import {prisma} from '../database/prisma.js';
 import {ContactService} from '../services/ContactService.js';
 import {SegmentService} from '../services/SegmentService.js';
+import {TopicService} from '../services/TopicService.js';
 import {bulkContactQueue} from '../services/QueueService.js';
 
 const BATCH_SIZE = 100;
@@ -44,6 +45,7 @@ async function applyBatch(
   operation: BulkActionResult['operation'],
   ids: string[],
   segmentId?: string,
+  topicId?: string,
 ): Promise<{changed: number; unchanged: number}> {
   switch (operation) {
     case 'subscribe': {
@@ -65,6 +67,15 @@ async function applyBatch(
       const r = await SegmentService.addContactsByIds(projectId, segmentId, ids);
       return {changed: r.added, unchanged: 0};
     }
+    case 'subscribe-topic':
+    case 'unsubscribe-topic': {
+      if (!topicId) {
+        throw new Error(`topicId is required for ${operation}`);
+      }
+      const status = operation === 'subscribe-topic' ? SubscriptionStatus.SUBSCRIBED : SubscriptionStatus.UNSUBSCRIBED;
+      const r = await TopicService.bulkSetSubscription(projectId, ids, topicId, status, 'bulk');
+      return {changed: r.updated, unchanged: r.unchanged};
+    }
   }
 }
 
@@ -72,7 +83,7 @@ export function createBulkContactWorker() {
   const worker = new Worker<BulkContactActionJobData>(
     bulkContactQueue.name,
     async (job: Job<BulkContactActionJobData>) => {
-      const {projectId, operation, selector, segmentId} = job.data;
+      const {projectId, operation, selector, segmentId, topicId} = job.data;
 
       const result: BulkActionResult = {
         operation,
@@ -94,7 +105,7 @@ export function createBulkContactWorker() {
         for (let i = 0; i < contactIds.length; i += BATCH_SIZE) {
           const batchIds = contactIds.slice(i, i + BATCH_SIZE);
           try {
-            const {changed, unchanged} = await applyBatch(projectId, operation, batchIds, segmentId);
+            const {changed, unchanged} = await applyBatch(projectId, operation, batchIds, segmentId, topicId);
             result.successCount += changed;
             result.unchangedCount += unchanged;
             const failed = batchIds.length - changed - unchanged;
@@ -150,7 +161,7 @@ export function createBulkContactWorker() {
           lastId = batchIds[batchIds.length - 1];
 
           try {
-            const {changed, unchanged} = await applyBatch(projectId, operation, batchIds, segmentId);
+            const {changed, unchanged} = await applyBatch(projectId, operation, batchIds, segmentId, topicId);
             result.successCount += changed;
             result.unchangedCount += unchanged;
             const failed = batchIds.length - changed - unchanged;

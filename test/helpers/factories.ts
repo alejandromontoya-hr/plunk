@@ -6,12 +6,14 @@ import {
   Prisma,
   PrismaClient,
   Role,
+  SubscriptionStatus,
   TemplateType,
   TrackingMode,
   WorkflowExecutionStatus,
   WorkflowStepType,
   WorkflowTriggerType
 } from '@plunk/db';
+import {DEFAULT_TOPICS} from '@plunk/shared';
 import {getPrismaClient} from './database';
 import bcrypt from 'bcrypt';
 
@@ -125,7 +127,7 @@ export class TestFactories {
    * Create a test project
    */
   async createProject(options: ProjectFactoryOptions = {}) {
-    return this.prisma.project.create({
+    const project = await this.prisma.project.create({
       data: {
         name: options.name || `Test Project ${uniqueId()}`,
         public: `pk_${uniqueId()}`,
@@ -137,6 +139,22 @@ export class TestFactories {
         billingLimitTransactional: options.billingLimitTransactional,
       },
     });
+
+    // Seed the default subscription topics, mirroring production project creation.
+    await this.prisma.topic.createMany({
+      data: DEFAULT_TOPICS.map(t => ({
+        projectId: project.id,
+        key: t.key,
+        name: t.name,
+        description: t.description,
+        transactional: t.transactional,
+        defaultSubscribed: t.defaultSubscribed,
+        position: t.position,
+      })),
+      skipDuplicates: true,
+    });
+
+    return project;
   }
 
   /**
@@ -161,14 +179,39 @@ export class TestFactories {
    * Create a test contact
    */
   async createContact(options: ContactFactoryOptions) {
-    return this.prisma.contact.create({
+    const subscribed = options.subscribed ?? true;
+    const contact = await this.prisma.contact.create({
       data: {
         projectId: options.projectId,
         email: options.email || `contact-${uniqueId()}@test.com`,
         data: options.data || {},
-        subscribed: options.subscribed ?? true,
+        subscribed,
       },
     });
+
+    // Keep the deviation-based topic model consistent with the materialized flag:
+    // an unsubscribed fixture needs explicit UNSUBSCRIBED rows on the marketing
+    // topics, otherwise a recompute would flip it back to the default (subscribed).
+    if (!subscribed) {
+      const marketingTopics = await this.prisma.topic.findMany({
+        where: {projectId: options.projectId, transactional: false},
+        select: {id: true},
+      });
+      if (marketingTopics.length > 0) {
+        await this.prisma.contactSubscription.createMany({
+          data: marketingTopics.map(t => ({
+            contactId: contact.id,
+            topicId: t.id,
+            status: SubscriptionStatus.UNSUBSCRIBED,
+            source: 'test',
+            unsubscribedAt: new Date(),
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    return contact;
   }
 
   /**

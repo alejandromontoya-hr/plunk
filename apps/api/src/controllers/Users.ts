@@ -13,6 +13,7 @@ import {BillingLimitService} from '../services/BillingLimitService.js';
 import {MembershipService} from '../services/MembershipService.js';
 import {NtfyService} from '../services/NtfyService.js';
 import {SecurityService} from '../services/SecurityService.js';
+import {TopicService} from '../services/TopicService.js';
 import {UserService} from '../services/UserService.js';
 import {CatchAsync} from '../utils/asyncHandler.js';
 import signale from 'signale';
@@ -93,6 +94,9 @@ export class Users {
         },
       },
     });
+
+    // Seed the default subscription topics for the new project.
+    await TopicService.seedDefaults(project.id);
 
     // Send notification about project creation
     await NtfyService.notifyProjectCreated(project.name, project.id, auth.userId);

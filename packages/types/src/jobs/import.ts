@@ -97,10 +97,17 @@ export type BulkContactActionSelector =
   | {mode: 'query'; filter: {search?: string; subscribed?: boolean}; excludeIds?: string[]};
 
 /** Operations supported by the bulk contact action queue. */
-export type BulkContactOperation = 'subscribe' | 'unsubscribe' | 'delete' | 'add-to-segment';
+export type BulkContactOperation =
+  | 'subscribe'
+  | 'unsubscribe'
+  | 'delete'
+  | 'add-to-segment'
+  | 'subscribe-topic'
+  | 'unsubscribe-topic';
 
 /**
- * Job data for bulk contact actions (subscribe, unsubscribe, delete, add-to-segment)
+ * Job data for bulk contact actions (subscribe, unsubscribe, delete,
+ * add-to-segment, subscribe-topic, unsubscribe-topic).
  * Used by: bulkContactQueue worker
  */
 export interface BulkContactActionJobData {
@@ -109,4 +116,6 @@ export interface BulkContactActionJobData {
   selector: BulkContactActionSelector;
   /** Target static segment id, required when operation is 'add-to-segment'. */
   segmentId?: string;
+  /** Target topic id, required when operation is 'subscribe-topic' or 'unsubscribe-topic'. */
+  topicId?: string;
 }

@@ -74,6 +74,7 @@ model Project {
   domains        Domain[]
   apiRequests    ApiRequest[]
   contactImports ContactImport[]
+  topics         Topic[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -134,7 +135,12 @@ model Contact {
   email String
   data  Json? // Custom fields: { firstName: "John", plan: "pro", ... }
 
-  // Subscription
+  // Subscription.
+  // MATERIALIZED marketing flag: true when the contact is effectively subscribed
+  // to at least one non-transactional (marketing) Topic. Kept denormalized so the
+  // campaign recipient filter and the (projectId, subscribed) index stay cheap at
+  // scale. Recomputed inside the same transaction whenever a topic subscription
+  // changes — never edit it directly, go through TopicService.
   subscribed Boolean @default(true)
 
   // Relations
@@ -145,6 +151,7 @@ model Contact {
   workflowExecutions WorkflowExecution[]
   events             Event[]
   segmentMemberships SegmentMembership[]
+  subscriptions      ContactSubscription[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -188,6 +195,83 @@ model Template {
   @@index([projectId])
   @@index([projectId, type])
   @@map("templates")
+}
+
+// ============================================
+// SUBSCRIPTION TOPICS (Per-topic opt-in/out)
+// ============================================
+
+// A subscription topic a contact can be opted in/out of, scoped to a project.
+// Every project is seeded with the default topics (see DEFAULT_TOPICS in
+// @plunk/shared). The set is extensible: new topics can be added per project.
+model Topic {
+  id String @id @default(uuid())
+
+  // Stable machine key shared by API/UI/i18n (e.g. "marketing", "product_updates",
+  // "transactional"). Human labels are rendered from translations keyed by this.
+  key         String
+  // Fallback human label (used when no translation exists for the key).
+  name        String
+  description String?
+
+  // Transactional/mandatory-style channel. Contacts can still unsubscribe (so it
+  // renders and can be managed), but it is EXCLUDED from the computed
+  // Contact.subscribed marketing flag — being on transactional alone does not make
+  // a contact "reachable for marketing".
+  transactional Boolean @default(false)
+
+  // Default membership for contacts with no explicit ContactSubscription row.
+  // true => contacts are considered subscribed unless they have an UNSUBSCRIBED row.
+  // This is what makes "subscribed by default, deviation stored on opt-out" work.
+  defaultSubscribed Boolean @default(true)
+
+  // Display order on preference/manage pages.
+  position Int @default(0)
+
+  // Relations
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  subscriptions ContactSubscription[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, key])
+  @@index([projectId])
+  @@map("topics")
+}
+
+// Per-contact, per-topic subscription state. A row is only stored when the state
+// deviates from (or is explicitly set against) the topic default — absence of a
+// row means "topic.defaultSubscribed". This keeps writes/backfill cheap at scale:
+// only opt-outs (and explicit opt-ins for audit) create rows.
+model ContactSubscription {
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contactId String
+
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  topicId String
+
+  status SubscriptionStatus @default(SUBSCRIBED)
+
+  // How the current status was last set (audit/debugging), e.g. "email_link",
+  // "bulk", "import", "api", "manual".
+  source String?
+
+  // Audit timestamps for the current status.
+  subscribedAt   DateTime?
+  unsubscribedAt DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([contactId, topicId])
+  @@index([topicId, status]) // Active members of a topic (status = SUBSCRIBED)
+  @@index([contactId])
+  @@map("contact_subscriptions")
 }
 
 // ============================================
@@ -841,6 +925,11 @@ enum StepExecutionStatus {
 enum SegmentType {
   DYNAMIC // Filter-based segment evaluated against contacts at query time
   STATIC // Manually curated list of contacts managed via memberships
+}
+
+enum SubscriptionStatus {
+  SUBSCRIBED // Contact is opted in to the topic
+  UNSUBSCRIBED // Contact has explicitly opted out of the topic
 }
 
 enum ImportFileType {

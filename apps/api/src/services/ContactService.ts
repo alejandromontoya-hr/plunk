@@ -1,10 +1,10 @@
-import {type Contact, Prisma} from '@plunk/db';
-import type {CursorPaginatedResponse, FilterCondition, FilterGroup} from '@plunk/types';
+import {type Contact, Prisma, SubscriptionStatus} from '@plunk/db';
+import type {ContactWithSubscriptions, CursorPaginatedResponse, FilterCondition, FilterGroup} from '@plunk/types';
 import {toPrismaJson} from '@plunk/types';
 
 import {prisma} from '../database/prisma.js';
 import {HttpException} from '../exceptions/index.js';
-import {EventService} from './EventService.js';
+import {TopicService} from './TopicService.js';
 
 export class ContactService {
   /**
@@ -38,7 +38,7 @@ export class ContactService {
       sort?: 'email' | 'createdAt';
       dir?: 'asc' | 'desc';
     },
-  ): Promise<CursorPaginatedResponse<Contact>> {
+  ): Promise<CursorPaginatedResponse<ContactWithSubscriptions>> {
     const where: Prisma.ContactWhereInput = {
       projectId,
       ...(search
@@ -77,8 +77,19 @@ export class ContactService {
     // Get total count only on first page for better performance
     const total = !cursor ? await prisma.contact.count({where}) : 0;
 
+    // Enrich the page with each contact's effective per-topic subscriptions
+    // (topic chips). Two extra queries for the whole page, no N+1.
+    const subscriptionsByContact = await TopicService.getSubscriptionsForContacts(
+      projectId,
+      results.map(c => c.id),
+    );
+    const data: ContactWithSubscriptions[] = results.map(contact => ({
+      ...contact,
+      subscriptions: subscriptionsByContact.get(contact.id) ?? [],
+    }));
+
     return {
-      data: results,
+      data,
       total,
       cursor: nextCursor,
       hasMore,
@@ -145,14 +156,27 @@ export class ContactService {
     data: {email: string; data?: Prisma.JsonValue; subscribed?: boolean},
   ): Promise<Contact> {
     try {
-      return await prisma.contact.create({
+      const contact = await prisma.contact.create({
         data: {
           projectId,
           email: this.normalizeEmail(data.email),
           data: data.data ?? Prisma.JsonNull,
+          // Materialized flag; topic rows below are the source of truth. New
+          // contacts default to subscribed (they inherit each topic's default).
           subscribed: data.subscribed ?? true,
         },
       });
+
+      // If the caller explicitly opts the contact out, persist that as a
+      // deviation across all marketing topics so the flag and the displayed
+      // topics agree. No event on create (matches prior behaviour).
+      if (data.subscribed === false) {
+        await TopicService.setAllMarketingSubscriptions(contact.id, SubscriptionStatus.UNSUBSCRIBED, 'api', {
+          emitEvent: false,
+        });
+      }
+
+      return contact;
     } catch (error) {
       // Check if this is a unique constraint violation (P2002)
       if (error instanceof Error && 'code' in error && error.code === 'P2002') {
@@ -230,27 +254,23 @@ export class ContactService {
         throw new HttpException(400, 'data must be an object');
       }
     }
-    if (data.subscribed !== undefined) {
-      updateData.subscribed = data.subscribed;
-    }
 
-    // Track subscription status change
+    // `subscribed` is materialized from topic subscriptions and must not be
+    // written directly. A subscribed=true/false toggle maps to opting in/out of
+    // all marketing topics via TopicService (below).
     const isSubscriptionChanging = data.subscribed !== undefined && existing.subscribed !== data.subscribed;
-    const wasSubscribed = existing.subscribed;
 
     try {
-      const updated = await prisma.contact.update({
+      let updated = await prisma.contact.update({
         where: {id: contactId},
         data: updateData,
       });
 
-      // Track subscription event if status changed
       if (isSubscriptionChanging) {
-        if (data.subscribed && !wasSubscribed) {
-          await EventService.trackEvent(projectId, 'contact.subscribed', contactId);
-        } else if (!data.subscribed && wasSubscribed) {
-          await EventService.trackEvent(projectId, 'contact.unsubscribed', contactId);
-        }
+        const status = data.subscribed ? SubscriptionStatus.SUBSCRIBED : SubscriptionStatus.UNSUBSCRIBED;
+        await TopicService.setAllMarketingSubscriptions(contactId, status, 'manual');
+        // Re-read so the returned contact reflects the recomputed flag.
+        updated = await this.get(projectId, contactId);
       }
 
       return updated;
@@ -309,30 +329,27 @@ export class ContactService {
     const mergedData = ContactService.mergeContactData(existing?.data ?? null, data ?? {});
 
     if (existing) {
-      // Track subscription status change
+      // `subscribed` is materialized from topics; a change maps to opting in/out
+      // of all marketing topics via TopicService rather than a direct write.
       const isSubscriptionChanging = subscribed !== undefined && existing.subscribed !== subscribed;
-      const wasSubscribed = existing.subscribed;
 
       try {
-        const updated = await prisma.contact.update({
+        let updated = await prisma.contact.update({
           where: {id: existing.id},
           data: {
             data: Object.keys(mergedData).length > 0 ? toPrismaJson(mergedData) : Prisma.JsonNull,
-            ...(subscribed !== undefined ? {subscribed} : {}),
           },
         });
 
-        // Track subscription event if status changed
         if (isSubscriptionChanging) {
-          if (subscribed && !wasSubscribed) {
-            await EventService.trackEvent(projectId, 'contact.subscribed', updated.id);
-          } else if (!subscribed && wasSubscribed) {
-            await EventService.trackEvent(projectId, 'contact.unsubscribed', updated.id);
-          }
+          const status = subscribed ? SubscriptionStatus.SUBSCRIBED : SubscriptionStatus.UNSUBSCRIBED;
+          await TopicService.setAllMarketingSubscriptions(updated.id, status, 'api');
+          updated = await this.getById(updated.id);
         }
 
         return updated;
       } catch (error) {
+        if (error instanceof HttpException) throw error;
         // Provide helpful error message for database/validation issues
         throw new HttpException(
           500,
@@ -340,16 +357,28 @@ export class ContactService {
         );
       }
     } else {
+      const resolvedSubscribed = subscribed ?? defaultSubscribed;
       try {
-        return await prisma.contact.create({
+        const created = await prisma.contact.create({
           data: {
             projectId,
             email: normalizedEmail,
             data: Object.keys(mergedData).length > 0 ? toPrismaJson(mergedData) : Prisma.JsonNull,
-            subscribed: subscribed ?? defaultSubscribed,
+            subscribed: resolvedSubscribed,
           },
         });
+
+        // Persist an explicit opt-out as topic deviations so the flag and the
+        // displayed topics agree. No event on create (matches prior behaviour).
+        if (!resolvedSubscribed) {
+          await TopicService.setAllMarketingSubscriptions(created.id, SubscriptionStatus.UNSUBSCRIBED, 'api', {
+            emitEvent: false,
+          });
+        }
+
+        return created;
       } catch (error) {
+        if (error instanceof HttpException) throw error;
         // Provide helpful error message for database/validation issues
         throw new HttpException(
           500,
@@ -443,33 +472,21 @@ export class ContactService {
   }
 
   /**
-   * PUBLIC: Subscribe a contact
+   * PUBLIC: Subscribe a contact to all marketing topics (global opt-in).
+   * Used by the public subscribe link / preference page.
    */
   public static async subscribe(contactId: string): Promise<Contact> {
-    const contact = await prisma.contact.update({
-      where: {id: contactId},
-      data: {subscribed: true},
-    });
-
-    // Track subscription event
-    await EventService.trackEvent(contact.projectId, 'contact.subscribed', contactId);
-
-    return contact;
+    await TopicService.setAllMarketingSubscriptions(contactId, SubscriptionStatus.SUBSCRIBED, 'email_link');
+    return this.getById(contactId);
   }
 
   /**
-   * PUBLIC: Unsubscribe a contact
+   * PUBLIC: Unsubscribe a contact from all marketing topics (global opt-out).
+   * Transactional topics are left untouched. Used by the public unsubscribe link.
    */
   public static async unsubscribe(contactId: string): Promise<Contact> {
-    const contact = await prisma.contact.update({
-      where: {id: contactId},
-      data: {subscribed: false},
-    });
-
-    // Track unsubscription event
-    await EventService.trackEvent(contact.projectId, 'contact.unsubscribed', contactId);
-
-    return contact;
+    await TopicService.setAllMarketingSubscriptions(contactId, SubscriptionStatus.UNSUBSCRIBED, 'email_link');
+    return this.getById(contactId);
   }
 
   /**
@@ -748,73 +765,19 @@ export class ContactService {
     projectId: string,
     contactIds: string[],
   ): Promise<{updated: number; unchanged: number}> {
-    const contacts = await prisma.contact.findMany({
-      where: {id: {in: contactIds}, projectId},
-      select: {id: true, subscribed: true},
-    });
-
-    if (contacts.length === 0) {
-      return {updated: 0, unchanged: 0};
-    }
-
-    const unsubscribedIds = contacts.filter(c => !c.subscribed).map(c => c.id);
-    const unchanged = contacts.length - unsubscribedIds.length;
-
-    if (unsubscribedIds.length === 0) {
-      return {updated: 0, unchanged};
-    }
-
-    const result = await prisma.contact.updateMany({
-      where: {id: {in: unsubscribedIds}, projectId},
-      data: {subscribed: true},
-    });
-
-    this.trackEventsSequentially(projectId, 'contact.subscribed', unsubscribedIds).catch(error => {
-      if (process.env.NODE_ENV !== 'test') {
-        console.error('[ContactService] Failed to track bulk subscribe events:', error);
-      }
-    });
-
-    return {updated: result.count, unchanged};
+    return TopicService.bulkSetAllMarketing(projectId, contactIds, SubscriptionStatus.SUBSCRIBED, 'bulk');
   }
 
   /**
-   * Bulk unsubscribe contacts.
-   * `updated` = contacts flipped from subscribed to unsubscribed.
+   * Bulk unsubscribe contacts from all marketing topics (global opt-out).
+   * `updated` = contacts whose materialized flag flipped to unsubscribed.
    * `unchanged` = contacts that were already unsubscribed (no-op, not a failure).
    */
   public static async bulkUnsubscribe(
     projectId: string,
     contactIds: string[],
   ): Promise<{updated: number; unchanged: number}> {
-    const contacts = await prisma.contact.findMany({
-      where: {id: {in: contactIds}, projectId},
-      select: {id: true, subscribed: true},
-    });
-
-    if (contacts.length === 0) {
-      return {updated: 0, unchanged: 0};
-    }
-
-    const subscribedIds = contacts.filter(c => c.subscribed).map(c => c.id);
-    const unchanged = contacts.length - subscribedIds.length;
-
-    if (subscribedIds.length === 0) {
-      return {updated: 0, unchanged};
-    }
-
-    const result = await prisma.contact.updateMany({
-      where: {id: {in: subscribedIds}, projectId},
-      data: {subscribed: false},
-    });
-
-    this.trackEventsSequentially(projectId, 'contact.unsubscribed', subscribedIds).catch(error => {
-      if (process.env.NODE_ENV !== 'test') {
-        console.error('[ContactService] Failed to track bulk unsubscribe events:', error);
-      }
-    });
-
-    return {updated: result.count, unchanged};
+    return TopicService.bulkSetAllMarketing(projectId, contactIds, SubscriptionStatus.UNSUBSCRIBED, 'bulk');
   }
 
   /**
@@ -874,29 +837,5 @@ export class ContactService {
     }
 
     return false;
-  }
-
-  /**
-   * Track events sequentially to avoid database deadlocks
-   * Processes events one at a time with error handling
-   *
-   * @private
-   */
-  private static async trackEventsSequentially(
-    projectId: string,
-    eventName: string,
-    contactIds: string[],
-  ): Promise<void> {
-    for (const contactId of contactIds) {
-      try {
-        await EventService.trackEvent(projectId, eventName, contactId);
-      } catch (error) {
-        // Log error but continue processing remaining events
-        // Suppress logging in test environments to reduce noise from cleanup race conditions
-        if (process.env.NODE_ENV !== 'test') {
-          console.error(`[ContactService] Failed to track event ${eventName} for contact ${contactId}:`, error);
-        }
-      }
-    }
   }
 }

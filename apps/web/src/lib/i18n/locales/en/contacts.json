@@ -16,9 +16,28 @@
     "select": "Select",
     "email": "Email",
     "status": "Status",
+    "subscriptions": "Subscriptions",
     "created": "Created",
     "updated": "Updated",
     "actions": "Actions"
+  },
+  "topics": {
+    "transactional": {
+      "name": "Transactional",
+      "description": "Receipts, security alerts and account notifications"
+    },
+    "product_updates": {
+      "name": "Product updates",
+      "description": "News about new features and product changes"
+    },
+    "marketing": {
+      "name": "Marketing",
+      "description": "Newsletters, offers and promotions"
+    },
+    "unsubscribedFromEmail": "Unsubscribed from email",
+    "transactionalHint": "Doesn't count toward marketing status",
+    "selectTopic": "Select a topic",
+    "empty": "No topics"
   },
   "selectAllOnPage": "Select all contacts on this page",
   "selectContact": "Select {email}",
@@ -33,7 +52,10 @@
   "bulk": {
     "subscribe": "Mark as marketing",
     "unsubscribe": "Remove from marketing",
-    "delete": "Delete"
+    "delete": "Delete",
+    "subscribeTopic": "Subscribe to topic",
+    "unsubscribeTopic": "Remove from topic",
+    "topicPickerTitle": "Topic subscription"
   },
   "empty": {
     "title": "No contacts yet",
@@ -189,6 +211,18 @@
       "confirmText": "Hide"
     }
   },
+  "bulkTopicDialog": {
+    "title": "Topic subscription",
+    "description": "Pick a topic and apply it to the {count} selected contacts.",
+    "action": "Action",
+    "subscribe": "Subscribe",
+    "unsubscribe": "Remove",
+    "applying": "Applying…",
+    "queued": "Queued…",
+    "successBody": "{count} contacts updated.",
+    "error": "Failed to update subscription",
+    "confirm": "Apply"
+  },
   "addToSegment": {
     "title": "Add to segment",
     "description": "Add {count} contacts to a segment.",
@@ -257,6 +291,32 @@
       "processingLabel": "Processing",
       "changedVerb": "processed",
       "summaryNoun": "processed"
+    },
+    "subscribe-topic": {
+      "title": "Subscribe contacts to {topic}",
+      "progressTitle": "Subscribing to {topic}…",
+      "completedTitle": "Subscribed to {topic}",
+      "failedTitle": "Couldn't subscribe contacts to {topic}",
+      "confirmVerb": "Subscribe to {topic}",
+      "confirmButton": "Subscribe",
+      "processingLabel": "Subscribing to {topic}",
+      "changedVerb": "subscribed",
+      "summaryNoun": "subscribed",
+      "alreadyState": "already subscribed",
+      "skipNote": "Contacts already subscribed to this topic will be skipped."
+    },
+    "unsubscribe-topic": {
+      "title": "Remove contacts from {topic}",
+      "progressTitle": "Removing from {topic}…",
+      "completedTitle": "Removed from {topic}",
+      "failedTitle": "Couldn't remove contacts from {topic}",
+      "confirmVerb": "Remove from {topic}",
+      "confirmButton": "Remove",
+      "processingLabel": "Removing from {topic}",
+      "changedVerb": "removed",
+      "summaryNoun": "removed",
+      "alreadyState": "already without this topic",
+      "skipNote": "Contacts already without this topic will be skipped."
     }
   },
   "detail": {
@@ -270,6 +330,10 @@
     "subscribedLabel": "Subscribed to emails",
     "subscribedHelpOn": "Receives emails from campaigns and workflows",
     "subscribedHelpOff": "Will not receive emails",
+    "subscriptionsTitle": "Subscriptions",
+    "subscriptionsSubtitle": "Topics this contact is subscribed to",
+    "topicUpdated": "Subscription updated",
+    "topicUpdateFailed": "Failed to update subscription",
     "saveChanges": "Save Changes",
     "saving": "Saving...",
     "activity": "Activity",
