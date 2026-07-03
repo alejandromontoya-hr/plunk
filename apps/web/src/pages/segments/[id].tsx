@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
   ConfirmDialog,
-  EmptyState,
   IconSpinner,
   Input,
   Label,
@@ -17,7 +16,7 @@ import type {PaginatedResponse} from '@plunk/types';
 import {DashboardLayout} from '../../components/DashboardLayout';
 import {network} from '../../lib/network';
 import {useTranslation} from '../../lib/i18n';
-import {ArrowLeft, Database, Filter, Layers, MailCheck, MailX, RefreshCw, Save, Trash2, UserMinus, Users} from 'lucide-react';
+import {ArrowLeft, Database, Filter, Layers, RefreshCw, Save, Trash2, Users} from 'lucide-react';
 import Link from 'next/link';
 import {useRouter} from 'next/router';
 import {useEffect, useState} from 'react';
@@ -28,6 +27,7 @@ import type {FilterCondition} from '@plunk/types';
 import {SegmentSchemas} from '@plunk/shared';
 import {SegmentFilterBuilder} from '../../components/SegmentFilterBuilder';
 import {ContactPicker} from '../../components/ContactPicker';
+import {SegmentResultsTable} from '../../components/SegmentResultsTable';
 import dayjs from 'dayjs';
 
 type SegmentType = 'DYNAMIC' | 'STATIC';
@@ -51,12 +51,11 @@ export default function SegmentDetailPage() {
   const {id} = router.query;
 
   const {data: segment, mutate, isLoading} = useSWR<SegmentWithType>(id ? `/segments/${id}` : null);
-  const [contactsPage, setContactsPage] = useState(1);
-  const {
-    data: contactsData,
-    isLoading: isLoadingContacts,
-    mutate: mutateContacts,
-  } = useSWR<PaginatedResponse<Contact>>(id ? `/segments/${id}/contacts?page=${contactsPage}&pageSize=10` : null);
+  // Existing members (page 1) feed the static ContactPicker's dedupe list. The rich
+  // results view fetches its own paginated data inside SegmentResultsTable.
+  const {data: contactsData, mutate: mutateContacts} = useSWR<PaginatedResponse<Contact>>(
+    id ? `/segments/${id}/contacts?page=1&pageSize=100` : null,
+  );
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -72,7 +71,6 @@ export default function SegmentDetailPage() {
   // Static segment member management
   const [pickedEmails, setPickedEmails] = useState<string[]>([]);
   const [isAddingMembers, setIsAddingMembers] = useState(false);
-  const [removingEmail, setRemovingEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (segment) {
@@ -149,22 +147,6 @@ export default function SegmentDetailPage() {
       toast.error(error instanceof Error ? error.message : t('segments.toast.addFailed'));
     } finally {
       setIsAddingMembers(false);
-    }
-  };
-
-  const handleRemoveMember = async (email: string) => {
-    setRemovingEmail(email);
-    try {
-      await network.fetch<{removed: number}, typeof SegmentSchemas.members>('DELETE', `/segments/${id}/members`, {
-        emails: [email],
-      });
-      toast.success(t('segments.toast.removed', {email}));
-      void mutate();
-      void mutateContacts();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('segments.toast.removeFailed'));
-    } finally {
-      setRemovingEmail(null);
     }
   };
 
@@ -342,15 +324,13 @@ export default function SegmentDetailPage() {
               </Card>
             )}
 
-            {/* Contacts */}
+            {/* Contacts — results table with selection + campaign actions */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>{isStatic ? t('segments.detail.membersTitle') : t('segments.detail.matchingContactsTitle')}</CardTitle>
-                    <CardDescription>
-                      {isStatic ? t('segments.detail.membersDescription') : t('segments.detail.matchingContactsDescription')}
-                    </CardDescription>
+                    <CardDescription>{t('segments.results.cardDescription')}</CardDescription>
                   </div>
                   {!isStatic && trackMembership && (
                     <Button variant="outline" size="sm" onClick={handleComputeMembership} disabled={isComputing}>
@@ -361,76 +341,7 @@ export default function SegmentDetailPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {isLoadingContacts ? (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-neutral-500">{t('segments.detail.loadingContacts')}</p>
-                  </div>
-                ) : contactsData?.data.length === 0 ? (
-                  <EmptyState
-                    icon={Users}
-                    title={isStatic ? t('segments.detail.noMembersTitle') : t('segments.detail.noMatchTitle')}
-                    description={isStatic ? t('segments.detail.noMembersDescription') : t('segments.detail.noMatchDescription')}
-                  />
-                ) : (
-                  <>
-                    <div className="space-y-2">
-                      {contactsData?.data.map(contact => (
-                        <div key={contact.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-2">
-                            {contact.subscribed ? (
-                              <MailCheck className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <MailX className="h-4 w-4 text-red-600" />
-                            )}
-                            <span className="text-sm font-medium">{contact.email}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button asChild variant="ghost" size="sm">
-                              <Link href={`/contacts/${contact.id}`}>{t('common.view')}</Link>
-                            </Button>
-                            {isStatic && (
-                              <Button
-                                variant="destructiveGhost"
-                                size="sm"
-                                onClick={() => handleRemoveMember(contact.email)}
-                                disabled={removingEmail === contact.email}
-                              >
-                                <UserMinus className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Pagination */}
-                    {contactsData && contactsData.totalPages > 1 && (
-                      <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                        <p className="text-sm text-neutral-500">
-                          {t('segments.detail.pageInfo', {page: contactsPage, totalPages: contactsData.totalPages, total: contactsData.total})}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setContactsPage(p => p - 1)}
-                            disabled={contactsPage === 1}
-                          >
-                            {t('common.previous')}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setContactsPage(p => p + 1)}
-                            disabled={contactsPage === contactsData.totalPages}
-                          >
-                            {t('common.next')}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
+                <SegmentResultsTable segmentId={id as string} />
               </CardContent>
             </Card>
           </div>

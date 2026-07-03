@@ -104,3 +104,13 @@ export interface TopicSubscriptionSummary {
 export interface ContactWithSubscriptions extends Contact {
   subscriptions: TopicSubscriptionSummary[];
 }
+
+/**
+ * Contact enriched with send activity, as returned by the segment results table.
+ * `lastSentAt` is the most recent email sent to the contact (ISO string) or null
+ * if the contact has never been emailed. The "days since" figure is derived on the
+ * client from this value.
+ */
+export interface ContactWithActivity extends Contact {
+  lastSentAt: string | null;
+}

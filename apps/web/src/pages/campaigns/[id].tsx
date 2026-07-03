@@ -122,6 +122,17 @@ export default function CampaignDetailsPage() {
     | {type: 'delete'};
 
   const [dialog, setDialog] = useState<CampaignDialog>({type: 'none'});
+  const [intentHandled, setIntentHandled] = useState(false);
+
+  // Arriving from the segment results view with "Programar envío" opens the
+  // schedule dialog straight away (audience is already preset to the selection).
+  useEffect(() => {
+    if (intentHandled || !router.isReady) return;
+    if (router.query.intent === 'schedule' && campaign?.data.status === CampaignStatus.DRAFT) {
+      setDialog({type: 'schedule'});
+      setIntentHandled(true);
+    }
+  }, [router.isReady, router.query.intent, campaign?.data.status, intentHandled]);
 
   // Automatically initialize edit fields when campaign is loaded and is a draft
   const isEditMode = campaign?.data.status === CampaignStatus.DRAFT;

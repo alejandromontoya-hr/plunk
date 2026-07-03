@@ -316,6 +316,15 @@ model Segment {
   // Track membership changes (enables segment entry/exit events)
   trackMembership Boolean @default(false)
 
+  // Internal snapshot segments (materialized selections used to send a campaign to
+  // a hand-picked subset of another segment) are hidden from the normal segment list.
+  internal Boolean @default(false)
+
+  // Snapshot origin: the segment this selection was captured from (null for normal segments).
+  sourceSegment   Segment?  @relation("SegmentSnapshots", fields: [sourceSegmentId], references: [id], onDelete: SetNull)
+  sourceSegmentId String?
+  snapshots       Segment[] @relation("SegmentSnapshots")
+
   // Stats (computed)
   memberCount Int @default(0)
 
@@ -331,6 +340,7 @@ model Segment {
   updatedAt DateTime @updatedAt
 
   @@index([projectId])
+  @@index([projectId, internal]) // list query filters out internal snapshots
   @@index([condition(ops: JsonbOps)], type: Gin) // GIN index for segment condition queries
   @@map("segments")
 }

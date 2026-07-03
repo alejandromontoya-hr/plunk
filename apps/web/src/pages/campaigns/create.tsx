@@ -47,10 +47,28 @@ export default function CreateCampaignPage() {
   const [campaignType, setCampaignType] = useState<TemplateType>(TemplateType.MARKETING);
   const [audienceType, setAudienceType] = useState<CampaignAudienceType>(CampaignAudienceType.ALL);
   const [segmentId, setSegmentId] = useState('');
+  const [presetSegment, setPresetSegment] = useState<Segment | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
 
   const {data: segments} = useSWR<Segment[]>('/segments', {revalidateOnFocus: false});
+
+  // A snapshot segment (a hand-picked selection captured from the segment view) is
+  // internal and hidden from /segments, so fetch it directly to show it as the
+  // preselected audience.
+  const presetSegmentQueryId = typeof router.query.segmentId === 'string' ? router.query.segmentId : '';
+  useEffect(() => {
+    if (!router.isReady || !presetSegmentQueryId) return;
+    if (segments?.some(s => s.id === presetSegmentQueryId)) return;
+    void network
+      .fetch<Segment>('GET', `/segments/${presetSegmentQueryId}`)
+      .then(setPresetSegment)
+      .catch(() => undefined);
+  }, [router.isReady, presetSegmentQueryId, segments]);
+
+  const segmentOptions: Segment[] = presetSegment && !segments?.some(s => s.id === presetSegment.id)
+    ? [presetSegment, ...(segments ?? [])]
+    : segments ?? [];
 
   useEffect(() => {
     const loadData = async () => {
@@ -147,7 +165,8 @@ export default function CreateCampaignPage() {
       } as any);
 
       toast.success(t('campaigns.toast.created'));
-      void router.push(`/campaigns/${response.data.id}`);
+      const intent = router.query.intent === 'schedule' ? '?intent=schedule' : '';
+      void router.push(`/campaigns/${response.data.id}${intent}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('campaigns.toast.createFailed'));
       setSaving(false);
@@ -155,8 +174,8 @@ export default function CreateCampaignPage() {
   };
 
   const getEstimatedRecipients = () => {
-    if (audienceType === CampaignAudienceType.SEGMENT && segmentId && segments) {
-      const segment = segments.find(s => s.id === segmentId);
+    if (audienceType === CampaignAudienceType.SEGMENT && segmentId) {
+      const segment = segmentOptions.find(s => s.id === segmentId);
       return segment?.memberCount || 0;
     }
     return 0;
@@ -366,7 +385,7 @@ export default function CreateCampaignPage() {
                           <SelectValue placeholder={t('campaigns.audience.selectSegmentPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
-                          {segments?.map(segment => (
+                          {segmentOptions.map(segment => (
                             <SelectItemWithDescription
                               key={segment.id}
                               value={segment.id}

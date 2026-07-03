@@ -1,5 +1,12 @@
 import {type Contact, Prisma, type Segment} from '@plunk/db';
-import type {FilterCondition, FilterGroup, PaginatedResponse, SegmentFilter, SegmentType} from '@plunk/types';
+import type {
+  ContactWithActivity,
+  FilterCondition,
+  FilterGroup,
+  PaginatedResponse,
+  SegmentFilter,
+  SegmentType,
+} from '@plunk/types';
 import {fromPrismaJson, toPrismaJson} from '@plunk/types';
 import signale from 'signale';
 
@@ -33,7 +40,9 @@ export class SegmentService {
    */
   public static async list(projectId: string): Promise<Segment[]> {
     return prisma.segment.findMany({
-      where: {projectId},
+      // Internal snapshot segments (hand-picked selections captured to send a
+      // campaign) are an implementation detail and must not appear in the list.
+      where: {projectId, internal: false},
       orderBy: {createdAt: 'desc'},
     });
   }
@@ -58,41 +67,23 @@ export class SegmentService {
   }
 
   /**
-   * Get contacts that match a segment's condition
+   * Get contacts that match a segment's condition.
+   *
+   * `extraEquals` narrows the result to contacts whose field equals a value (e.g.
+   * the Sector column filter). It is applied on top of the segment membership so
+   * the table, its counts, and the snapshot all agree on the same recipient set.
    */
   public static async getContacts(
     projectId: string,
     segmentId: string,
     page = 1,
     pageSize = 20,
-  ): Promise<PaginatedResponse<Contact>> {
+    extraEquals?: {field: string; value: unknown},
+  ): Promise<PaginatedResponse<ContactWithActivity>> {
     const segment = await this.get(projectId, segmentId);
     const skip = (page - 1) * pageSize;
 
-    if (segment.type === 'STATIC') {
-      // For static segments, query via SegmentMembership records
-      const [memberships, total] = await Promise.all([
-        prisma.segmentMembership.findMany({
-          where: {segmentId, exitedAt: null},
-          include: {contact: true},
-          skip,
-          take: pageSize,
-          orderBy: {enteredAt: 'desc'},
-        }),
-        prisma.segmentMembership.count({where: {segmentId, exitedAt: null}}),
-      ]);
-
-      return {
-        data: memberships.map(m => m.contact),
-        total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize),
-      };
-    }
-
-    const condition = fromPrismaJson<FilterCondition>(segment.condition);
-    const where = await this.buildWhereClause(projectId, condition);
+    const where = await this.buildContactsWhere(projectId, segment, extraEquals);
 
     const [contacts, total] = await Promise.all([
       prisma.contact.findMany({
@@ -104,13 +95,168 @@ export class SegmentService {
       prisma.contact.count({where}),
     ]);
 
+    const data = await this.attachLastSentAt(contacts);
+
     return {
-      data: contacts,
+      data,
       total,
       page,
       pageSize,
       totalPages: Math.ceil(total / pageSize),
     };
+  }
+
+  /**
+   * Attach the most recent send date to each contact using a single grouped
+   * query over the current page's contact ids. Avoids N+1 lookups so the segment
+   * results table stays cheap even on large segments (page size is capped at 100).
+   */
+  private static async attachLastSentAt(contacts: Contact[]): Promise<ContactWithActivity[]> {
+    if (contacts.length === 0) {
+      return [];
+    }
+
+    const ids = contacts.map(c => c.id);
+    const grouped = await prisma.email.groupBy({
+      by: ['contactId'],
+      where: {contactId: {in: ids}, sentAt: {not: null}},
+      _max: {sentAt: true},
+    });
+
+    const lastSentByContact = new Map(grouped.map(g => [g.contactId, g._max.sentAt]));
+
+    return contacts.map(contact => ({
+      ...contact,
+      lastSentAt: lastSentByContact.get(contact.id)?.toISOString() ?? null,
+    }));
+  }
+
+  /**
+   * Build the Prisma `where` that resolves a segment's current contacts, for both
+   * DYNAMIC (filter condition) and STATIC (materialized membership) segments. Used
+   * by the snapshot flow so a selection can be captured from either kind.
+   */
+  private static async buildSegmentContactsWhere(
+    projectId: string,
+    segment: Segment,
+  ): Promise<Prisma.ContactWhereInput> {
+    if (segment.type === 'STATIC') {
+      return {
+        projectId,
+        segmentMemberships: {some: {segmentId: segment.id, exitedAt: null}},
+      };
+    }
+
+    const condition = fromPrismaJson<FilterCondition>(segment.condition);
+    return this.buildWhereClause(projectId, condition);
+  }
+
+  /**
+   * Resolve a segment's contacts `where`, optionally intersected with an equality
+   * filter (the Sector column filter). Reused by both the results table and the
+   * snapshot so what the user sees is exactly what gets captured/sent.
+   */
+  private static async buildContactsWhere(
+    projectId: string,
+    segment: Segment,
+    extraEquals?: {field: string; value: unknown},
+  ): Promise<Prisma.ContactWhereInput> {
+    const base = await this.buildSegmentContactsWhere(projectId, segment);
+
+    if (!extraEquals || !extraEquals.field) {
+      return base;
+    }
+
+    // Reuse the segment filter engine so the equality is applied consistently
+    // (handles standard columns and JSON `data.*` fields alike).
+    const extraWhere = await this.buildFilterCondition({
+      field: extraEquals.field,
+      operator: 'equals',
+      value: extraEquals.value,
+    });
+
+    return {AND: [base, extraWhere]};
+  }
+
+  /**
+   * Capture a hand-picked selection of a segment's contacts into a new STATIC,
+   * internal snapshot segment, so the existing campaign send/schedule flow can
+   * target exactly those contacts (audienceType=SEGMENT) without re-resolving the
+   * live segment at send time and ignoring the user's deselections.
+   *
+   * `excludedContactIds` are the contacts the user unticked; `extraEquals` is the
+   * active Sector column filter. When neither narrows the segment there is no drift
+   * risk, so we skip materialization entirely and hand back the live segment id.
+   * Membership is materialized in id-ordered batches to stay memory-safe at scale.
+   */
+  public static async createSnapshot(
+    projectId: string,
+    sourceSegmentId: string,
+    excludedContactIds: string[] = [],
+    extraEquals?: {field: string; value: unknown},
+  ): Promise<{segmentId: string; snapshot: boolean; total: number}> {
+    const source = await this.get(projectId, sourceSegmentId);
+
+    const hasExtra = Boolean(extraEquals && extraEquals.field);
+
+    // Nothing narrows the segment → the live segment already represents it exactly.
+    if (excludedContactIds.length === 0 && !hasExtra) {
+      return {segmentId: sourceSegmentId, snapshot: false, total: source.memberCount};
+    }
+
+    const baseWhere = await this.buildContactsWhere(projectId, source, extraEquals);
+    const where: Prisma.ContactWhereInput =
+      excludedContactIds.length > 0 ? {AND: [baseWhere, {id: {notIn: excludedContactIds}}]} : baseWhere;
+
+    const snapshot = await prisma.segment.create({
+      data: {
+        projectId,
+        name: `${source.name} · selección`,
+        description: `Selección capturada del segmento "${source.name}"`,
+        type: 'STATIC',
+        internal: true,
+        sourceSegmentId: source.id,
+        trackMembership: false,
+      },
+    });
+
+    // Materialize membership in id-ordered cursor batches (memory-safe at scale).
+    const BATCH = 1000;
+    let cursor: string | undefined;
+    let total = 0;
+
+    for (;;) {
+      const batch = await prisma.contact.findMany({
+        where,
+        select: {id: true},
+        take: BATCH,
+        skip: cursor ? 1 : 0,
+        cursor: cursor ? {id: cursor} : undefined,
+        orderBy: {id: 'asc'},
+      });
+
+      if (batch.length === 0) {
+        break;
+      }
+
+      await prisma.segmentMembership.createMany({
+        data: batch.map(c => ({contactId: c.id, segmentId: snapshot.id})),
+        skipDuplicates: true,
+      });
+
+      total += batch.length;
+      cursor = batch[batch.length - 1]!.id;
+
+      if (batch.length < BATCH) {
+        break;
+      }
+    }
+
+    await prisma.segment.update({where: {id: snapshot.id}, data: {memberCount: total}});
+
+    signale.info(`[SEGMENT] Snapshot ${snapshot.id} captured ${total} contacts from segment ${source.id}`);
+
+    return {segmentId: snapshot.id, snapshot: true, total};
   }
 
   /**

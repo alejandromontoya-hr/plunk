@@ -53,12 +53,53 @@ export class Segments {
     const segmentId = req.params.id;
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = Math.min(parseInt(req.query.pageSize as string) || 20, 100);
+    const filterField = typeof req.query.filterField === 'string' ? req.query.filterField : undefined;
+    const filterValue = typeof req.query.filterValue === 'string' ? req.query.filterValue : undefined;
 
     if (!segmentId) {
       return res.status(400).json({error: 'Segment ID is required'});
     }
 
-    const result = await SegmentService.getContacts(auth.projectId!, segmentId, page, pageSize);
+    const extraEquals = filterField && filterValue !== undefined ? {field: filterField, value: filterValue} : undefined;
+
+    const result = await SegmentService.getContacts(auth.projectId!, segmentId, page, pageSize, extraEquals);
+
+    return res.status(200).json(result);
+  }
+
+  /**
+   * POST /segments/:id/snapshot
+   * Capture a hand-picked selection of the segment's contacts into an internal
+   * STATIC snapshot segment, so a campaign can be sent to exactly that subset via
+   * the existing SEGMENT audience flow. `excludedContactIds` are the deselected
+   * contacts; when empty, the live segment id is returned unchanged.
+   */
+  @Post(':id/snapshot')
+  @Middleware([requireAuth, requireEmailVerified])
+  @CatchAsync
+  public async snapshot(req: Request, res: Response, _next: NextFunction) {
+    const auth = res.locals.auth;
+    const segmentId = req.params.id;
+    const {excludedContactIds, filterField, filterValue} = req.body as {
+      excludedContactIds?: unknown;
+      filterField?: unknown;
+      filterValue?: unknown;
+    };
+
+    if (!segmentId) {
+      return res.status(400).json({error: 'Segment ID is required'});
+    }
+
+    if (excludedContactIds !== undefined && !Array.isArray(excludedContactIds)) {
+      return res.status(400).json({error: 'excludedContactIds must be an array of contact ids'});
+    }
+
+    const excluded = Array.isArray(excludedContactIds) ? (excludedContactIds as unknown[]).filter((id): id is string => typeof id === 'string') : [];
+
+    const extraEquals =
+      typeof filterField === 'string' && filterField && filterValue !== undefined ? {field: filterField, value: filterValue} : undefined;
+
+    const result = await SegmentService.createSnapshot(auth.projectId!, segmentId, excluded, extraEquals);
 
     return res.status(200).json(result);
   }
