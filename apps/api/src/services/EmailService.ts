@@ -1,5 +1,5 @@
 import type {Contact, Email, Prisma, Project} from '@plunk/db';
-import {EmailSourceType, EmailStatus, SubscriptionStatus, TrackingMode} from '@plunk/db';
+import {EmailSourceType, EmailStatus, TrackingMode} from '@plunk/db';
 import {toPrismaJson} from '@plunk/types';
 import signale from 'signale';
 
@@ -13,7 +13,6 @@ import {DomainService} from './DomainService.js';
 import {EventService} from './EventService.js';
 import {QueueService} from './QueueService.js';
 import {sendRawEmail} from './SESService.js';
-import {TopicService} from './TopicService.js';
 
 interface Attachment {
   filename: string;
@@ -501,14 +500,13 @@ export class EmailService {
       case 'bounced':
         updateData.status = EmailStatus.BOUNCED;
         updateData.bouncedAt = now;
-        // Unsubscribe contact from marketing on bounce and track event. Routed
-        // through topics so the materialized `subscribed` flag stays in sync;
-        // emitEvent:false since we track a richer contact.unsubscribed below.
-        // (Point 2 will separate undeliverable from voluntary opt-out.)
+        // Unsubscribe contact on bounce and track event
         if (email.contactId) {
-          await TopicService.setAllMarketingSubscriptions(email.contactId, SubscriptionStatus.UNSUBSCRIBED, 'bounce', {
-            emitEvent: false,
+          await prisma.contact.update({
+            where: {id: email.contactId},
+            data: {subscribed: false},
           });
+          // Track unsubscription event
           await EventService.trackEvent(email.projectId, 'contact.unsubscribed', email.contactId, email.id, {
             reason: 'bounce',
           });
@@ -518,13 +516,13 @@ export class EmailService {
       case 'complained':
         updateData.status = EmailStatus.COMPLAINED;
         updateData.complainedAt = now;
-        // Unsubscribe contact from marketing on complaint and track event.
-        // Routed through topics; emitEvent:false since we track a richer
-        // contact.unsubscribed below. (Point 2 separates undeliverable state.)
+        // Unsubscribe contact and track event
         if (email.contactId) {
-          await TopicService.setAllMarketingSubscriptions(email.contactId, SubscriptionStatus.UNSUBSCRIBED, 'complaint', {
-            emitEvent: false,
+          await prisma.contact.update({
+            where: {id: email.contactId},
+            data: {subscribed: false},
           });
+          // Track unsubscription event
           await EventService.trackEvent(email.projectId, 'contact.unsubscribed', email.contactId, email.id, {
             reason: 'complaint',
           });

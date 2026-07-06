@@ -10,34 +10,16 @@
   "clearSearch": "Limpiar búsqueda",
   "status": {
     "subscribed": "Suscrito",
-    "unsubscribed": "Sin suscripción"
+    "unsubscribed": "Sin suscripción",
+    "toggleHint": "Clic para cambiar la suscripción"
   },
   "columns": {
     "select": "Seleccionar",
     "email": "Correo",
     "status": "Estado",
-    "subscriptions": "Suscripciones",
     "created": "Creado",
     "updated": "Actualizado",
     "actions": "Acciones"
-  },
-  "topics": {
-    "transactional": {
-      "name": "Transaccional",
-      "description": "Recibos, avisos de seguridad y notificaciones de la cuenta"
-    },
-    "product_updates": {
-      "name": "Novedades de producto",
-      "description": "Novedades sobre nuevas funciones y cambios del producto"
-    },
-    "marketing": {
-      "name": "Marketing",
-      "description": "Boletines, ofertas y promociones"
-    },
-    "unsubscribedFromEmail": "Dado de baja desde el correo",
-    "transactionalHint": "No cuenta para el estado de marketing",
-    "selectTopic": "Selecciona un topic",
-    "empty": "Sin topics"
   },
   "selectAllOnPage": "Seleccionar todos los contactos de esta página",
   "selectContact": "Seleccionar {email}",
@@ -52,10 +34,7 @@
   "bulk": {
     "subscribe": "Marcar como marketing",
     "unsubscribe": "Quitar de marketing",
-    "delete": "Eliminar",
-    "subscribeTopic": "Suscribir a topic",
-    "unsubscribeTopic": "Quitar de topic",
-    "topicPickerTitle": "Suscripción por topic"
+    "delete": "Eliminar"
   },
   "empty": {
     "title": "Aún no hay contactos",
@@ -137,6 +116,14 @@
       "dupExisting": "{count} contactos ya existen y podrían actualizarse.",
       "dupInFile": "{count} filas están duplicadas dentro del archivo."
     },
+    "constants": {
+      "title": "Asignar campo",
+      "help": "Asigna un campo con el mismo valor a todos los contactos importados (ej. sector = Energía), sin necesidad de columna. Opcional.",
+      "fieldPlaceholder": "Campo (ej. sector)",
+      "valuePlaceholder": "Valor (ej. Energía)",
+      "add": "＋ Agregar campo fijo",
+      "remove": "Quitar"
+    },
     "mode": {
       "title": "Elija cómo gestionar los contactos.",
       "create": "Crear",
@@ -211,18 +198,6 @@
       "confirmText": "Ocultar"
     }
   },
-  "bulkTopicDialog": {
-    "title": "Suscripción por topic",
-    "description": "Elige un topic y aplícalo a los {count} contactos seleccionados.",
-    "action": "Acción",
-    "subscribe": "Suscribir",
-    "unsubscribe": "Quitar",
-    "applying": "Aplicando…",
-    "queued": "En cola…",
-    "successBody": "{count} contactos actualizados.",
-    "error": "No se pudo actualizar la suscripción",
-    "confirm": "Aplicar"
-  },
   "addToSegment": {
     "title": "Añadir a segmento",
     "description": "Añadir {count} contactos a un segmento.",
@@ -242,6 +217,23 @@
     "close": "Cerrar",
     "cancel": "Cancelar",
     "memberCount": "{count} miembros"
+  },
+  "setField": {
+    "title": "Asignar campo",
+    "description": "Asignar un campo personalizado a {count} contactos.",
+    "fieldLabel": "Campo",
+    "selectField": "Selecciona un campo",
+    "createNew": "➕ Crear un campo nuevo",
+    "newFieldPlaceholder": "p. ej. sector, empresa, ciudad",
+    "valueLabel": "Valor",
+    "valuePlaceholder": "p. ej. Energía",
+    "overwriteHint": "Se sobrescribe el valor en todos los contactos seleccionados. No afecta otros campos.",
+    "apply": "Asignar",
+    "applying": "Asignando…",
+    "processing": "Asignando el campo…",
+    "successTitle": "✓ Campo asignado",
+    "successBody": "Campo asignado a {count} contactos.",
+    "errorTitle": "No se pudo asignar el campo"
   },
   "operations": {
     "subscribe": {
@@ -291,32 +283,6 @@
       "processingLabel": "Procesando",
       "changedVerb": "procesados",
       "summaryNoun": "procesados"
-    },
-    "subscribe-topic": {
-      "title": "Suscribir contactos a {topic}",
-      "progressTitle": "Suscribiendo a {topic}…",
-      "completedTitle": "Suscritos a {topic}",
-      "failedTitle": "No se pudo suscribir los contactos a {topic}",
-      "confirmVerb": "Suscribir a {topic} a",
-      "confirmButton": "Suscribir",
-      "processingLabel": "Suscribiendo a {topic} a",
-      "changedVerb": "suscritos",
-      "summaryNoun": "suscritos",
-      "alreadyState": "ya suscritos",
-      "skipNote": "Los contactos que ya están suscritos a este topic se omitirán."
-    },
-    "unsubscribe-topic": {
-      "title": "Quitar contactos de {topic}",
-      "progressTitle": "Quitando de {topic}…",
-      "completedTitle": "Quitados de {topic}",
-      "failedTitle": "No se pudo quitar los contactos de {topic}",
-      "confirmVerb": "Quitar de {topic} a",
-      "confirmButton": "Quitar",
-      "processingLabel": "Quitando de {topic} a",
-      "changedVerb": "quitados",
-      "summaryNoun": "quitados",
-      "alreadyState": "ya sin este topic",
-      "skipNote": "Los contactos que ya están sin este topic se omitirán."
     }
   },
   "detail": {
@@ -330,10 +296,6 @@
     "subscribedLabel": "Suscrito a los correos",
     "subscribedHelpOn": "Recibe correos de campañas y flujos de trabajo",
     "subscribedHelpOff": "No recibirá correos",
-    "subscriptionsTitle": "Suscripciones",
-    "subscriptionsSubtitle": "Topics a los que este contacto está suscrito",
-    "topicUpdated": "Suscripción actualizada",
-    "topicUpdateFailed": "No se pudo actualizar la suscripción",
     "saveChanges": "Guardar cambios",
     "saving": "Guardando...",
     "activity": "Actividad",

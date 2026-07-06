@@ -16,8 +16,9 @@ import {
   Label,
   Switch,
 } from '@plunk/ui';
+import type {Contact} from '@plunk/db';
 import {ContactSchemas} from '@plunk/shared';
-import type {ContactWithSubscriptions, CursorPaginatedResponse} from '@plunk/types';
+import type {CursorPaginatedResponse} from '@plunk/types';
 import {
   getCoreRowModel,
   useReactTable,
@@ -44,8 +45,7 @@ import {
 import {KeyValueEditor} from '../../components/KeyValueEditor';
 import {ImportContactsWizard} from '../../components/ImportContactsWizard';
 import {AddToSegmentDialog} from '../../components/AddToSegmentDialog';
-import {BulkTopicDialog} from '../../components/BulkTopicDialog';
-import {TopicChips} from '../../components/TopicChips';
+import {BulkSetFieldDialog} from '../../components/BulkSetFieldDialog';
 import {network} from '../../lib/network';
 import {useTranslation, type TranslateFn} from '../../lib/i18n';
 import {formatRelativeTime} from '../../lib/dateUtils';
@@ -107,7 +107,7 @@ export default function ContactsPage() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [cursorHistory, setCursorHistory] = useState<(string | undefined)[]>([undefined]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [contacts, setContacts] = useState<ContactWithSubscriptions[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
@@ -125,7 +125,7 @@ export default function ContactsPage() {
   const [showBulkActionsDialog, setShowBulkActionsDialog] = useState(false);
   const [bulkOperation, setBulkOperation] = useState<'subscribe' | 'unsubscribe' | 'delete' | null>(null);
   const [showAddToSegmentDialog, setShowAddToSegmentDialog] = useState(false);
-  const [showBulkTopicDialog, setShowBulkTopicDialog] = useState(false);
+  const [showSetFieldDialog, setShowSetFieldDialog] = useState(false);
   const pageSize = 50;
 
   // Backend is authoritative for sorting + status filtering
@@ -134,7 +134,7 @@ export default function ContactsPage() {
   const dirParam = sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : '';
   const subscribedParam = statusFilter === 'subscribed' ? 'true' : statusFilter === 'unsubscribed' ? 'false' : '';
 
-  const {data, mutate, isLoading} = useSWR<CursorPaginatedResponse<ContactWithSubscriptions>>(
+  const {data, mutate, isLoading} = useSWR<CursorPaginatedResponse<Contact>>(
     `/contacts?limit=${pageSize}${cursor ? `&cursor=${cursor}` : ''}${
       search ? `&search=${encodeURIComponent(search)}` : ''
     }${subscribedParam ? `&subscribed=${subscribedParam}` : ''}${sortParam ? `&sort=${sortParam}&dir=${dirParam}` : ''}`,
@@ -290,6 +290,19 @@ export default function ContactsPage() {
     setExcludedContacts(new Set());
   };
 
+  // Toggle a single contact's subscription straight from the Status badge, so the
+  // user can remove (or restore) the subscribed state inline without opening the
+  // contact or using the bulk bar.
+  const handleToggleSubscribed = async (contact: Contact) => {
+    try {
+      await network.fetch('PATCH', `/contacts/${contact.id}`, {subscribed: !contact.subscribed} as never);
+      toast.success(t('contacts.toast.updated'));
+      void mutate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('contacts.toast.updateFailed'));
+    }
+  };
+
   const promptDelete = (contactId: string) => {
     setContactToDelete(contactId);
     setShowDeleteDialog(true);
@@ -325,7 +338,7 @@ export default function ContactsPage() {
     clearSelection();
   };
 
-  const columns = useMemo<Array<ColumnDef<ContactWithSubscriptions, unknown>>>(
+  const columns = useMemo<Array<ColumnDef<Contact, unknown>>>(
     () => [
       {
         id: 'select',
@@ -392,19 +405,20 @@ export default function ContactsPage() {
           </DataTableColumnHeader>
         ),
         cell: ({row}) => (
-          <Badge variant={row.original.subscribed ? 'success' : 'destructive'}>
-            {row.original.subscribed ? t('contacts.status.subscribed') : t('contacts.status.unsubscribed')}
-          </Badge>
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              void handleToggleSubscribed(row.original);
+            }}
+            title={t('contacts.status.toggleHint')}
+            className="rounded-full transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
+          >
+            <Badge variant={row.original.subscribed ? 'success' : 'destructive'} className="cursor-pointer">
+              {row.original.subscribed ? t('contacts.status.subscribed') : t('contacts.status.unsubscribed')}
+            </Badge>
+          </button>
         ),
-      },
-      {
-        id: 'subscriptions',
-        enableSorting: false,
-        meta: {label: t('contacts.columns.subscriptions')} satisfies DataTableColumnMeta,
-        header: ({column}) => (
-          <DataTableColumnHeader column={column}>{t('contacts.columns.subscriptions')}</DataTableColumnHeader>
-        ),
-        cell: ({row}) => <TopicChips subscriptions={row.original.subscriptions} />,
       },
       {
         id: 'createdAt',
@@ -465,7 +479,7 @@ export default function ContactsPage() {
     [statusFilter, selectAllMatching, selectedContacts, excludedContacts, contacts, allOnPageSelected],
   );
 
-  const table = useReactTable<ContactWithSubscriptions>({
+  const table = useReactTable<Contact>({
     data: contacts,
     columns,
     state: {sorting, columnVisibility},
@@ -589,17 +603,9 @@ export default function ContactsPage() {
                 <Layers className="h-4 w-4" />
                 {t('contacts.addToSegment.title')}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowBulkTopicDialog(true)}>
+              <Button variant="outline" size="sm" onClick={() => setShowSetFieldDialog(true)}>
                 <Tag className="h-4 w-4" />
-                {t('contacts.bulk.topicPickerTitle')}
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleBulkAction('subscribe')}>
-                <MailCheck className="h-4 w-4" />
-                {t('contacts.bulk.subscribe')}
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleBulkAction('unsubscribe')}>
-                <MailX className="h-4 w-4" />
-                {t('contacts.bulk.unsubscribe')}
+                {t('contacts.setField.title')}
               </Button>
               <Button
                 variant="outline"
@@ -678,12 +684,16 @@ export default function ContactsPage() {
                                 )}
                                 <span className="truncate">{contact.email}</span>
                               </Link>
-                              <Badge variant={contact.subscribed ? 'success' : 'destructive'} className="shrink-0">
-                                {contact.subscribed ? t('contacts.status.subscribed') : t('contacts.status.unsubscribed')}
-                              </Badge>
-                            </div>
-                            <div className="mt-2.5">
-                              <TopicChips subscriptions={contact.subscriptions} />
+                              <button
+                                type="button"
+                                onClick={() => void handleToggleSubscribed(contact)}
+                                title={t('contacts.status.toggleHint')}
+                                className="shrink-0 rounded-full transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
+                              >
+                                <Badge variant={contact.subscribed ? 'success' : 'destructive'} className="cursor-pointer">
+                                  {contact.subscribed ? t('contacts.status.subscribed') : t('contacts.status.unsubscribed')}
+                                </Badge>
+                              </button>
                             </div>
                             <div className="mt-3 flex items-center justify-between">
                               <div className="group relative inline-block cursor-help">
@@ -860,10 +870,10 @@ export default function ContactsPage() {
           }}
         />
 
-        {/* Bulk Topic Subscription Dialog */}
-        <BulkTopicDialog
-          open={showBulkTopicDialog}
-          onOpenChange={setShowBulkTopicDialog}
+        {/* Assign custom field in bulk */}
+        <BulkSetFieldDialog
+          open={showSetFieldDialog}
+          onOpenChange={setShowSetFieldDialog}
           selector={
             selectAllMatching
               ? {

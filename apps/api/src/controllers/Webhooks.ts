@@ -1,6 +1,6 @@
 import {Controller, Post} from '@overnightjs/core';
 import type {Prisma} from '@plunk/db';
-import {EmailSourceType, EmailStatus, SubscriptionStatus} from '@plunk/db';
+import {EmailSourceType, EmailStatus} from '@plunk/db';
 import type {Request, Response} from 'express';
 import {simpleParser} from 'mailparser';
 import sanitizeHtml from 'sanitize-html';
@@ -20,7 +20,6 @@ import {MembershipService} from '../services/MembershipService.js';
 import {MeterService} from '../services/MeterService.js';
 import {NtfyService} from '../services/NtfyService.js';
 import {SecurityService} from '../services/SecurityService.js';
-import {TopicService} from '../services/TopicService.js';
 import {CatchAsync} from '../utils/asyncHandler.js';
 
 /**
@@ -382,11 +381,10 @@ export class Webhooks {
             signale.warn(`[WEBHOOK] Permanent bounce received for ${email.contact.email} from ${email.project.name}`);
             updateData.status = EmailStatus.BOUNCED;
             updateData.bouncedAt = now;
-            // Unsubscribe contact from marketing on permanent bounce. Routed
-            // through topics so the materialized `subscribed` flag stays in sync.
-            // (Point 2 will separate undeliverable from voluntary opt-out.)
-            await TopicService.setAllMarketingSubscriptions(email.contactId, SubscriptionStatus.UNSUBSCRIBED, 'bounce', {
-              emitEvent: false,
+            // Unsubscribe contact on permanent bounce
+            await prisma.contact.update({
+              where: {id: email.contactId},
+              data: {subscribed: false},
             });
             eventData = {
               ...baseEventData,
@@ -415,8 +413,9 @@ export class Webhooks {
             );
             updateData.status = EmailStatus.BOUNCED;
             updateData.bouncedAt = now;
-            await TopicService.setAllMarketingSubscriptions(email.contactId, SubscriptionStatus.UNSUBSCRIBED, 'bounce', {
-              emitEvent: false,
+            await prisma.contact.update({
+              where: {id: email.contactId},
+              data: {subscribed: false},
             });
             eventData = {
               ...baseEventData,
@@ -433,11 +432,10 @@ export class Webhooks {
           signale.warn(`[WEBHOOK] Complaint received for ${email.contact.email} from ${email.project.name}`);
           updateData.status = EmailStatus.COMPLAINED;
           updateData.complainedAt = now;
-          // Unsubscribe contact from marketing on complaint. Routed through
-          // topics so the materialized `subscribed` flag stays in sync.
-          // (Point 2 will separate undeliverable from voluntary opt-out.)
-          await TopicService.setAllMarketingSubscriptions(email.contactId, SubscriptionStatus.UNSUBSCRIBED, 'complaint', {
-            emitEvent: false,
+          // Unsubscribe contact on complaint
+          await prisma.contact.update({
+            where: {id: email.contactId},
+            data: {subscribed: false},
           });
           eventData = {
             ...baseEventData,

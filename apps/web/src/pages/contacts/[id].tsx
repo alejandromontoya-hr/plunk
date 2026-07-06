@@ -8,6 +8,7 @@ import {
   IconSpinner,
   Input,
   Label,
+  Switch,
 } from '@plunk/ui';
 import type {Contact} from '@plunk/db';
 import {AnimatePresence, motion} from 'framer-motion';
@@ -19,11 +20,11 @@ import {useEffect, useState} from 'react';
 import {DashboardLayout} from '../../components/DashboardLayout';
 import {KeyValueEditor} from '../../components/KeyValueEditor';
 import {ActivityFeed} from '../../components/ActivityFeed';
-import {ContactTopicSubscriptions} from '../../components/ContactTopicSubscriptions';
 import {network} from '../../lib/network';
 import {useTranslation} from '../../lib/i18n';
 import {toast} from 'sonner';
 import useSWR from 'swr';
+import {ContactSchemas} from '@plunk/shared';
 import dayjs from 'dayjs';
 
 export default function ContactDetailPage() {
@@ -33,6 +34,7 @@ export default function ContactDetailPage() {
   const {data: contact, mutate, isLoading} = useSWR<Contact>(id ? `/contacts/${id}` : null);
 
   const [email, setEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(true);
   const [customData, setCustomData] = useState<Record<string, string | number | boolean> | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -41,6 +43,7 @@ export default function ContactDetailPage() {
   useEffect(() => {
     if (contact) {
       setEmail(contact.email);
+      setSubscribed(contact.subscribed);
       setCustomData(contact.data as Record<string, string | number | boolean> | null);
     }
   }, [contact]);
@@ -50,7 +53,12 @@ export default function ContactDetailPage() {
     setIsSubmitting(true);
 
     try {
-      await network.fetch<{success: boolean}>('PATCH', `/contacts/${id}`, {email, data: customData} as never);
+      await network.fetch<
+        {
+          success: boolean;
+        },
+        typeof ContactSchemas.create
+      >('PATCH', `/contacts/${id}`, {email, subscribed, data: customData});
       toast.success(t('contacts.toast.updated'));
       void mutate();
     } catch (error) {
@@ -161,6 +169,18 @@ export default function ContactDetailPage() {
                       />
                     </div>
 
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <Label htmlFor="subscribed" className="font-medium cursor-pointer">
+                          {t('contacts.detail.subscribedLabel')}
+                        </Label>
+                        <p className="text-xs text-neutral-500 mt-0.5">
+                          {subscribed ? t('contacts.detail.subscribedHelpOn') : t('contacts.detail.subscribedHelpOff')}
+                        </p>
+                      </div>
+                      <Switch id="subscribed" checked={subscribed} onCheckedChange={setSubscribed} />
+                    </div>
+
                     <div>
                       {contact && (
                         <KeyValueEditor
@@ -178,9 +198,6 @@ export default function ContactDetailPage() {
                   </form>
                 </CardContent>
               </Card>
-
-              {/* Per-topic subscriptions */}
-              <ContactTopicSubscriptions contactId={id as string} onChanged={() => void mutate()} />
 
               {/* Activity Feed */}
               <Card>

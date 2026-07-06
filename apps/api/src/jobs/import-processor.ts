@@ -54,6 +54,12 @@ export function createImportWorker() {
 
       const mode = record.mode as ImportMode;
       const mapping = (record.mapping ?? {}) as unknown as ColumnMapping;
+      // Fixed custom fields applied to every row (the "valor fijo" step). Sanitized:
+      // keep only well-formed {key, value} pairs with a non-empty key.
+      const constants = (Array.isArray(record.constants) ? record.constants : [])
+        .filter((c): c is {key: string; value: string} => Boolean(c) && typeof c === 'object' && typeof (c as {key?: unknown}).key === 'string')
+        .map(c => ({key: c.key.trim(), value: typeof c.value === 'string' ? c.value : String(c.value ?? '')}))
+        .filter(c => c.key.length > 0);
       const undoable = record.totalRows <= UNDO_MAX_ROWS;
 
       await prisma.contactImport.update({
@@ -140,6 +146,11 @@ export function createImportWorker() {
                 if (value !== undefined && value !== '') {
                   data[key] = coerceCustomValue(value);
                 }
+              }
+              // Apply fixed custom fields to every row (overwrites any mapped column
+              // with the same key, matching "valor fijo para todo el archivo").
+              for (const {key, value} of constants) {
+                data[key] = coerceCustomValue(value);
               }
 
               // Subscription (optional column).

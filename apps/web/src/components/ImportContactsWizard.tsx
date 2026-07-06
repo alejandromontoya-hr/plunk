@@ -115,6 +115,8 @@ export function ImportContactsWizard({open, onOpenChange, onSuccess}: ImportCont
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [mapping, setMapping] = useState<Record<string, ColumnMapping>>({});
   const [mode, setMode] = useState<ImportMode>('UPSERT');
+  // Fixed custom fields applied to every imported row ("valor fijo para todo el archivo").
+  const [constants, setConstants] = useState<Array<{key: string; value: string}>>([]);
   const [isConfirming, setIsConfirming] = useState(false);
 
   const [, setImportId] = useState<string | null>(null);
@@ -146,6 +148,7 @@ export function ImportContactsWizard({open, onOpenChange, onSuccess}: ImportCont
         setPreview(null);
         setMapping({});
         setMode('UPSERT');
+        setConstants([]);
         setIsConfirming(false);
         setImportId(null);
         setRecord(null);
@@ -259,10 +262,13 @@ export function ImportContactsWizard({open, onOpenChange, onSuccess}: ImportCont
     setIsConfirming(true);
     setErrorMessage(null);
     try {
+      const cleanConstants = constants
+        .map(c => ({key: c.key.trim(), value: c.value}))
+        .filter(c => c.key.length > 0);
       const response = await network.fetch<ImportConfirmResponse>(
         'POST',
         `/contacts/import/${preview.importId}/confirm`,
-        {mode, mapping} as never,
+        {mode, mapping, constants: cleanConstants} as never,
       );
       setImportId(response.importId);
       setStep('progress');
@@ -505,6 +511,48 @@ export function ImportContactsWizard({open, onOpenChange, onSuccess}: ImportCont
                 {t('contacts.import.map.emailRequired')}
               </p>
             )}
+
+            {/* Fixed custom fields applied to every row */}
+            <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+              <div>
+                <p className="text-sm font-medium text-neutral-800">{t('contacts.import.constants.title')}</p>
+                <p className="text-xs text-neutral-500">{t('contacts.import.constants.help')}</p>
+              </div>
+              {constants.length > 0 && (
+                <div className="space-y-2">
+                  {constants.map((c, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input
+                        value={c.key}
+                        onChange={(e) => setConstants((prev) => prev.map((x, j) => (j === i ? {...x, key: e.target.value} : x)))}
+                        placeholder={t('contacts.import.constants.fieldPlaceholder')}
+                        maxLength={100}
+                        className="flex-1"
+                      />
+                      <span className="text-neutral-400">=</span>
+                      <Input
+                        value={c.value}
+                        onChange={(e) => setConstants((prev) => prev.map((x, j) => (j === i ? {...x, value: e.target.value} : x)))}
+                        placeholder={t('contacts.import.constants.valuePlaceholder')}
+                        maxLength={500}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConstants((prev) => prev.filter((_, j) => j !== i))}
+                      >
+                        {t('contacts.import.constants.remove')}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Button type="button" variant="outline" size="sm" onClick={() => setConstants((prev) => [...prev, {key: '', value: ''}])}>
+                {t('contacts.import.constants.add')}
+              </Button>
+            </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={resetToUpload}>

@@ -405,11 +405,11 @@ export class QueueService {
     selector: BulkContactActionSelector,
     operation: BulkContactOperation,
     segmentId?: string,
-    topicId?: string,
+    data?: {field: string; value: string},
   ): Promise<Job<BulkContactActionJobData>> {
     return bulkContactQueue.add(
       'bulk-contact-action',
-      {projectId, operation, selector, segmentId, topicId},
+      {projectId, operation, selector, segmentId, data},
       {
         jobId: `bulk-${operation}-${projectId}-${Date.now()}`,
       },
