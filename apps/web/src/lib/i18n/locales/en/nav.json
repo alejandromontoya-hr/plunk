@@ -1,0 +1,19 @@
+{
+  "dashboard": "Dashboard",
+  "contacts": "Contacts",
+  "segments": "Segments",
+  "activity": "Activity",
+  "analytics": "Analytics",
+  "automations": "Automations",
+  "templates": "Templates",
+  "workflows": "Workflows",
+  "campaigns": "Campaigns",
+  "documentation": "Documentation",
+  "settings": "Settings",
+  "account": "Account",
+  "logout": "Log out",
+  "selectProject": "Select project",
+  "createProject": "Create project",
+  "openMenu": "Open menu",
+  "language": "Language"
+}

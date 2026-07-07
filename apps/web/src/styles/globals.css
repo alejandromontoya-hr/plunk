@@ -90,7 +90,8 @@
         --card: 0 0% 100%;
         --card-foreground: 222.2 47.4% 11.2%;
 
-        --primary: 222.2 47.4% 11.2%;
+        /* Sagy deep brand blue (#032333) */
+        --primary: 200 89% 11%;
         --primary-foreground: 210 40% 98%;
 
         --secondary: 210 40% 96.1%;
@@ -102,7 +103,7 @@
         --destructive: 0 100% 50%;
         --destructive-foreground: 210 40% 98%;
 
-        --ring: 215.4 16.3% 46.9%;
+        --ring: 200 89% 11%;
 
         --radius: 0.5rem;
     }

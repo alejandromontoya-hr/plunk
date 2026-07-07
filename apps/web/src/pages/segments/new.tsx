@@ -4,6 +4,7 @@ import {DashboardLayout} from '../../components/DashboardLayout';
 import {SegmentFilterBuilder} from '../../components/SegmentFilterBuilder';
 import {ContactPicker} from '../../components/ContactPicker';
 import {network} from '../../lib/network';
+import {useTranslation} from '../../lib/i18n';
 import {ArrowLeft, Save} from 'lucide-react';
 import Link from 'next/link';
 import {useRouter} from 'next/router';
@@ -16,6 +17,7 @@ import {SegmentSchemas} from '@plunk/shared';
 type SegmentType = 'DYNAMIC' | 'STATIC';
 
 export default function NewSegmentPage() {
+  const {t} = useTranslation();
   const router = useRouter();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -54,20 +56,20 @@ export default function NewSegmentPage() {
             {emails: selectedContacts, createMissing: true},
           );
           const msg = result.created > 0
-            ? `Segment created with ${result.added} contact${result.added !== 1 ? 's' : ''} (${result.created} new)`
-            : `Segment created with ${result.added} contact${result.added !== 1 ? 's' : ''}`;
+            ? t('segments.toast.createdWithContactsNew', {count: result.added, created: result.created})
+            : t('segments.toast.createdWithContacts', {count: result.added});
           toast.success(msg);
         } catch {
           // Segment was created; just warn about members
-          toast.warning('Segment created, but some contacts could not be added');
+          toast.warning(t('segments.toast.createdPartial'));
         }
       } else {
-        toast.success('Segment created successfully');
+        toast.success(t('segments.toast.created'));
       }
 
       void router.push('/segments');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create segment');
+      toast.error(error instanceof Error ? error.message : t('segments.toast.createFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -75,7 +77,7 @@ export default function NewSegmentPage() {
 
   return (
     <>
-      <NextSeo title="Create Segment" />
+      <NextSeo title={t('segments.new.seoTitle')} />
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
@@ -84,11 +86,11 @@ export default function NewSegmentPage() {
               <Link href="/segments"><ArrowLeft className="h-4 w-4" /></Link>
             </Button>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Create Segment</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('segments.new.title')}</h1>
               <p className="text-neutral-500 mt-1">
                 {segmentType === 'DYNAMIC'
-                  ? 'Build complex audience filters with AND/OR logic'
-                  : 'Manually curate a list of contacts'}
+                  ? t('segments.new.subtitleDynamic')
+                  : t('segments.new.subtitleStatic')}
               </p>
             </div>
           </div>
@@ -104,7 +106,7 @@ export default function NewSegmentPage() {
                   : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
-              Dynamic
+              {t('segments.dynamic')}
             </button>
             <button
               type="button"
@@ -115,7 +117,7 @@ export default function NewSegmentPage() {
                   : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
-              Static
+              {t('segments.static')}
             </button>
           </div>
 
@@ -123,31 +125,31 @@ export default function NewSegmentPage() {
             {/* Basic Info */}
             <Card>
               <CardHeader>
-                <CardTitle>Segment Details</CardTitle>
-                <CardDescription>Give your segment a name and description</CardDescription>
+                <CardTitle>{t('segments.new.detailsTitle')}</CardTitle>
+                <CardDescription>{t('segments.new.detailsDescription')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Segment Name *</Label>
+                  <Label htmlFor="name">{t('segments.new.nameLabel')}</Label>
                   <Input
                     id="name"
                     type="text"
                     value={name}
                     onChange={e => setName(e.target.value)}
                     required
-                    placeholder="e.g., VIP Customers or Recent High Spenders"
+                    placeholder={t('segments.new.namePlaceholder')}
                     maxLength={100}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">{t('segments.new.descriptionLabel')}</Label>
                   <Input
                     id="description"
                     type="text"
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    placeholder="e.g., Users on VIP plan OR recent signups who spent $1000+"
+                    placeholder={t('segments.new.descriptionPlaceholder')}
                     maxLength={500}
                   />
                 </div>
@@ -162,10 +164,10 @@ export default function NewSegmentPage() {
                   />
                   <div className="flex-1">
                     <Label htmlFor="trackMembership" className="font-medium cursor-pointer">
-                      Track membership changes
+                      {t('segments.new.trackMembershipLabel')}
                     </Label>
                     <p className="text-xs text-neutral-500 mt-1">
-                      When enabled, segment entry and exit events will be tracked for use in workflows and analytics
+                      {t('segments.new.trackMembershipHelp')}
                     </p>
                   </div>
                 </div>
@@ -176,8 +178,8 @@ export default function NewSegmentPage() {
             {segmentType === 'DYNAMIC' ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Filter Conditions</CardTitle>
-                  <CardDescription>Build complex audience filters with AND/OR logic</CardDescription>
+                  <CardTitle>{t('segments.new.filterConditionsTitle')}</CardTitle>
+                  <CardDescription>{t('segments.new.filterConditionsDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <SegmentFilterBuilder condition={condition} onChange={setCondition} />
@@ -186,9 +188,9 @@ export default function NewSegmentPage() {
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle>Initial Members</CardTitle>
+                  <CardTitle>{t('segments.new.initialMembersTitle')}</CardTitle>
                   <CardDescription>
-                    Optionally add contacts now — you can always add or remove members later
+                    {t('segments.new.initialMembersDescription')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -196,7 +198,7 @@ export default function NewSegmentPage() {
                     selected={selectedContacts}
                     onChange={setSelectedContacts}
                     onAdd={async (emails, _subscribed) => setSelectedContacts(prev => [...new Set([...prev, ...emails])])}
-                    placeholder="Search and select contacts..."
+                    placeholder={t('segments.new.contactPickerPlaceholder')}
                   />
                 </CardContent>
               </Card>
@@ -205,11 +207,11 @@ export default function NewSegmentPage() {
             {/* Actions */}
             <div className="flex items-center justify-end gap-2">
               <Button asChild variant="outline" disabled={isSubmitting}>
-                <Link href="/segments">Cancel</Link>
+                <Link href="/segments">{t('common.cancel')}</Link>
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 <Save className="h-4 w-4 mr-2" />
-                {isSubmitting ? 'Creating...' : 'Create Segment'}
+                {isSubmitting ? t('segments.new.creating') : t('segments.createSegment')}
               </Button>
             </div>
           </form>

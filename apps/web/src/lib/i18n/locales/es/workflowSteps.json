@@ -1,0 +1,210 @@
+{
+  "types": {
+    "TRIGGER": {
+      "label": "Disparador",
+      "description": "Inicia el flujo de trabajo cuando se recibe un evento específico."
+    },
+    "SEND_EMAIL": {
+      "label": "Enviar correo",
+      "description": "Envía un correo al contacto usando la plantilla que elija."
+    },
+    "DELAY": {
+      "label": "Espera",
+      "description": "Pausa el flujo de trabajo durante un tiempo determinado antes de continuar."
+    },
+    "WAIT_FOR_EVENT": {
+      "label": "Esperar evento",
+      "description": "Espera hasta que el contacto genere un evento específico y luego continúa."
+    },
+    "CONDITION": {
+      "label": "Condición",
+      "description": "Divide el flujo según los datos del contacto: cada camino lleva a pasos diferentes."
+    },
+    "EXIT": {
+      "label": "Salir",
+      "description": "Finaliza el flujo de trabajo para el contacto."
+    },
+    "WEBHOOK": {
+      "label": "Webhook",
+      "description": "Realiza una solicitud HTTP a una URL externa con los datos del contacto."
+    },
+    "UPDATE_CONTACT": {
+      "label": "Actualizar contacto",
+      "description": "Establece o actualiza campos en el perfil del contacto."
+    }
+  },
+  "builder": {
+    "editTriggerSettings": "Editar ajustes del disparador",
+    "editStep": "Editar paso",
+    "deleteStep": "Eliminar paso",
+    "openTemplateNewTab": "Abrir plantilla en una pestaña nueva",
+    "waitDuration": "Esperar {amount} {unit}",
+    "branchCount": "{count} rama + predeterminada",
+    "branchCount_plural": "{count} ramas + predeterminada",
+    "branchDefault": "Predeterminada",
+    "branchYes": "Sí",
+    "branchNo": "No",
+    "emptyTitle": "Aún no hay pasos en el flujo de trabajo",
+    "emptySubtitle": "Añada su primer paso para comenzar",
+    "stepCount": "{count} paso",
+    "stepCount_plural": "{count} pasos",
+    "connectionCount": "{count} conexión",
+    "connectionCount_plural": "{count} conexiones",
+    "exitFullscreen": "Salir de pantalla completa",
+    "expandFullscreen": "Expandir a pantalla completa",
+    "connectHint": "Haga clic en los botones + para añadir y conectar pasos.",
+    "addStepTitle": "Añadir paso",
+    "parentStepNotFound": "No se encontró el paso principal",
+    "branchAlreadyConnected": "La rama {branch} ya tiene una conexión",
+    "newStepName": "Nuevo {type}",
+    "stepAdded": "Paso añadido correctamente",
+    "failedToAddStep": "No se pudo añadir el paso",
+    "stepsDeleted": "Se eliminaron {count} pasos",
+    "stepDeleted": "Paso eliminado",
+    "stepRemovedFromFlow": "Paso eliminado del flujo",
+    "failedToDeleteStep": "No se pudo eliminar el paso",
+    "removeTitle": "Eliminar \"{name}\"",
+    "removeQuestion": "¿Cómo desea eliminar este paso?",
+    "removeFromFlow": "Eliminar del flujo",
+    "removeFromFlowDescription": "Elimina este paso y conecta su paso principal directamente con su paso secundario. El resto del flujo de trabajo se conserva.",
+    "deleteWithDownstream": "Eliminar con {count} paso posterior",
+    "deleteWithDownstream_plural": "Eliminar con {count} pasos posteriores",
+    "deleteWithDownstreamDescription": "Elimina de forma permanente este paso y todo lo que está debajo. Esta acción no se puede deshacer.",
+    "conditionDeleteWarning": "Eliminar un paso de condición también eliminará el {count} paso posterior en todas sus ramas:",
+    "conditionDeleteWarning_plural": "Eliminar un paso de condición también eliminará los {count} pasos posteriores en todas sus ramas:",
+    "cannotBeUndone": "Esta acción no se puede deshacer.",
+    "confirmDeleteSingle": "¿Seguro que desea eliminar este paso? Esta acción no se puede deshacer.",
+    "deleteStepsButton": "Eliminar {count} pasos",
+    "deleteStepButton": "Eliminar paso"
+  },
+  "shared": {
+    "editTitle": "Editar {type}",
+    "stepName": "Nombre del paso",
+    "stepNamePlaceholder": "p. ej., Enviar correo de bienvenida",
+    "saveChanges": "Guardar cambios",
+    "stepUpdated": "Paso actualizado correctamente",
+    "failedToUpdate": "No se pudo actualizar el paso"
+  },
+  "sendEmail": {
+    "emailTemplate": "Plantilla de correo",
+    "editTemplate": "Editar plantilla",
+    "sendTo": "Enviar a",
+    "recipientContactTitle": "Contacto",
+    "recipientContactDescription": "Enviar al contacto que activó el flujo de trabajo",
+    "recipientCustomTitle": "Correo personalizado",
+    "recipientCustomDescription": "Enviar a una dirección de correo específica",
+    "emailAddress": "Dirección de correo",
+    "emailAddressPlaceholder": "p. ej., admin@ejemplo.com",
+    "selectTemplateError": "Seleccione una plantilla",
+    "enterCustomEmailError": "Ingrese una dirección de correo personalizada",
+    "invalidEmailError": "Ingrese una dirección de correo válida"
+  },
+  "delay": {
+    "amount": "Cantidad",
+    "unit": "Unidad",
+    "unitMinutes": "Minutos",
+    "unitHours": "Horas",
+    "unitDays": "Días",
+    "maxError": "La espera no puede superar los 365 días ({max} {unit})"
+  },
+  "waitForEvent": {
+    "eventName": "Nombre del evento",
+    "eventNamePlaceholder": "p. ej., email.clicked, user.upgraded",
+    "useCustom": "Usar \"{value}\"",
+    "timeout": "Tiempo de espera (opcional)",
+    "unitMinutes": "Minutos",
+    "unitHours": "Horas",
+    "unitDays": "Días",
+    "timeoutHelp": "Si no se recibe, el flujo de trabajo continúa después de este tiempo",
+    "eventNameRequired": "El nombre del evento es obligatorio",
+    "timeoutMaxError": "El tiempo de espera no puede superar los 365 días ({max} {unit})"
+  },
+  "condition": {
+    "conditionMode": "Modo de condición",
+    "simpleMode": "Simple (Si/No)",
+    "multiMode": "Multirrama (Switch)",
+    "simpleModeHelp": "Evalúa una única condición con caminos Sí/No",
+    "multiModeHelp": "Compara un campo con varios valores, cada uno dirigido a su propia rama",
+    "blocksMultiToBinary": "No se puede cambiar al modo simple: las ramas tienen nodos conectados. Desconecte primero todas las conexiones de las ramas.",
+    "blocksBinaryToMulti": "No se puede cambiar al modo multirrama: las ramas Sí/No tienen nodos conectados. Desconecte primero todas las conexiones de las ramas.",
+    "wiringWarning": "Cambiar de modo desconectará las ramas existentes. Deberá volver a conectarlas.",
+    "fieldToCheck": "Campo a evaluar *",
+    "loadingFields": "Cargando campos...",
+    "selectFieldPlaceholder": "Seleccione un campo...",
+    "fieldPlaceholder": "p. ej., contact.subscribed o contact.data.plan",
+    "operator": "Operador",
+    "value": "Valor",
+    "valueNumberPlaceholder": "p. ej., 100",
+    "valueStringPlaceholder": "p. ej., premium, active",
+    "booleanTrue": "Verdadero",
+    "booleanFalse": "Falso",
+    "branches": "Ramas",
+    "branchesHelp": "Cada rama define una condición. Se toma la primera rama que coincida. Los contactos que no coincidan con ninguna rama siguen el camino Predeterminado.",
+    "branchLabel": "Rama {index}",
+    "branchName": "Nombre *",
+    "branchNamePlaceholder": "p. ej., Premium, Free, Enterprise",
+    "branchValuePlaceholder": "Valor...",
+    "addBranch": "Añadir rama",
+    "branchesEvaluatedInfoPrefix": "Las ramas se evalúan en orden. Gana la primera coincidencia. Los contactos que no coincidan con ninguna rama seguirán el camino ",
+    "branchesEvaluatedInfoDefault": "Predeterminado",
+    "branchesEvaluatedInfoSuffix": ".",
+    "atLeastOneBranchError": "Se requiere al menos una rama con nombre",
+    "selectFieldError": "Seleccione un campo",
+    "operators": {
+      "equals": "Es igual a",
+      "notEquals": "No es igual a",
+      "contains": "Contiene",
+      "notContains": "No contiene",
+      "greaterThan": "Mayor que",
+      "lessThan": "Menor que",
+      "greaterThanOrEqual": "Mayor o igual que",
+      "lessThanOrEqual": "Menor o igual que",
+      "exists": "Existe",
+      "notExists": "No existe"
+    }
+  },
+  "webhook": {
+    "hidePayload": "Ocultar cuerpo de la solicitud",
+    "viewPayload": "Ver cuerpo de la solicitud",
+    "webhookGuide": "Guía de webhooks",
+    "url": "URL",
+    "urlPlaceholder": "https://api.ejemplo.com/webhook",
+    "method": "Método",
+    "headers": "Encabezados",
+    "headerNamePlaceholder": "Nombre",
+    "headerValuePlaceholder": "Valor",
+    "urlRequired": "La URL del webhook es obligatoria"
+  },
+  "updateContact": {
+    "subscriptionState": "Estado de suscripción",
+    "leaveAsIsLabel": "Dejar como está",
+    "leaveAsIsDescription": "No cambiar el estado de suscripción del contacto.",
+    "subscribeLabel": "Suscribir",
+    "subscribeDescription": "Marcar el contacto como suscrito.",
+    "unsubscribeLabel": "Cancelar suscripción",
+    "unsubscribeDescription": "Marcar el contacto como no suscrito.",
+    "atLeastOneUpdateError": "Añada al menos un campo para actualizar o elija una acción de suscripción"
+  },
+  "exit": {
+    "exitReason": "Motivo de salida (opcional)",
+    "selectReasonPlaceholder": "Seleccione el motivo de salida...",
+    "reasons": {
+      "completedTitle": "Completado",
+      "completedDescription": "El contacto finalizó el flujo de trabajo correctamente",
+      "unsubscribedTitle": "Suscripción cancelada",
+      "unsubscribedDescription": "El contacto canceló la suscripción a las comunicaciones",
+      "notEligibleTitle": "No elegible",
+      "notEligibleDescription": "El contacto no cumple los criterios requeridos",
+      "optedOutTitle": "Exclusión voluntaria",
+      "optedOutDescription": "El contacto se excluyó de este flujo de trabajo",
+      "goalAchievedTitle": "Objetivo alcanzado",
+      "goalAchievedDescription": "El objetivo del flujo de trabajo se cumplió antes de completarse",
+      "duplicateTitle": "Duplicado",
+      "duplicateDescription": "El contacto ya estaba en este flujo de trabajo",
+      "errorTitle": "Error",
+      "errorDescription": "Ocurrió un problema técnico",
+      "otherTitle": "Otro",
+      "otherDescription": "Motivo personalizado o no listado"
+    }
+  }
+}

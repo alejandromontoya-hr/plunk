@@ -7,6 +7,12 @@ interface BulkActionBarProps {
   selectedCount: number;
   /** Singular noun for the selected item type (e.g. "template"). Pluralized with a trailing 's'. */
   itemNoun: string;
+  /**
+   * Optional fully-formed selection label (e.g. "3 contactos seleccionados").
+   * When provided it replaces the default "{count} {noun} selected" text, so
+   * callers can supply a localized/pluralized string.
+   */
+  selectionLabel?: ReactNode;
   /** Clears the row selection state. */
   onClear: () => void;
   /**
@@ -35,7 +41,7 @@ interface BulkActionBarProps {
  * page, matching the rest of the dashboard's affordances and keeping tab order
  * predictable.
  */
-export function BulkActionBar({selectedCount, itemNoun, onClear, note, children}: BulkActionBarProps) {
+export function BulkActionBar({selectedCount, itemNoun, selectionLabel, onClear, note, children}: BulkActionBarProps) {
   if (selectedCount <= 0) return null;
 
   const noun = selectedCount === 1 ? itemNoun : `${itemNoun}s`;
@@ -58,7 +64,7 @@ export function BulkActionBar({selectedCount, itemNoun, onClear, note, children}
           <X className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium text-neutral-900 tabular-nums whitespace-nowrap">
-          {selectedCount.toLocaleString()} {noun} selected
+          {selectionLabel ?? `${selectedCount.toLocaleString()} ${noun} selected`}
         </span>
         {note ? (
           <>

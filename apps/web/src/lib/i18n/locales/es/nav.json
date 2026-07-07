@@ -1,0 +1,19 @@
+{
+  "dashboard": "Panel",
+  "contacts": "Contactos",
+  "segments": "Segmentos",
+  "activity": "Actividad",
+  "analytics": "Analíticas",
+  "automations": "Automatizaciones",
+  "templates": "Plantillas",
+  "workflows": "Flujos de trabajo",
+  "campaigns": "Campañas",
+  "documentation": "Documentación",
+  "settings": "Configuración",
+  "account": "Cuenta",
+  "logout": "Cerrar sesión",
+  "selectProject": "Seleccionar proyecto",
+  "createProject": "Crear proyecto",
+  "openMenu": "Abrir menú",
+  "language": "Idioma"
+}

@@ -5,6 +5,7 @@ import {useState} from 'react';
 import {toast} from 'sonner';
 
 import {WIKI_URI} from '../../lib/constants';
+import {useTranslation} from '../../lib/i18n';
 
 import {type EditStepDialogProps, getStepConfig, StepDialogShell, useStepUpdate} from './shared';
 
@@ -14,6 +15,7 @@ interface HeaderEntry {
 }
 
 export function WebhookStepDialog({step, workflowId, open, onOpenChange, onSuccess}: EditStepDialogProps) {
+  const {t} = useTranslation();
   const config = getStepConfig(step);
 
   const initialHeaders: HeaderEntry[] =
@@ -33,7 +35,7 @@ export function WebhookStepDialog({step, workflowId, open, onOpenChange, onSucce
     e.preventDefault();
 
     if (!webhookUrl) {
-      toast.error('Webhook URL is required');
+      toast.error(t('workflowSteps.webhook.urlRequired'));
       return;
     }
 
@@ -74,7 +76,7 @@ export function WebhookStepDialog({step, workflowId, open, onOpenChange, onSucce
           <div className="flex items-center justify-between">
             <CollapsibleTrigger className="flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-700">
               <ChevronDown className={`h-3 w-3 transition-transform ${showWebhookInfo ? 'rotate-180' : ''}`} />
-              {showWebhookInfo ? 'Hide' : 'View'} request payload
+              {showWebhookInfo ? t('workflowSteps.webhook.hidePayload') : t('workflowSteps.webhook.viewPayload')}
             </CollapsibleTrigger>
             <Link
               href={`${WIKI_URI}/guides/webhooks#webhook-payload`}
@@ -82,7 +84,7 @@ export function WebhookStepDialog({step, workflowId, open, onOpenChange, onSucce
               rel="noopener noreferrer"
               className="text-xs text-neutral-500 hover:text-neutral-700 underline underline-offset-2"
             >
-              Webhook guide
+              {t('workflowSteps.webhook.webhookGuide')}
             </Link>
           </div>
           <CollapsibleContent className="mt-2">
@@ -98,7 +100,7 @@ export function WebhookStepDialog({step, workflowId, open, onOpenChange, onSucce
         </Collapsible>
 
         <div>
-          <Label htmlFor="editWebhookUrl">URL</Label>
+          <Label htmlFor="editWebhookUrl">{t('workflowSteps.webhook.url')}</Label>
           <Input
             className="font-mono mt-1.5"
             id="editWebhookUrl"
@@ -106,12 +108,12 @@ export function WebhookStepDialog({step, workflowId, open, onOpenChange, onSucce
             value={webhookUrl}
             onChange={e => setWebhookUrl(e.target.value)}
             required
-            placeholder="https://api.example.com/webhook"
+            placeholder={t('workflowSteps.webhook.urlPlaceholder')}
           />
         </div>
 
         <div>
-          <Label htmlFor="editWebhookMethod">Method</Label>
+          <Label htmlFor="editWebhookMethod">{t('workflowSteps.webhook.method')}</Label>
           <Select value={webhookMethod} onValueChange={setWebhookMethod}>
             <SelectTrigger id="editWebhookMethod" className="font-mono mt-1.5">
               <SelectValue />
@@ -128,7 +130,7 @@ export function WebhookStepDialog({step, workflowId, open, onOpenChange, onSucce
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <Label>Headers</Label>
+            <Label>{t('workflowSteps.webhook.headers')}</Label>
             <Button
               type="button"
               variant="outline"
@@ -137,7 +139,7 @@ export function WebhookStepDialog({step, workflowId, open, onOpenChange, onSucce
               className="h-7 text-xs"
             >
               <Plus className="h-3 w-3 mr-1" />
-              Add
+              {t('common.add')}
             </Button>
           </div>
 
@@ -145,13 +147,13 @@ export function WebhookStepDialog({step, workflowId, open, onOpenChange, onSucce
             {webhookHeaders.map((header, index) => (
               <div key={index} className="flex gap-2 items-center">
                 <Input
-                  placeholder="Name"
+                  placeholder={t('workflowSteps.webhook.headerNamePlaceholder')}
                   value={header.key}
                   onChange={e => updateHeader(index, {key: e.target.value})}
                   className="text-sm font-mono"
                 />
                 <Input
-                  placeholder="Value"
+                  placeholder={t('workflowSteps.webhook.headerValuePlaceholder')}
                   value={header.value}
                   onChange={e => updateHeader(index, {value: e.target.value})}
                   className="text-sm font-mono"

@@ -1,6 +1,7 @@
 import {Badge, Button, Collapsible, CollapsibleContent, CollapsibleTrigger} from '@plunk/ui';
 import type {Activity} from '@plunk/types';
 import {memo, useState} from 'react';
+import {useTranslation, type TranslateFn} from '../lib/i18n';
 import {EmailPreviewModal} from './EmailPreviewModal';
 import {
   AlertCircle,
@@ -22,75 +23,77 @@ import Link from 'next/link';
 /**
  * Simple relative time formatter for past events
  */
-function getRelativeTime(date: Date): string {
+function getRelativeTime(date: Date, t: TranslateFn): string {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
   if (diffInSeconds < 60) {
-    return 'just now';
+    return t('activity.time.justNow');
   }
 
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   if (diffInMinutes < 60) {
-    return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
+    return t(diffInMinutes === 1 ? 'activity.time.minuteAgo' : 'activity.time.minutesAgo', {count: diffInMinutes});
   }
 
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) {
-    return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+    return t(diffInHours === 1 ? 'activity.time.hourAgo' : 'activity.time.hoursAgo', {count: diffInHours});
   }
 
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 30) {
-    return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+    return t(diffInDays === 1 ? 'activity.time.dayAgo' : 'activity.time.daysAgo', {count: diffInDays});
   }
 
   const diffInMonths = Math.floor(diffInDays / 30);
   if (diffInMonths < 12) {
-    return `${diffInMonths} ${diffInMonths === 1 ? 'month' : 'months'} ago`;
+    return t(diffInMonths === 1 ? 'activity.time.monthAgo' : 'activity.time.monthsAgo', {count: diffInMonths});
   }
 
   const diffInYears = Math.floor(diffInMonths / 12);
-  return `${diffInYears} ${diffInYears === 1 ? 'year' : 'years'} ago`;
+  return t(diffInYears === 1 ? 'activity.time.yearAgo' : 'activity.time.yearsAgo', {count: diffInYears});
 }
 
 /**
  * Format upcoming time (for future events)
  */
-function getUpcomingTime(date: Date): string {
+function getUpcomingTime(date: Date, t: TranslateFn, locale: string): string {
   const now = new Date();
   const diffInSeconds = Math.floor((date.getTime() - now.getTime()) / 1000);
 
   if (diffInSeconds < 60) {
-    return 'in a moment';
+    return t('activity.time.inAMoment');
   }
 
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   if (diffInMinutes < 60) {
-    return `in ${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'}`;
+    return t(diffInMinutes === 1 ? 'activity.time.inMinute' : 'activity.time.inMinutes', {count: diffInMinutes});
   }
 
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) {
-    return `in ${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'}`;
+    return t(diffInHours === 1 ? 'activity.time.inHour' : 'activity.time.inHours', {count: diffInHours});
   }
 
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays === 1) {
-    return `tomorrow at ${date.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true})}`;
+    return t('activity.time.tomorrowAt', {
+      time: date.toLocaleTimeString(locale, {hour: 'numeric', minute: '2-digit', hour12: true}),
+    });
   }
 
   if (diffInDays < 7) {
-    return `in ${diffInDays} days`;
+    return t('activity.time.inDays', {count: diffInDays});
   }
 
   if (diffInDays < 30) {
     const weeks = Math.floor(diffInDays / 7);
-    return `in ${weeks} ${weeks === 1 ? 'week' : 'weeks'}`;
+    return t(weeks === 1 ? 'activity.time.inWeek' : 'activity.time.inWeeks', {count: weeks});
   }
 
   const diffInMonths = Math.floor(diffInDays / 30);
-  return `in ${diffInMonths} ${diffInMonths === 1 ? 'month' : 'months'}`;
+  return t(diffInMonths === 1 ? 'activity.time.inMonth' : 'activity.time.inMonths', {count: diffInMonths});
 }
 
 /**
@@ -126,7 +129,7 @@ interface ActivityConfig {
   jsonData?: Record<string, unknown>;
 }
 
-function getActivityConfig(activity: Activity): ActivityConfig {
+function getActivityConfig(activity: Activity, t: TranslateFn): ActivityConfig {
   const {type, metadata} = activity;
 
   switch (type) {
@@ -135,10 +138,12 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: Zap,
         color: 'text-amber-700',
         bgColor: 'bg-amber-50',
-        title: (typeof metadata.eventName === 'string' ? metadata.eventName : undefined) || 'Event triggered',
+        title:
+          (typeof metadata.eventName === 'string' ? metadata.eventName : undefined) ||
+          t('activity.eventTypes.eventTriggered'),
         description: undefined,
         badge: {
-          label: 'Event',
+          label: t('activity.eventTypes.event'),
           variant: 'default',
         },
         jsonData:
@@ -152,16 +157,16 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: Send,
         color: 'text-neutral-700',
         bgColor: 'bg-neutral-100',
-        title: (typeof metadata.subject === 'string' ? metadata.subject : undefined) || 'Email sent',
+        title: (typeof metadata.subject === 'string' ? metadata.subject : undefined) || t('activity.eventTypes.emailSent'),
         description: metadata.campaignName
-          ? `Campaign: ${String(metadata.campaignName)}`
+          ? t('activity.descriptions.campaign', {name: String(metadata.campaignName)})
           : metadata.workflowName
-            ? `Workflow: ${String(metadata.workflowName)}`
+            ? t('activity.descriptions.workflow', {name: String(metadata.workflowName)})
             : typeof metadata.sourceType === 'string'
               ? metadata.sourceType
               : undefined,
         badge: {
-          label: 'Sent',
+          label: t('activity.eventTypes.sent'),
           variant: 'default',
         },
       };
@@ -171,14 +176,16 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: CheckCircle,
         color: 'text-emerald-700',
         bgColor: 'bg-emerald-50',
-        title: (typeof metadata.subject === 'string' ? metadata.subject : undefined) || 'Email delivered',
+        title:
+          (typeof metadata.subject === 'string' ? metadata.subject : undefined) ||
+          t('activity.eventTypes.emailDelivered'),
         description: metadata.campaignName
-          ? `Campaign: ${String(metadata.campaignName)}`
+          ? t('activity.descriptions.campaign', {name: String(metadata.campaignName)})
           : metadata.workflowName
-            ? `Workflow: ${String(metadata.workflowName)}`
+            ? t('activity.descriptions.workflow', {name: String(metadata.workflowName)})
             : undefined,
         badge: {
-          label: 'Delivered',
+          label: t('activity.eventTypes.delivered'),
           variant: 'default',
         },
       };
@@ -188,10 +195,15 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: Inbox,
         color: 'text-neutral-600',
         bgColor: 'bg-neutral-100',
-        title: (typeof metadata.subject === 'string' ? metadata.subject : undefined) || 'Email received',
-        description: typeof metadata.from === 'string' ? `From: ${metadata.from}` : 'Inbound email',
+        title:
+          (typeof metadata.subject === 'string' ? metadata.subject : undefined) ||
+          t('activity.eventTypes.emailReceived'),
+        description:
+          typeof metadata.from === 'string'
+            ? t('activity.descriptions.from', {from: metadata.from})
+            : t('activity.eventTypes.inboundEmail'),
         badge: {
-          label: 'Received',
+          label: t('activity.eventTypes.received'),
           variant: 'default',
         },
       };
@@ -201,17 +213,18 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: Eye,
         color: 'text-emerald-700',
         bgColor: 'bg-emerald-50',
-        title: (typeof metadata.subject === 'string' ? metadata.subject : undefined) || 'Email opened',
+        title:
+          (typeof metadata.subject === 'string' ? metadata.subject : undefined) || t('activity.eventTypes.emailOpened'),
         description:
           typeof metadata.totalOpens === 'number' && metadata.totalOpens > 1
-            ? `Opened ${metadata.totalOpens} times`
+            ? t('activity.descriptions.openedTimes', {count: metadata.totalOpens})
             : metadata.campaignName
-              ? `Campaign: ${String(metadata.campaignName)}`
+              ? t('activity.descriptions.campaign', {name: String(metadata.campaignName)})
               : metadata.workflowName
-                ? `Workflow: ${String(metadata.workflowName)}`
+                ? t('activity.descriptions.workflow', {name: String(metadata.workflowName)})
                 : undefined,
         badge: {
-          label: 'Opened',
+          label: t('activity.eventTypes.opened'),
           variant: 'secondary',
         },
       };
@@ -221,17 +234,18 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: MousePointerClick,
         color: 'text-sky-700',
         bgColor: 'bg-sky-50',
-        title: (typeof metadata.subject === 'string' ? metadata.subject : undefined) || 'Email clicked',
+        title:
+          (typeof metadata.subject === 'string' ? metadata.subject : undefined) || t('activity.eventTypes.emailClicked'),
         description:
           typeof metadata.totalClicks === 'number' && metadata.totalClicks > 1
-            ? `Clicked ${metadata.totalClicks} times`
+            ? t('activity.descriptions.clickedTimes', {count: metadata.totalClicks})
             : metadata.campaignName
-              ? `Campaign: ${String(metadata.campaignName)}`
+              ? t('activity.descriptions.campaign', {name: String(metadata.campaignName)})
               : metadata.workflowName
-                ? `Workflow: ${String(metadata.workflowName)}`
+                ? t('activity.descriptions.workflow', {name: String(metadata.workflowName)})
                 : undefined,
         badge: {
-          label: 'Clicked',
+          label: t('activity.eventTypes.clicked'),
           variant: 'default',
         },
       };
@@ -241,10 +255,13 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: XCircle,
         color: 'text-red-700',
         bgColor: 'bg-red-50',
-        title: (typeof metadata.subject === 'string' ? metadata.subject : undefined) || 'Email bounced',
-        description: (typeof metadata.error === 'string' ? metadata.error : undefined) || 'Email failed to deliver',
+        title:
+          (typeof metadata.subject === 'string' ? metadata.subject : undefined) || t('activity.eventTypes.emailBounced'),
+        description:
+          (typeof metadata.error === 'string' ? metadata.error : undefined) ||
+          t('activity.eventTypes.failedToDeliver'),
         badge: {
-          label: 'Bounced',
+          label: t('activity.eventTypes.bounced'),
           variant: 'destructive',
         },
       };
@@ -254,14 +271,16 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: ShieldAlert,
         color: 'text-red-700',
         bgColor: 'bg-red-50',
-        title: (typeof metadata.subject === 'string' ? metadata.subject : undefined) || 'Spam complaint',
+        title:
+          (typeof metadata.subject === 'string' ? metadata.subject : undefined) ||
+          t('activity.eventTypes.spamComplaint'),
         description: metadata.campaignName
-          ? `Campaign: ${String(metadata.campaignName)}`
+          ? t('activity.descriptions.campaign', {name: String(metadata.campaignName)})
           : metadata.workflowName
-            ? `Workflow: ${String(metadata.workflowName)}`
-            : 'Recipient marked as spam',
+            ? t('activity.descriptions.workflow', {name: String(metadata.workflowName)})
+            : t('activity.eventTypes.markedAsSpam'),
         badge: {
-          label: 'Complaint',
+          label: t('activity.eventTypes.complaint'),
           variant: 'destructive',
         },
       };
@@ -271,10 +290,14 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: Workflow,
         color: 'text-amber-700',
         bgColor: 'bg-amber-50',
-        title: (typeof metadata.workflowName === 'string' ? metadata.workflowName : undefined) || 'Workflow started',
-        description: `Status: ${String(metadata.status || 'unknown')}`,
+        title:
+          (typeof metadata.workflowName === 'string' ? metadata.workflowName : undefined) ||
+          t('activity.eventTypes.workflowStarted'),
+        description: t('activity.descriptions.status', {
+          status: String(metadata.status || t('activity.descriptions.unknownStatus')),
+        }),
         badge: {
-          label: 'Workflow',
+          label: t('activity.eventTypes.workflow'),
           variant: 'default',
         },
       };
@@ -284,12 +307,16 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: CheckCheck,
         color: 'text-amber-700',
         bgColor: 'bg-amber-50',
-        title: (typeof metadata.workflowName === 'string' ? metadata.workflowName : undefined) || 'Workflow completed',
+        title:
+          (typeof metadata.workflowName === 'string' ? metadata.workflowName : undefined) ||
+          t('activity.eventTypes.workflowCompleted'),
         description: metadata.exitReason
-          ? `Exit: ${String(metadata.exitReason)}`
-          : `Status: ${String(metadata.status || 'unknown')}`,
+          ? t('activity.descriptions.exit', {reason: String(metadata.exitReason)})
+          : t('activity.descriptions.status', {
+              status: String(metadata.status || t('activity.descriptions.unknownStatus')),
+            }),
         badge: {
-          label: 'Completed',
+          label: t('activity.eventTypes.completed'),
           variant: 'default',
         },
       };
@@ -299,14 +326,21 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: Calendar,
         color: 'text-sky-700',
         bgColor: 'bg-sky-50',
-        title: (typeof metadata.campaignName === 'string' ? metadata.campaignName : undefined) || 'Campaign scheduled',
+        title:
+          (typeof metadata.campaignName === 'string' ? metadata.campaignName : undefined) ||
+          t('activity.eventTypes.campaignScheduled'),
         description: metadata.subject
-          ? `${String(metadata.subject)}${metadata.totalRecipients ? ` • ${metadata.totalRecipients} recipients` : ''}`
+          ? metadata.totalRecipients
+            ? t('activity.descriptions.subjectWithRecipients', {
+                subject: String(metadata.subject),
+                count: Number(metadata.totalRecipients),
+              })
+            : String(metadata.subject)
           : metadata.totalRecipients
-            ? `${metadata.totalRecipients} recipients`
+            ? t('activity.descriptions.recipients', {count: Number(metadata.totalRecipients)})
             : undefined,
         badge: {
-          label: 'Scheduled',
+          label: t('activity.eventTypes.scheduled'),
           variant: 'outline',
         },
       };
@@ -316,14 +350,21 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: Calendar,
         color: 'text-amber-700',
         bgColor: 'bg-amber-50',
-        title: (typeof metadata.stepName === 'string' ? metadata.stepName : undefined) || 'Workflow email scheduled',
+        title:
+          (typeof metadata.stepName === 'string' ? metadata.stepName : undefined) ||
+          t('activity.eventTypes.workflowEmailScheduled'),
         description: metadata.workflowName
-          ? `Workflow: ${String(metadata.workflowName)}${metadata.subject ? ` • ${String(metadata.subject)}` : ''}`
+          ? metadata.subject
+            ? t('activity.descriptions.workflowWithSubject', {
+                name: String(metadata.workflowName),
+                subject: String(metadata.subject),
+              })
+            : t('activity.descriptions.workflow', {name: String(metadata.workflowName)})
           : typeof metadata.subject === 'string'
             ? metadata.subject
             : undefined,
         badge: {
-          label: 'Scheduled',
+          label: t('activity.eventTypes.scheduled'),
           variant: 'outline',
         },
       };
@@ -333,9 +374,9 @@ function getActivityConfig(activity: Activity): ActivityConfig {
         icon: AlertCircle,
         color: 'text-neutral-600',
         bgColor: 'bg-neutral-100',
-        title: 'Unknown activity',
+        title: t('activity.eventTypes.unknownActivity'),
         badge: {
-          label: 'Unknown',
+          label: t('activity.eventTypes.unknown'),
           variant: 'outline',
         },
       };
@@ -343,12 +384,13 @@ function getActivityConfig(activity: Activity): ActivityConfig {
 }
 
 export const ActivityItem = memo(function ActivityItem({activity, status = 'completed'}: ActivityItemProps) {
+  const {t, locale} = useTranslation();
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const config = getActivityConfig(activity);
+  const config = getActivityConfig(activity, t);
   const Icon = config.icon;
   const timestamp = new Date(activity.timestamp);
   const isUpcoming = status === 'upcoming';
-  const relativeTime = isUpcoming ? getUpcomingTime(timestamp) : getRelativeTime(timestamp);
+  const relativeTime = isUpcoming ? getUpcomingTime(timestamp, t, locale) : getRelativeTime(timestamp, t);
 
   return (
     <div className={`flex items-start gap-4 ${isUpcoming ? 'opacity-80' : ''}`}>
@@ -376,7 +418,7 @@ export const ActivityItem = memo(function ActivityItem({activity, status = 'comp
                   className="h-6 px-2 text-xs"
                 >
                   <Eye className="h-3 w-3 mr-1" />
-                  Preview
+                  {t('activity.item.preview')}
                 </Button>
               ) : null}
             </div>
@@ -400,7 +442,7 @@ export const ActivityItem = memo(function ActivityItem({activity, status = 'comp
               <Collapsible className="mt-2">
                 <CollapsibleTrigger className="flex items-center gap-1 text-xs text-neutral-600 hover:text-neutral-900 transition-colors group">
                   <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
-                  <span className="font-medium">Event Data</span>
+                  <span className="font-medium">{t('activity.item.eventData')}</span>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <pre className="mt-2 p-3 bg-neutral-50 rounded-md border border-neutral-200 text-xs overflow-x-auto">

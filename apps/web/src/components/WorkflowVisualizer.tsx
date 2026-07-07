@@ -18,6 +18,7 @@ import type {WorkflowStep} from '@plunk/db';
 import {AlertTriangle, Clock, GitBranch, Hourglass, Link, LogOut, Mail, Maximize2, Minimize2, Timer, UserCog, Webhook} from 'lucide-react';
 import {useEffect, useMemo, useState} from 'react';
 import dagre from 'dagre';
+import {useTranslation} from '../lib/i18n';
 
 interface WorkflowVisualizerProps {
   steps: (WorkflowStep & {
@@ -37,16 +38,8 @@ interface WorkflowVisualizerProps {
   })[];
 }
 
-const STEP_TYPE_LABELS: Record<string, string> = {
-  TRIGGER: 'Trigger',
-  SEND_EMAIL: 'Send Email',
-  DELAY: 'Delay',
-  WAIT_FOR_EVENT: 'Wait for Event',
-  CONDITION: 'Condition',
-  EXIT: 'Exit',
-  WEBHOOK: 'Webhook',
-  UPDATE_CONTACT: 'Update Contact',
-};
+// Step types that have a translated label under `workflows.visualizer.stepTypes`.
+const STEP_TYPE_KEYS = ['TRIGGER', 'SEND_EMAIL', 'DELAY', 'WAIT_FOR_EVENT', 'CONDITION', 'EXIT', 'WEBHOOK', 'UPDATE_CONTACT'];
 
 const STEP_TYPE_ICONS = {
   TRIGGER: GitBranch,
@@ -135,6 +128,7 @@ function CustomNode({
     config?: any;
   };
 }) {
+  const {t} = useTranslation();
   const Icon = data.icon;
   const color = data.color;
   const bgColor = data.bgColor;
@@ -172,7 +166,7 @@ function CustomNode({
                 color,
               }}
             >
-              {STEP_TYPE_LABELS[data.type] ?? data.type}
+              {STEP_TYPE_KEYS.includes(data.type) ? t(`workflows.visualizer.stepTypes.${data.type}`) : data.type}
             </span>
           </div>
         </div>
@@ -191,7 +185,7 @@ function CustomNode({
             <div className="flex items-center gap-2 text-xs text-neutral-600">
               <Timer className="h-3 w-3" />
               <span>
-                Wait {data.config.amount} {data.config.unit}
+                {t('workflows.visualizer.wait', {amount: data.config.amount, unit: data.config.unit})}
               </span>
             </div>
           </div>
@@ -200,7 +194,7 @@ function CustomNode({
           <div className="mt-3 pt-3 border-t border-neutral-100">
             <div className="flex items-center gap-1 text-xs text-neutral-600">
               <GitBranch className="h-3 w-3" />
-              <span>If/Else Branch</span>
+              <span>{t('workflows.visualizer.ifElseBranch')}</span>
             </div>
           </div>
         )}
@@ -236,6 +230,7 @@ const nodeTypes = {
 };
 
 export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
+  const {t} = useTranslation();
   // Convert workflow steps to React Flow nodes
   const rawNodes: Node[] = useMemo(() => {
     if (steps.length === 0) return [];
@@ -278,7 +273,7 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
             type: 'custom',
             position: {x: 0, y: 0},
             data: {
-              label: 'End Workflow',
+              label: t('workflows.visualizer.endWorkflow'),
               type: 'END',
               icon: LogOut,
               color: '#9ca3af',
@@ -295,7 +290,7 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
             type: 'custom',
             position: {x: 0, y: 0},
             data: {
-              label: 'End Workflow',
+              label: t('workflows.visualizer.endWorkflow'),
               type: 'END',
               icon: LogOut,
               color: '#9ca3af',
@@ -309,7 +304,7 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
     });
 
     return nodes;
-  }, [steps]);
+  }, [steps, t]);
 
   // Convert transitions to React Flow edges
   const rawEdges: Edge[] = useMemo(() => {
@@ -332,7 +327,11 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
             target: transition.toStepId,
             type: 'smoothstep',
             animated: false,
-            label: isConditional ? (branch === 'yes' ? 'Yes' : 'No') : undefined,
+            label: isConditional
+              ? branch === 'yes'
+                ? t('workflows.visualizer.branchYes')
+                : t('workflows.visualizer.branchNo')
+              : undefined,
             labelStyle: {
               fill: branch === 'yes' ? '#16a34a' : branch === 'no' ? '#dc2626' : '#64748b',
               fontWeight: 600,
@@ -375,7 +374,7 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
             target: `${step.id}-yes-end`,
             type: 'smoothstep',
             animated: false,
-            label: 'Yes',
+            label: t('workflows.visualizer.branchYes'),
             labelStyle: {
               fill: '#16a34a',
               fontWeight: 600,
@@ -408,7 +407,7 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
             target: `${step.id}-no-end`,
             type: 'smoothstep',
             animated: false,
-            label: 'No',
+            label: t('workflows.visualizer.branchNo'),
             labelStyle: {
               fill: '#dc2626',
               fontWeight: 600,
@@ -437,7 +436,7 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
     });
 
     return edges;
-  }, [steps]);
+  }, [steps, t]);
 
   // Apply dagre layout
   const {nodes: layoutedNodes, edges: layoutedEdges} = useMemo(() => {
@@ -471,8 +470,8 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
     return (
       <div className="bg-neutral-50 border-2 border-dashed border-neutral-300 rounded-lg p-12 text-center">
         <GitBranch className="h-16 w-16 text-neutral-400 mx-auto mb-4" />
-        <p className="text-neutral-600 font-medium">No workflow steps yet</p>
-        <p className="text-sm text-neutral-500 mt-2">Add steps to your workflow to see the visualization</p>
+        <p className="text-neutral-600 font-medium">{t('workflows.visualizer.emptyTitle')}</p>
+        <p className="text-sm text-neutral-500 mt-2">{t('workflows.visualizer.emptyDescription')}</p>
       </div>
     );
   }
@@ -534,11 +533,17 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
             <div className="flex items-center gap-3">
               <GitBranch className="h-4 w-4 text-neutral-700" />
               <div className="text-sm">
-                <span className="font-semibold text-neutral-900">{steps.length}</span>
-                <span className="text-neutral-600"> step{steps.length !== 1 ? 's' : ''}</span>
+                <span className="text-neutral-600">
+                  {steps.length === 1
+                    ? t('workflows.visualizer.stepSummary', {count: steps.length})
+                    : t('workflows.visualizer.stepSummaryPlural', {count: steps.length})}
+                </span>
                 <span className="text-neutral-400 mx-2">·</span>
-                <span className="font-semibold text-neutral-900">{rawEdges.length}</span>
-                <span className="text-neutral-600"> transition{rawEdges.length !== 1 ? 's' : ''}</span>
+                <span className="text-neutral-600">
+                  {rawEdges.length === 1
+                    ? t('workflows.visualizer.transitionSummary', {count: rawEdges.length})
+                    : t('workflows.visualizer.transitionSummaryPlural', {count: rawEdges.length})}
+                </span>
               </div>
             </div>
           </Panel>
@@ -546,7 +551,7 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
             <button
               onClick={() => setIsExpanded(e => !e)}
               className="bg-white border border-neutral-200 rounded-lg shadow-md p-2 hover:bg-neutral-50 transition-colors"
-              title={isExpanded ? 'Exit fullscreen' : 'Expand to fullscreen'}
+              title={isExpanded ? t('workflows.visualizer.exitFullscreen') : t('workflows.visualizer.expand')}
             >
               {isExpanded ? (
                 <Minimize2 className="h-4 w-4 text-neutral-600" />
@@ -562,7 +567,7 @@ export function WorkflowVisualizer({steps}: WorkflowVisualizerProps) {
             >
               <div className="flex items-center gap-2 text-sm text-neutral-600">
                 <AlertTriangle className="h-4 w-4" />
-                <span>No transitions found. Connect your steps to see the flow.</span>
+                <span>{t('workflows.visualizer.noTransitions')}</span>
               </div>
             </Panel>
           )}

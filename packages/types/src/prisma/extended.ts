@@ -80,3 +80,13 @@ export type StepConfig = Prisma.JsonValue;
  * Generic key-value result from step execution
  */
 export type StepResult = Record<string, unknown>;
+
+/**
+ * Contact enriched with send activity, as returned by the segment results table.
+ * `lastSentAt` is the most recent email sent to the contact (ISO string) or null
+ * if the contact has never been emailed. The "days since" figure is derived on the
+ * client from this value.
+ */
+export interface ContactWithActivity extends Contact {
+  lastSentAt: string | null;
+}

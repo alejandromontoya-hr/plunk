@@ -16,47 +16,56 @@ import type {FilterCondition, FilterGroup, SegmentFilter, SegmentFilterOperator}
 import {Check, ChevronsUpDown, GripVertical, Plus, Search, Trash2} from 'lucide-react';
 import {memo, useCallback, useEffect, useMemo, useState} from 'react';
 import {network} from '../lib/network';
+import {useTranslation, type TranslateFn} from '../lib/i18n';
 
-const STANDARD_OPERATORS: {value: SegmentFilterOperator; label: string; description: string}[] = [
-  {value: 'equals', label: 'Equals', description: 'Exact match'},
-  {value: 'notEquals', label: 'Not equals', description: 'Anything other than this value'},
-  {value: 'contains', label: 'Contains', description: 'Value includes this text'},
-  {value: 'notContains', label: 'Does not contain', description: 'Value does not include this text'},
-  {value: 'greaterThan', label: 'Greater than', description: 'Value is higher than'},
-  {value: 'lessThan', label: 'Less than', description: 'Value is lower than'},
-  {value: 'greaterThanOrEqual', label: 'Greater than or equal', description: 'Value is at least'},
-  {value: 'lessThanOrEqual', label: 'Less than or equal', description: 'Value is at most'},
-  {value: 'exists', label: 'Has a value', description: 'Field is set to anything'},
-  {value: 'notExists', label: 'Has no value', description: 'Field is empty or unset'},
-  {value: 'within', label: 'Less than X ago', description: 'Date is within the last X days/hours'},
-  {value: 'olderThan', label: 'More than X ago', description: 'Date is older than X days/hours'},
+// Operator value sets (labels/descriptions resolved via i18n at render time)
+const STANDARD_OPERATOR_VALUES: SegmentFilterOperator[] = [
+  'equals',
+  'notEquals',
+  'contains',
+  'notContains',
+  'greaterThan',
+  'lessThan',
+  'greaterThanOrEqual',
+  'lessThanOrEqual',
+  'exists',
+  'notExists',
+  'within',
+  'olderThan',
 ];
 
-const EVENT_OPERATORS: {value: SegmentFilterOperator; label: string; description: string}[] = [
-  {value: 'triggered', label: 'Ever occurred', description: 'This event has happened at least once'},
-  {value: 'triggeredWithin', label: 'Occurred within', description: 'Happened at least once in the last X days/hours'},
-  {value: 'triggeredOlderThan', label: 'Occurred, but not recently', description: 'Has happened before, but not in the last X days/hours'},
-  {value: 'notTriggered', label: 'Never occurred', description: 'This event has never happened'},
-  {value: 'notTriggeredWithin', label: 'Not occurred within', description: 'Has not happened in the last X days/hours — includes contacts who never triggered this'},
+const EVENT_OPERATOR_VALUES: SegmentFilterOperator[] = [
+  'triggered',
+  'triggeredWithin',
+  'triggeredOlderThan',
+  'notTriggered',
+  'notTriggeredWithin',
 ];
 
-const SEGMENT_OPERATORS: {value: SegmentFilterOperator; label: string; description: string}[] = [
-  {value: 'memberOfSegment', label: 'Is member of', description: 'Contact is currently in this segment'},
-  {value: 'notMemberOfSegment', label: 'Is not member of', description: 'Contact is not in this segment'},
-];
+const SEGMENT_OPERATOR_VALUES: SegmentFilterOperator[] = ['memberOfSegment', 'notMemberOfSegment'];
 
-const TIME_UNITS = [
-  {value: 'minutes', label: 'Minutes'},
-  {value: 'hours', label: 'Hours'},
-  {value: 'days', label: 'Days'},
-] as const;
+interface OperatorOption {
+  value: SegmentFilterOperator;
+  label: string;
+  description: string;
+}
+
+function buildOperators(t: TranslateFn, values: SegmentFilterOperator[]): OperatorOption[] {
+  return values.map(value => ({
+    value,
+    label: t(`segments.builder.operator.${value}`),
+    description: t(`segments.builder.operator.${value}Desc`),
+  }));
+}
+
+const TIME_UNIT_VALUES = ['minutes', 'hours', 'days'] as const;
 
 const STANDARD_FIELDS = [
-  // Contact fields
-  {value: 'email', label: 'Email', type: 'string', category: 'Contact Fields'},
-  {value: 'subscribed', label: 'Subscribed', type: 'boolean', category: 'Contact Fields'},
-  {value: 'createdAt', label: 'Created At', type: 'date', category: 'Contact Fields'},
-  {value: 'updatedAt', label: 'Updated At', type: 'date', category: 'Contact Fields'},
+  // Contact fields (labels resolved via i18n at render time)
+  {value: 'email', labelKey: 'email', type: 'string', category: 'Contact Fields'},
+  {value: 'subscribed', labelKey: 'subscribed', type: 'boolean', category: 'Contact Fields'},
+  {value: 'createdAt', labelKey: 'createdAt', type: 'date', category: 'Contact Fields'},
+  {value: 'updatedAt', labelKey: 'updatedAt', type: 'date', category: 'Contact Fields'},
 ] as const;
 
 interface FieldOption {
@@ -68,8 +77,10 @@ interface FieldOption {
 }
 
 // Hook to fetch available fields, events, and segments
-function useAvailableOptions(currentSegmentId?: string) {
-  const [fields, setFields] = useState<FieldOption[]>([...STANDARD_FIELDS]);
+function useAvailableOptions(t: TranslateFn, currentSegmentId?: string) {
+  const [fields, setFields] = useState<FieldOption[]>(() =>
+    STANDARD_FIELDS.map(f => ({...f, label: t(`segments.builder.field.${f.labelKey}`)})),
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -128,7 +139,7 @@ function useAvailableOptions(currentSegmentId?: string) {
           .map((s: {id: string; name: string; memberCount: number}) => ({
             value: `segment.${s.id}`,
             label: s.name,
-            description: `${s.memberCount.toLocaleString()} ${s.memberCount === 1 ? 'person' : 'people'}`,
+            description: `${s.memberCount.toLocaleString()} ${s.memberCount === 1 ? t('segments.builder.person') : t('segments.builder.people')}`,
             type: 'segment' as const,
             category: 'Segments' as const,
           }));
@@ -142,7 +153,7 @@ function useAvailableOptions(currentSegmentId?: string) {
     };
 
     fetchOptions();
-  }, [currentSegmentId]);
+  }, [currentSegmentId, t]);
 
   return {fields, loading};
 }
@@ -155,6 +166,7 @@ interface FilterRowProps {
 }
 
 const FilterRow = memo(function FilterRow({filter, onChange, onRemove, availableFields}: FilterRowProps) {
+  const {t} = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -173,41 +185,46 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
   }, []);
 
   // Helper to get valid operators for a field type
-  const getOperatorsForType = useCallback((type: string, isEvent: boolean) => {
-    if (type === 'segment') {
-      return SEGMENT_OPERATORS;
-    }
+  const getOperatorsForType = useCallback(
+    (type: string, isEvent: boolean) => {
+      if (type === 'segment') {
+        return buildOperators(t, SEGMENT_OPERATOR_VALUES);
+      }
 
-    if (isEvent) {
-      return EVENT_OPERATORS;
-    }
+      if (isEvent) {
+        return buildOperators(t, EVENT_OPERATOR_VALUES);
+      }
 
-    if (type === 'boolean') {
-      return STANDARD_OPERATORS.filter(op => ['equals', 'notEquals', 'exists', 'notExists'].includes(op.value));
-    }
+      if (type === 'boolean') {
+        return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
+          ['equals', 'notEquals', 'exists', 'notExists'].includes(op.value),
+        );
+      }
 
-    if (type === 'number' || type === 'date') {
-      return STANDARD_OPERATORS.filter(op =>
-        [
-          'equals',
-          'notEquals',
-          'greaterThan',
-          'lessThan',
-          'greaterThanOrEqual',
-          'lessThanOrEqual',
-          'exists',
-          'notExists',
-          'within',
-          'olderThan',
-        ].includes(op.value),
+      if (type === 'number' || type === 'date') {
+        return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
+          [
+            'equals',
+            'notEquals',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual',
+            'exists',
+            'notExists',
+            'within',
+            'olderThan',
+          ].includes(op.value),
+        );
+      }
+
+      // String type - no within operator, no comparison operators
+      return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
+        ['equals', 'notEquals', 'contains', 'notContains', 'exists', 'notExists'].includes(op.value),
       );
-    }
-
-    // String type - no within operator, no comparison operators
-    return STANDARD_OPERATORS.filter(op =>
-      ['equals', 'notEquals', 'contains', 'notContains', 'exists', 'notExists'].includes(op.value),
-    );
-  }, []);
+    },
+    [t],
+  );
 
   const needsValue = !['exists', 'notExists', 'triggered', 'notTriggered', 'memberOfSegment', 'notMemberOfSegment'].includes(filter.operator);
   const needsUnit = ['within', 'triggeredWithin', 'olderThan', 'triggeredOlderThan', 'notTriggeredWithin'].includes(filter.operator);
@@ -225,20 +242,22 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
   // Get operators based on field type (memoized)
   const operators = useMemo(() => {
     if (isSegment) {
-      return SEGMENT_OPERATORS;
+      return buildOperators(t, SEGMENT_OPERATOR_VALUES);
     }
 
     if (isEventOrEmailActivity) {
-      return EVENT_OPERATORS;
+      return buildOperators(t, EVENT_OPERATOR_VALUES);
     }
 
     // Filter operators based on field type
     if (fieldType === 'boolean') {
-      return STANDARD_OPERATORS.filter(op => ['equals', 'notEquals', 'exists', 'notExists'].includes(op.value));
+      return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
+        ['equals', 'notEquals', 'exists', 'notExists'].includes(op.value),
+      );
     }
 
     if (fieldType === 'number' || fieldType === 'date') {
-      return STANDARD_OPERATORS.filter(op =>
+      return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
         [
           'equals',
           'notEquals',
@@ -255,10 +274,10 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
     }
 
     // String type - no within operator, no comparison operators
-    return STANDARD_OPERATORS.filter(op =>
+    return buildOperators(t, STANDARD_OPERATOR_VALUES).filter(op =>
       ['equals', 'notEquals', 'contains', 'notContains', 'exists', 'notExists'].includes(op.value),
     );
-  }, [fieldType, isEventOrEmailActivity, isSegment]);
+  }, [fieldType, isEventOrEmailActivity, isSegment, t]);
 
   const handleFieldChange = useCallback(
     (value: string) => {
@@ -376,7 +395,7 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
       <div className="flex-1 grid grid-cols-3 gap-3">
         {/* Field Selection */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-neutral-600">Field</Label>
+          <Label className="text-xs text-neutral-600">{t('segments.builder.fieldLabel')}</Label>
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -393,7 +412,7 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
               <div className="flex items-center border-b px-3 py-2">
                 <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                 <Input
-                  placeholder="Search fields, events, or email activity..."
+                  placeholder={t('segments.builder.searchFieldsPlaceholder')}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -401,11 +420,13 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
               </div>
               <div className="max-h-[300px] overflow-y-auto p-1">
                 {Object.keys(filteredGroups).length === 0 ? (
-                  <div className="py-6 text-center text-sm text-neutral-500">No fields or events found.</div>
+                  <div className="py-6 text-center text-sm text-neutral-500">{t('segments.builder.noFieldsFound')}</div>
                 ) : (
                   Object.entries(filteredGroups).map(([category, fields]) => (
                     <div key={category} className="py-1">
-                      <div className="px-2 py-1.5 text-xs font-semibold text-neutral-500">{category}</div>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-neutral-500">
+                        {t(`segments.builder.category.${category}`)}
+                      </div>
                       {fields.map(field => (
                         <button
                           key={field.value}
@@ -440,7 +461,7 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
 
         {/* Operator Selection */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-neutral-600">Operator</Label>
+          <Label className="text-xs text-neutral-600">{t('segments.builder.operatorLabel')}</Label>
           <Select
             value={filter.operator}
             onValueChange={(v: SegmentFilterOperator) => {
@@ -500,10 +521,10 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
 
         {/* Value Input */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-neutral-600">Value</Label>
+          <Label className="text-xs text-neutral-600">{t('segments.builder.valueLabel')}</Label>
           {!needsValue ? (
             <div className="h-9 flex items-center text-sm text-neutral-400 px-3 bg-neutral-100 rounded border border-neutral-200">
-              No value needed
+              {t('segments.builder.noValueNeeded')}
             </div>
           ) : needsUnit ? (
             <div className="flex gap-1">
@@ -522,9 +543,9 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TIME_UNITS.map(unit => (
-                    <SelectItem key={unit.value} value={unit.value}>
-                      {unit.label}
+                  {TIME_UNIT_VALUES.map(unit => (
+                    <SelectItem key={unit} value={unit}>
+                      {t(`segments.builder.timeUnit.${unit}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -539,8 +560,8 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">True</SelectItem>
-                <SelectItem value="false">False</SelectItem>
+                <SelectItem value="true">{t('segments.builder.valueTrue')}</SelectItem>
+                <SelectItem value="false">{t('segments.builder.valueFalse')}</SelectItem>
               </SelectContent>
             </Select>
           ) : fieldType === 'number' ? (
@@ -552,7 +573,7 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
                 onChange({...filter, value: val === '' ? 0 : parseFloat(val) || 0});
               }}
               className="text-sm bg-white"
-              placeholder="Enter number"
+              placeholder={t('segments.builder.enterNumber')}
             />
           ) : fieldType === 'date' ? (
             <Input
@@ -567,7 +588,7 @@ const FilterRow = memo(function FilterRow({filter, onChange, onRemove, available
               value={String(filter.value ?? '')}
               onChange={e => onChange({...filter, value: e.target.value})}
               className="text-sm bg-white"
-              placeholder="Enter value"
+              placeholder={t('segments.builder.enterValue')}
             />
           )}
         </div>
@@ -589,6 +610,7 @@ interface FilterGroupComponentProps {
 }
 
 function FilterGroupComponent({group, onChange, onRemove, depth = 0, availableFields}: FilterGroupComponentProps) {
+  const {t} = useTranslation();
   const addFilter = useCallback(() => {
     onChange({
       ...group,
@@ -652,7 +674,9 @@ function FilterGroupComponent({group, onChange, onRemove, depth = 0, availableFi
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <GripVertical className="h-4 w-4 text-neutral-400" />
-          <span className="text-sm font-medium text-neutral-700">Filter Group {depth > 0 && `(Nested)`}</span>
+          <span className="text-sm font-medium text-neutral-700">
+            {depth > 0 ? t('segments.builder.filterGroupNested') : t('segments.builder.filterGroup')}
+          </span>
         </div>
         {onRemove && (
           <Button type="button" variant="destructiveGhost" size="sm" onClick={onRemove}>
@@ -675,7 +699,9 @@ function FilterGroupComponent({group, onChange, onRemove, depth = 0, availableFi
         {group.conditions && (
           <div className="mt-4">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-medium text-neutral-600 uppercase tracking-wide">Nested Conditions</span>
+              <span className="text-xs font-medium text-neutral-600 uppercase tracking-wide">
+                {t('segments.builder.nestedConditions')}
+              </span>
               <Button
                 type="button"
                 variant="destructiveGhost"
@@ -683,7 +709,7 @@ function FilterGroupComponent({group, onChange, onRemove, depth = 0, availableFi
                 onClick={removeNestedCondition}
                 className="h-6 text-xs"
               >
-                Remove nested
+                {t('segments.builder.removeNested')}
               </Button>
             </div>
             <FilterConditionComponent
@@ -698,12 +724,12 @@ function FilterGroupComponent({group, onChange, onRemove, depth = 0, availableFi
         <div className="flex gap-2 pt-2">
           <Button type="button" variant="outline" size="sm" onClick={addFilter} className="flex-1">
             <Plus className="h-3 w-3 mr-1" />
-            Add Filter
+            {t('segments.builder.addFilter')}
           </Button>
           {!group.conditions && (
             <Button type="button" variant="outline" size="sm" onClick={addNestedCondition} className="flex-1">
               <Plus className="h-3 w-3 mr-1" />
-              Add Nested Condition
+              {t('segments.builder.addNestedCondition')}
             </Button>
           )}
         </div>
@@ -720,6 +746,7 @@ interface FilterConditionComponentProps {
 }
 
 function FilterConditionComponent({condition, onChange, depth = 0, availableFields}: FilterConditionComponentProps) {
+  const {t} = useTranslation();
   const addGroup = useCallback(() => {
     onChange({
       ...condition,
@@ -758,7 +785,7 @@ function FilterConditionComponent({condition, onChange, depth = 0, availableFiel
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-neutral-600">Groups are combined with:</span>
+          <span className="text-sm font-medium text-neutral-600">{t('segments.builder.groupsCombinedWith')}</span>
           <Button
             type="button"
             variant={condition.logic === 'AND' ? 'default' : 'outline'}
@@ -794,7 +821,7 @@ function FilterConditionComponent({condition, onChange, depth = 0, availableFiel
 
       <Button type="button" variant="outline" onClick={addGroup} className="w-full">
         <Plus className="h-4 w-4 mr-2" />
-        Add Group
+        {t('segments.builder.addGroup')}
       </Button>
     </div>
   );
@@ -807,10 +834,11 @@ interface SegmentFilterBuilderProps {
 }
 
 export function SegmentFilterBuilder({condition, onChange, currentSegmentId}: SegmentFilterBuilderProps) {
-  const {fields, loading} = useAvailableOptions(currentSegmentId);
+  const {t} = useTranslation();
+  const {fields, loading} = useAvailableOptions(t, currentSegmentId);
 
   if (loading) {
-    return <div className="text-sm text-neutral-500 py-4">Loading available fields and events...</div>;
+    return <div className="text-sm text-neutral-500 py-4">{t('segments.builder.loadingFields')}</div>;
   }
 
   return <FilterConditionComponent condition={condition} onChange={onChange} availableFields={fields} />;

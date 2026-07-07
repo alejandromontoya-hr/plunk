@@ -1,0 +1,75 @@
+{
+  "title": "Analytics",
+  "subtitle": "Comprehensive insights into your email performance, engagement metrics, and delivery statistics.",
+  "ranges": {
+    "placeholder": "Select period",
+    "last7Days": "Last 7 days",
+    "last30Days": "Last 30 days",
+    "last90Days": "Last 90 days"
+  },
+  "errors": {
+    "loadFailed": "Failed to load analytics data. Please try again."
+  },
+  "metrics": {
+    "totalEmails": "Total Emails",
+    "lastNDays": "Last {days} days",
+    "openRate": "Open Rate",
+    "opensCount": "{count} opens",
+    "clickRate": "Click Rate",
+    "clicksCount": "{count} clicks",
+    "activeCampaigns": "Active Campaigns",
+    "totalCampaigns": "{count} total campaigns",
+    "workflows": "Workflows",
+    "automationsTriggered": "Automations triggered",
+    "totalEvents": "Total Events",
+    "customEventsTracked": "Custom events tracked"
+  },
+  "charts": {
+    "emailsSent": "Emails Sent",
+    "opens": "Opens",
+    "clicks": "Clicks",
+    "openRate": "Open Rate",
+    "volumeTitle": "Email Volume Trends",
+    "volumeDescription": "Daily email sends, opens, and clicks over the selected period",
+    "engagementTitle": "Engagement Rate Trends",
+    "engagementDescription": "Open rate percentage over time"
+  },
+  "empty": {
+    "noEmailTitle": "No email data yet",
+    "noEmailDescription": "Send your first email to see analytics here.",
+    "noEngagementTitle": "No engagement data",
+    "noEngagementDescription": "Engagement metrics will appear once emails are opened."
+  },
+  "insights": {
+    "title": "Performance Insights",
+    "description": "Key metrics and recommendations",
+    "openRate": "Open Rate",
+    "openRateGood": "Your open rate is above industry average!",
+    "openRateBad": "Consider improving subject lines to increase open rates.",
+    "clickRate": "Click Rate",
+    "clickRateGood": "Great click-through performance!",
+    "clickRateBad": "Add more compelling calls-to-action to boost clicks.",
+    "engagement": "Engagement",
+    "workflowsStarted": "{count} workflows started",
+    "engagementBad": "Set up workflows to automate your email campaigns."
+  },
+  "events": {
+    "activityTitle": "Event Activity",
+    "activityDescription": "Custom events and triggers",
+    "totalEvents": "Total Events",
+    "activityNote": "Events triggered by your contacts over the last {days} days. These can trigger workflows and automations.",
+    "topTitle": "Top Events",
+    "topDescription": "Most frequently triggered events in the last {days} days",
+    "occurrences": "{count} occurrences"
+  },
+  "campaigns": {
+    "title": "Campaign Performance",
+    "description": "Top performing campaigns in the last {days} days",
+    "campaign": "Campaign",
+    "sent": "Sent",
+    "opened": "Opened",
+    "clicked": "Clicked",
+    "openRate": "Open Rate",
+    "clickRate": "Click Rate"
+  }
+}

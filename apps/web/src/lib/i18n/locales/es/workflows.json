@@ -1,0 +1,231 @@
+{
+  "seoTitle": "Flujos de trabajo",
+  "list": {
+    "title": "Flujos de trabajo",
+    "subtitle": "Automatice sus campañas de correo con potentes flujos de trabajo.",
+    "totalCount": "{count} flujos de trabajo en total",
+    "searchPlaceholder": "Buscar flujos de trabajo...",
+    "clearSearch": "Limpiar búsqueda",
+    "createWorkflow": "Crear flujo de trabajo",
+    "createShort": "Crear",
+    "selectAll": "Seleccionar todas las filas de esta página",
+    "selectRow": "Seleccionar {name}",
+    "openWorkflow": "Abrir {name}",
+    "triggersOn": "Se dispara con",
+    "stepsSuffix": "pasos",
+    "executionsSuffix": "ejecuciones",
+    "updatedPrefix": "Actualizado {time}",
+    "deleteSelected": "Eliminar seleccionados",
+    "itemNoun": "flujo de trabajo",
+    "itemNounPlural": "flujos de trabajo",
+    "emptyTitle": "Aún no hay flujos de trabajo",
+    "emptyDescription": "Automatice correos activados por eventos de contacto.",
+    "columns": {
+      "select": "Seleccionar",
+      "name": "Nombre",
+      "trigger": "Disparador",
+      "status": "Estado",
+      "steps": "Pasos",
+      "updated": "Actualizado",
+      "actions": "Acciones"
+    },
+    "pagination": {
+      "showing": "Mostrando {from} a {to} de {total} flujos de trabajo",
+      "page": "Página {page} de {totalPages}"
+    },
+    "actions": {
+      "enable": "Activar flujo de trabajo",
+      "disable": "Desactivar flujo de trabajo",
+      "edit": "Editar flujo de trabajo",
+      "duplicate": "Duplicar flujo de trabajo",
+      "delete": "Eliminar flujo de trabajo"
+    },
+    "deleteDialog": {
+      "title": "Eliminar flujo de trabajo",
+      "description": "¿Está seguro de que desea eliminar este flujo de trabajo? Esta acción no se puede deshacer.",
+      "confirm": "Eliminar"
+    },
+    "bulkDeleteDialog": {
+      "title": "Eliminar {count} flujo de trabajo",
+      "titlePlural": "Eliminar {count} flujos de trabajo",
+      "description": "¿Está seguro de que desea eliminar los flujos de trabajo seleccionados? Esta acción no se puede deshacer. Los flujos de trabajo con ejecuciones activas bloquearán la operación.",
+      "confirm": "Eliminar"
+    }
+  },
+  "create": {
+    "title": "Crear nuevo flujo de trabajo",
+    "nameLabel": "Nombre *",
+    "namePlaceholder": "Secuencia de correo de bienvenida",
+    "descriptionLabel": "Descripción",
+    "descriptionPlaceholder": "Envíe una serie de correos de bienvenida a los nuevos suscriptores",
+    "triggerEventLabel": "Evento disparador *",
+    "triggerEventPlaceholder": "p. ej., contact.created, email.opened",
+    "triggerEventHint": "El evento que activa este flujo de trabajo para un contacto",
+    "useCustomEvent": "Usar “{value}”",
+    "allowReentryLabel": "Permitir reingreso",
+    "allowReentryHint": "Cuando está activado, los contactos pueden entrar a este flujo de trabajo varias veces.",
+    "submit": "Crear flujo de trabajo",
+    "submitting": "Creando..."
+  },
+  "editor": {
+    "back": "Atrás",
+    "settings": "Configuración",
+    "deleteWorkflow": "Eliminar flujo de trabajo",
+    "enable": "Activar",
+    "disable": "Desactivar",
+    "activeExecutionsBanner": {
+      "titleEnabled": "El flujo de trabajo está activo con ejecuciones en curso",
+      "titleDisabled": "El flujo de trabajo tiene ejecuciones activas",
+      "intro": "Este flujo de trabajo tiene {count} ejecución activa.",
+      "introPlural": "Este flujo de trabajo tiene {count} ejecuciones activas.",
+      "disabledNote": "Aunque el flujo de trabajo esté desactivado, las ejecuciones existentes continuarán.",
+      "protectIntro": "Para proteger los flujos de trabajo en ejecución, no puede:",
+      "cannotDeleteSteps": "Eliminar pasos o transiciones",
+      "cannotModifyConfig": "Modificar la configuración de los pasos (plantillas de correo, condiciones, etc.)",
+      "cannotChangeTrigger": "Cambiar el disparador del flujo de trabajo",
+      "outro": "Aún puede renombrar los pasos y ajustar su posición. Para realizar cambios de configuración, espere a que las ejecuciones finalicen o cancélelas desde la pestaña Ejecuciones."
+    },
+    "validationBanner": {
+      "title": "El flujo de trabajo tiene errores de validación",
+      "intro": "Corrija los siguientes problemas antes de activar este flujo de trabajo:"
+    },
+    "disabledBanner": {
+      "title": "El flujo de trabajo está desactivado",
+      "description": "Los contactos no se procesarán hasta que este flujo de trabajo esté activado.",
+      "enable": "Activar"
+    },
+    "tabs": {
+      "builder": "Constructor de flujos",
+      "executions": "Ejecuciones"
+    },
+    "builder": {
+      "title": "Constructor de flujos",
+      "description": "Haga clic en los botones + para añadir y conectar pasos a su flujo de trabajo."
+    },
+    "executions": {
+      "title": "Ejecuciones del flujo de trabajo",
+      "description": "Vea y gestione todas las ejecuciones de este flujo de trabajo",
+      "cancelAllActive": "Cancelar todas las activas ({count})",
+      "emptyTitle": "Aún no hay ejecuciones",
+      "emptyDescription": "Este flujo de trabajo aún no se ha ejecutado. Actívelo para empezar a procesar contactos.",
+      "columns": {
+        "contact": "Contacto",
+        "status": "Estado",
+        "currentStep": "Paso actual",
+        "started": "Iniciado",
+        "actions": "Acciones"
+      },
+      "cancel": "Cancelar"
+    },
+    "settings": {
+      "title": "Configuración del flujo de trabajo",
+      "nameLabel": "Nombre *",
+      "descriptionLabel": "Descripción",
+      "triggerEventLabel": "Evento disparador *",
+      "triggerEventPlaceholder": "p. ej., contact.created, email.opened",
+      "triggerEventHint": "El evento que activa este flujo de trabajo para un contacto",
+      "useCustomEvent": "Usar “{value}”",
+      "allowReentryLabel": "Permitir reingreso",
+      "allowReentryHint": "Cuando está activado, los contactos pueden entrar a este flujo de trabajo varias veces. Cuando está desactivado, los contactos solo pueden entrar una vez, para siempre.",
+      "submit": "Guardar cambios",
+      "submitting": "Guardando..."
+    },
+    "cancelOneDialog": {
+      "title": "Cancelar ejecución",
+      "descriptionIntro": "¿Está seguro de que desea cancelar la ejecución del flujo de trabajo para {contact}?",
+      "thisContact": "este contacto",
+      "descriptionNote": "El contacto no recibirá ningún correo ni acción restante de este flujo de trabajo. Esta acción no se puede deshacer.",
+      "descriptionFallback": "¿Está seguro de que desea cancelar esta ejecución?",
+      "confirm": "Cancelar ejecución",
+      "keepRunning": "Mantener en ejecución"
+    },
+    "cancelAllDialog": {
+      "title": "Cancelar todas las ejecuciones activas",
+      "descriptionIntro": "¿Está seguro de que desea cancelar la única ejecución activa ({count})?",
+      "descriptionIntroPlural": "¿Está seguro de que desea cancelar todas las {count} ejecuciones activas?",
+      "descriptionNote": "Todos los contactos que se encuentran actualmente en este flujo de trabajo se detendrán y no recibirán ningún correo ni acción restante. Esta acción no se puede deshacer.",
+      "confirm": "Cancelar {count} ejecución",
+      "confirmPlural": "Cancelar {count} ejecuciones",
+      "keepRunning": "Mantener en ejecución"
+    },
+    "deleteDialog": {
+      "title": "Eliminar flujo de trabajo",
+      "description": "¿Está seguro de que desea eliminar este flujo de trabajo? Esta acción no se puede deshacer.",
+      "confirm": "Eliminar flujo de trabajo"
+    },
+    "validation": {
+      "noSteps": "El flujo de trabajo debe tener al menos un paso",
+      "missingTemplate": "Al paso \"{name}\" le falta una plantilla de correo",
+      "missingDelay": "Al paso \"{name}\" le falta la configuración de retraso (cantidad o unidad)",
+      "missingConditionField": "Al paso \"{name}\" le falta el campo de la condición",
+      "needsBranch": "El paso \"{name}\" necesita al menos una rama",
+      "missingConditionConfig": "Al paso \"{name}\" le falta la configuración de la condición (campo u operador)",
+      "missingConditionValue": "Al paso \"{name}\" le falta un valor para la condición",
+      "missingEventName": "Al paso \"{name}\" le falta el nombre del evento",
+      "missingWebhookUrl": "Al paso \"{name}\" le falta la URL del webhook",
+      "missingContactUpdates": "Al paso \"{name}\" le faltan actualizaciones de contacto o una acción de suscripción",
+      "notConnected": "El paso \"{name}\" no está conectado al flujo de trabajo",
+      "noTrigger": "El flujo de trabajo debe tener un paso disparador",
+      "missingBranchConnections": "Al paso de condición \"{name}\" le faltan conexiones para: {branches}",
+      "missingYesNoBranches": "El paso de condición \"{name}\" debe tener ambas ramas SÍ y NO conectadas",
+      "defaultBranch": "Predeterminada",
+      "cannotEnableTitle": "No se puede activar el flujo de trabajo"
+    }
+  },
+  "status": {
+    "active": "Activo",
+    "disabled": "Desactivado",
+    "COMPLETED": "COMPLETADA",
+    "FAILED": "FALLIDA",
+    "WAITING": "EN ESPERA",
+    "RUNNING": "EN CURSO",
+    "PENDING": "PENDIENTE",
+    "CANCELLED": "CANCELADA"
+  },
+  "visualizer": {
+    "emptyTitle": "Aún no hay pasos en el flujo de trabajo",
+    "emptyDescription": "Añada pasos a su flujo de trabajo para ver la visualización",
+    "stepSummary": "{count} paso",
+    "stepSummaryPlural": "{count} pasos",
+    "transitionSummary": "{count} transición",
+    "transitionSummaryPlural": "{count} transiciones",
+    "expand": "Expandir a pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa",
+    "noTransitions": "No se encontraron transiciones. Conecte sus pasos para ver el flujo.",
+    "endWorkflow": "Finalizar flujo de trabajo",
+    "wait": "Esperar {amount} {unit}",
+    "ifElseBranch": "Rama Si/Sino",
+    "branchYes": "Sí",
+    "branchNo": "No",
+    "stepTypes": {
+      "TRIGGER": "Disparador",
+      "SEND_EMAIL": "Enviar correo",
+      "DELAY": "Retraso",
+      "WAIT_FOR_EVENT": "Esperar evento",
+      "CONDITION": "Condición",
+      "EXIT": "Salida",
+      "WEBHOOK": "Webhook",
+      "UPDATE_CONTACT": "Actualizar contacto"
+    }
+  },
+  "toast": {
+    "deleteSuccess": "Flujo de trabajo eliminado correctamente",
+    "deleteError": "No se pudo eliminar el flujo de trabajo",
+    "duplicateSuccess": "Flujo de trabajo duplicado correctamente",
+    "duplicateError": "No se pudo duplicar el flujo de trabajo",
+    "enabledSuccess": "Flujo de trabajo activado correctamente",
+    "disabledSuccess": "Flujo de trabajo desactivado correctamente",
+    "toggleError": "No se pudo cambiar el estado del flujo de trabajo",
+    "bulkDeleteSuccess": "{count} flujo de trabajo eliminado",
+    "bulkDeleteSuccessPlural": "{count} flujos de trabajo eliminados",
+    "bulkDeleteError": "No se pudieron eliminar los flujos de trabajo",
+    "createSuccess": "Flujo de trabajo creado correctamente",
+    "createError": "No se pudo crear el flujo de trabajo",
+    "executionCancelSuccess": "Ejecución cancelada correctamente",
+    "executionCancelError": "No se pudo cancelar la ejecución",
+    "cancelAllSuccess": "Se cancelaron correctamente {count} ejecución(es)",
+    "cancelAllError": "No se pudieron cancelar las ejecuciones",
+    "updateSuccess": "Flujo de trabajo actualizado correctamente",
+    "updateError": "No se pudo actualizar el flujo de trabajo"
+  }
+}

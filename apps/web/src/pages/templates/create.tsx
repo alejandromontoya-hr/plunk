@@ -13,6 +13,7 @@ import {DashboardLayout} from '../../components/DashboardLayout';
 import {EmailSettings} from '../../components/EmailSettings';
 import {EmailEditor} from '../../components/EmailEditor';
 import {network} from '../../lib/network';
+import {useTranslation} from '../../lib/i18n';
 import {EmailFormValidator} from '../../lib/validation';
 import {ArrowLeft, TriangleAlert} from 'lucide-react';
 import Link from 'next/link';
@@ -24,6 +25,7 @@ import {useActiveProject} from '../../lib/contexts/ActiveProjectProvider';
 
 export default function CreateTemplatePage() {
   const router = useRouter();
+  const {t} = useTranslation();
   const {activeProject} = useActiveProject();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -58,17 +60,17 @@ export default function CreateTemplatePage() {
         type,
       });
 
-      toast.success('Template created successfully');
+      toast.success(t('templates.toast.created'));
       void router.push(`/templates/${template.id}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create template');
+      toast.error(error instanceof Error ? error.message : t('templates.toast.createFailed'));
       setSaving(false);
     }
   };
 
   return (
     <>
-      <NextSeo title="Create Template" />
+      <NextSeo title={t('templates.create.seoTitle')} />
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
@@ -77,9 +79,9 @@ export default function CreateTemplatePage() {
               <Link href="/templates"><ArrowLeft className="h-4 w-4" /></Link>
             </Button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Create Template</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('templates.create.title')}</h1>
               <p className="text-neutral-500 mt-1 text-sm sm:text-base">
-                Create a reusable email template for campaigns and workflows
+                {t('templates.create.description')}
               </p>
             </div>
           </div>
@@ -89,30 +91,30 @@ export default function CreateTemplatePage() {
             <div className="grid gap-6 md:grid-cols-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Basic Information</CardTitle>
-                  <CardDescription>Name and describe your template</CardDescription>
+                  <CardTitle>{t('templates.form.basicInfoTitle')}</CardTitle>
+                  <CardDescription>{t('templates.form.basicInfoDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Template Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="name">{t('templates.form.nameLabel')} <span className="text-red-500">*</span></Label>
                     <Input
                       id="name"
                       type="text"
                       value={name}
                       onChange={e => setName(e.target.value)}
                       required
-                      placeholder="Welcome Email"
+                      placeholder={t('templates.form.namePlaceholder')}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">{t('templates.form.descriptionLabel')}</Label>
                     <Input
                       id="description"
                       type="text"
                       value={description}
                       onChange={e => setDescription(e.target.value)}
-                      placeholder="Sent to new subscribers"
+                      placeholder={t('templates.form.descriptionPlaceholder')}
                     />
                   </div>
                 </CardContent>
@@ -120,15 +122,15 @@ export default function CreateTemplatePage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Template Type</CardTitle>
-                  <CardDescription>Choose how this template should be treated</CardDescription>
+                  <CardTitle>{t('templates.form.typeTitle')}</CardTitle>
+                  <CardDescription>{t('templates.form.typeDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col gap-2">
                     {([
-                      {value: 'MARKETING', label: 'Marketing', description: 'Subscribed contacts, includes unsubscribe link'},
-                      {value: 'TRANSACTIONAL', label: 'Transactional', description: 'All contacts, no subscription check or footer'},
-                      {value: 'HEADLESS', label: 'Headless', description: 'Subscribed contacts, no Plunk footer'},
+                      {value: 'MARKETING', label: t('templates.types.marketing'), description: t('templates.types.descriptions.marketing')},
+                      {value: 'TRANSACTIONAL', label: t('templates.types.transactional'), description: t('templates.types.descriptions.transactional')},
+                      {value: 'HEADLESS', label: t('templates.types.headless'), description: t('templates.types.descriptions.headless')},
                     ] as const).map(({value, label, description}) => (
                       <button
                         key={value}
@@ -149,11 +151,11 @@ export default function CreateTemplatePage() {
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 overflow-hidden">
                       <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-100/60 px-3 py-2">
                         <TriangleAlert className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                        <p className="text-xs font-semibold text-amber-900">No unsubscribe link detected</p>
+                        <p className="text-xs font-semibold text-amber-900">{t('templates.unsubscribeWarning.title')}</p>
                       </div>
                       <div className="px-3 py-2.5 space-y-2">
                         <p className="text-xs text-amber-800 leading-relaxed">
-                          You are responsible for providing recipients a way to opt out. Use the Plunk variables below to build your own footer.
+                          {t('templates.unsubscribeWarning.body')}
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           <code className="inline-flex items-center rounded bg-amber-100 border border-amber-200 px-1.5 py-0.5 font-mono text-[11px] text-amber-900">
@@ -173,21 +175,21 @@ export default function CreateTemplatePage() {
             {/* Email Settings */}
             <Card>
               <CardHeader>
-                <CardTitle>Email Settings</CardTitle>
-                <CardDescription>Configure sender information and subject</CardDescription>
+                <CardTitle>{t('templates.form.emailSettingsTitle')}</CardTitle>
+                <CardDescription>{t('templates.form.emailSettingsDescription')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject Line <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="subject">{t('templates.form.subjectLabel')} <span className="text-red-500">*</span></Label>
                   <Input
                     id="subject"
                     type="text"
                     value={subject}
                     onChange={e => setSubject(e.target.value)}
                     required
-                    placeholder="Welcome to our platform!"
+                    placeholder={t('templates.form.subjectPlaceholder')}
                   />
-                  <p className="text-xs text-neutral-500">Use {'{{variableName}}'} for dynamic content</p>
+                  <p className="text-xs text-neutral-500">{t('templates.form.variableHint', {variable: '{{variableName}}'})}</p>
                 </div>
 
                 <EmailSettings
@@ -197,7 +199,7 @@ export default function CreateTemplatePage() {
                   onFromChange={setFrom}
                   onFromNameChange={setFromName}
                   onReplyToChange={setReplyTo}
-                  fromNamePlaceholder={activeProject?.name || 'Your Company'}
+                  fromNamePlaceholder={activeProject?.name || t('templates.form.fromNamePlaceholder')}
                 />
               </CardContent>
             </Card>
@@ -205,8 +207,8 @@ export default function CreateTemplatePage() {
             {/* Email Body */}
             <Card className="overflow-visible">
               <CardHeader>
-                <CardTitle>Email Body</CardTitle>
-                <CardDescription>Create your email using the visual editor or paste custom HTML</CardDescription>
+                <CardTitle>{t('templates.form.bodyTitle')}</CardTitle>
+                <CardDescription>{t('templates.form.bodyDescription')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <EmailEditor value={body} onChange={setBody} />
@@ -216,10 +218,10 @@ export default function CreateTemplatePage() {
             {/* Actions */}
             <div className="flex justify-end gap-3">
               <Button asChild variant="outline">
-                <Link href="/templates">Cancel</Link>
+                <Link href="/templates">{t('common.cancel')}</Link>
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving ? 'Creating...' : 'Create Template'}
+                {saving ? t('templates.form.creatingButton') : t('templates.form.createButton')}
               </Button>
             </div>
           </form>

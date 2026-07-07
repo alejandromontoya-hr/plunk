@@ -1,0 +1,210 @@
+{
+  "types": {
+    "TRIGGER": {
+      "label": "Trigger",
+      "description": "Starts the workflow when a specific event is received."
+    },
+    "SEND_EMAIL": {
+      "label": "Send Email",
+      "description": "Sends an email to the contact using a template you choose."
+    },
+    "DELAY": {
+      "label": "Delay",
+      "description": "Pauses the workflow for a set amount of time before continuing."
+    },
+    "WAIT_FOR_EVENT": {
+      "label": "Wait for Event",
+      "description": "Waits until the contact triggers a specific event, then continues."
+    },
+    "CONDITION": {
+      "label": "Condition",
+      "description": "Splits the flow based on contact data — each path leads to different steps."
+    },
+    "EXIT": {
+      "label": "Exit",
+      "description": "Ends the workflow for the contact."
+    },
+    "WEBHOOK": {
+      "label": "Webhook",
+      "description": "Makes an HTTP request to an external URL with the contact's data."
+    },
+    "UPDATE_CONTACT": {
+      "label": "Update Contact",
+      "description": "Sets or updates fields on the contact's profile."
+    }
+  },
+  "builder": {
+    "editTriggerSettings": "Edit trigger settings",
+    "editStep": "Edit step",
+    "deleteStep": "Delete step",
+    "openTemplateNewTab": "Open template in a new tab",
+    "waitDuration": "Wait {amount} {unit}",
+    "branchCount": "{count} branch + default",
+    "branchCount_plural": "{count} branches + default",
+    "branchDefault": "Default",
+    "branchYes": "Yes",
+    "branchNo": "No",
+    "emptyTitle": "No workflow steps yet",
+    "emptySubtitle": "Add your first step to get started",
+    "stepCount": "{count} step",
+    "stepCount_plural": "{count} steps",
+    "connectionCount": "{count} connection",
+    "connectionCount_plural": "{count} connections",
+    "exitFullscreen": "Exit fullscreen",
+    "expandFullscreen": "Expand to fullscreen",
+    "connectHint": "Click the + buttons to add and connect steps.",
+    "addStepTitle": "Add Step",
+    "parentStepNotFound": "Parent step not found",
+    "branchAlreadyConnected": "The {branch} branch already has a connection",
+    "newStepName": "New {type}",
+    "stepAdded": "Step added successfully",
+    "failedToAddStep": "Failed to add step",
+    "stepsDeleted": "Deleted {count} steps",
+    "stepDeleted": "Step deleted",
+    "stepRemovedFromFlow": "Step removed from flow",
+    "failedToDeleteStep": "Failed to delete step",
+    "removeTitle": "Remove \"{name}\"",
+    "removeQuestion": "How would you like to remove this step?",
+    "removeFromFlow": "Remove from flow",
+    "removeFromFlowDescription": "Delete this step and connect its parent directly to its child. The rest of the workflow is preserved.",
+    "deleteWithDownstream": "Delete with {count} downstream step",
+    "deleteWithDownstream_plural": "Delete with {count} downstream steps",
+    "deleteWithDownstreamDescription": "Permanently removes this step and everything below it. This cannot be undone.",
+    "conditionDeleteWarning": "Removing a condition step will also delete all {count} downstream step across its branches:",
+    "conditionDeleteWarning_plural": "Removing a condition step will also delete all {count} downstream steps across its branches:",
+    "cannotBeUndone": "This action cannot be undone.",
+    "confirmDeleteSingle": "Are you sure you want to delete this step? This action cannot be undone.",
+    "deleteStepsButton": "Delete {count} steps",
+    "deleteStepButton": "Delete step"
+  },
+  "shared": {
+    "editTitle": "Edit {type}",
+    "stepName": "Step Name",
+    "stepNamePlaceholder": "e.g., Send Welcome Email",
+    "saveChanges": "Save Changes",
+    "stepUpdated": "Step updated successfully",
+    "failedToUpdate": "Failed to update step"
+  },
+  "sendEmail": {
+    "emailTemplate": "Email Template",
+    "editTemplate": "Edit template",
+    "sendTo": "Send To",
+    "recipientContactTitle": "Contact",
+    "recipientContactDescription": "Send to the contact that triggered the workflow",
+    "recipientCustomTitle": "Custom Email",
+    "recipientCustomDescription": "Send to a specific email address",
+    "emailAddress": "Email Address",
+    "emailAddressPlaceholder": "e.g., admin@example.com",
+    "selectTemplateError": "Please select a template",
+    "enterCustomEmailError": "Please enter a custom email address",
+    "invalidEmailError": "Please enter a valid email address"
+  },
+  "delay": {
+    "amount": "Amount",
+    "unit": "Unit",
+    "unitMinutes": "Minutes",
+    "unitHours": "Hours",
+    "unitDays": "Days",
+    "maxError": "Delay cannot exceed 365 days ({max} {unit})"
+  },
+  "waitForEvent": {
+    "eventName": "Event Name",
+    "eventNamePlaceholder": "e.g., email.clicked, user.upgraded",
+    "useCustom": "Use \"{value}\"",
+    "timeout": "Timeout (optional)",
+    "unitMinutes": "Minutes",
+    "unitHours": "Hours",
+    "unitDays": "Days",
+    "timeoutHelp": "If not received, the workflow continues after this time",
+    "eventNameRequired": "Event name is required",
+    "timeoutMaxError": "Timeout cannot exceed 365 days ({max} {unit})"
+  },
+  "condition": {
+    "conditionMode": "Condition Mode",
+    "simpleMode": "Simple (If/Else)",
+    "multiMode": "Multi-branch (Switch)",
+    "simpleModeHelp": "Evaluates a single condition with Yes/No paths",
+    "multiModeHelp": "Match a field against multiple values, each routing to its own branch",
+    "blocksMultiToBinary": "Cannot switch to simple mode: branches have connected nodes. Disconnect all branch connections first.",
+    "blocksBinaryToMulti": "Cannot switch to multi-branch mode: Yes/No branches have connected nodes. Disconnect all branch connections first.",
+    "wiringWarning": "Changing mode will disconnect existing branches. You will need to rewire them.",
+    "fieldToCheck": "Field to Check *",
+    "loadingFields": "Loading fields...",
+    "selectFieldPlaceholder": "Select a field...",
+    "fieldPlaceholder": "e.g., contact.subscribed or contact.data.plan",
+    "operator": "Operator",
+    "value": "Value",
+    "valueNumberPlaceholder": "e.g., 100",
+    "valueStringPlaceholder": "e.g., premium, active",
+    "booleanTrue": "True",
+    "booleanFalse": "False",
+    "branches": "Branches",
+    "branchesHelp": "Each branch defines a condition. The first matching branch is taken. Contacts not matching any branch follow the Default path.",
+    "branchLabel": "Branch {index}",
+    "branchName": "Name *",
+    "branchNamePlaceholder": "e.g., Premium, Free, Enterprise",
+    "branchValuePlaceholder": "Value...",
+    "addBranch": "Add Branch",
+    "branchesEvaluatedInfoPrefix": "Branches are evaluated in order. The first match wins. Contacts not matching any branch will follow the ",
+    "branchesEvaluatedInfoDefault": "Default",
+    "branchesEvaluatedInfoSuffix": " path.",
+    "atLeastOneBranchError": "At least one branch with a name is required",
+    "selectFieldError": "Please select a field",
+    "operators": {
+      "equals": "Equals",
+      "notEquals": "Not Equals",
+      "contains": "Contains",
+      "notContains": "Does not contain",
+      "greaterThan": "Greater than",
+      "lessThan": "Less than",
+      "greaterThanOrEqual": "Greater than or equal",
+      "lessThanOrEqual": "Less than or equal",
+      "exists": "Exists",
+      "notExists": "Does not exist"
+    }
+  },
+  "webhook": {
+    "hidePayload": "Hide request payload",
+    "viewPayload": "View request payload",
+    "webhookGuide": "Webhook guide",
+    "url": "URL",
+    "urlPlaceholder": "https://api.example.com/webhook",
+    "method": "Method",
+    "headers": "Headers",
+    "headerNamePlaceholder": "Name",
+    "headerValuePlaceholder": "Value",
+    "urlRequired": "Webhook URL is required"
+  },
+  "updateContact": {
+    "subscriptionState": "Subscription state",
+    "leaveAsIsLabel": "Leave as is",
+    "leaveAsIsDescription": "Don't change the contact's subscription state.",
+    "subscribeLabel": "Subscribe",
+    "subscribeDescription": "Mark the contact as subscribed.",
+    "unsubscribeLabel": "Unsubscribe",
+    "unsubscribeDescription": "Mark the contact as unsubscribed.",
+    "atLeastOneUpdateError": "Add at least one field to update or choose a subscription action"
+  },
+  "exit": {
+    "exitReason": "Exit Reason (optional)",
+    "selectReasonPlaceholder": "Select exit reason...",
+    "reasons": {
+      "completedTitle": "Completed",
+      "completedDescription": "Contact finished the workflow successfully",
+      "unsubscribedTitle": "Unsubscribed",
+      "unsubscribedDescription": "Contact unsubscribed from communications",
+      "notEligibleTitle": "Not Eligible",
+      "notEligibleDescription": "Contact doesn't meet the required criteria",
+      "optedOutTitle": "Opted Out",
+      "optedOutDescription": "Contact opted out of this workflow",
+      "goalAchievedTitle": "Goal Achieved",
+      "goalAchievedDescription": "Workflow goal was met before completion",
+      "duplicateTitle": "Duplicate",
+      "duplicateDescription": "Contact was already in this workflow",
+      "errorTitle": "Error",
+      "errorDescription": "A technical issue occurred",
+      "otherTitle": "Other",
+      "otherDescription": "Custom or unlisted reason"
+    }
+  }
+}

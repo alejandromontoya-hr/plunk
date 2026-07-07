@@ -2,20 +2,34 @@ import {Label, RadioGroup, RadioGroupItem} from '@plunk/ui';
 import {useState} from 'react';
 import {toast} from 'sonner';
 
+import {useTranslation} from '../../lib/i18n';
 import {KeyValueEditor} from '../KeyValueEditor';
 
 import {type EditStepDialogProps, getStepConfig, StepDialogShell, useStepUpdate} from './shared';
 
 type SubscriptionAction = 'none' | 'subscribe' | 'unsubscribe';
 
-const SUBSCRIPTION_OPTIONS: Array<{value: SubscriptionAction; label: string; description: string}> = [
-  {value: 'none', label: 'Leave as is', description: "Don't change the contact's subscription state."},
-  {value: 'subscribe', label: 'Subscribe', description: 'Mark the contact as subscribed.'},
-  {value: 'unsubscribe', label: 'Unsubscribe', description: 'Mark the contact as unsubscribed.'},
-];
-
 export function UpdateContactStepDialog({step, workflowId, open, onOpenChange, onSuccess}: EditStepDialogProps) {
+  const {t} = useTranslation();
   const config = getStepConfig(step);
+
+  const subscriptionOptions: Array<{value: SubscriptionAction; label: string; description: string}> = [
+    {
+      value: 'none',
+      label: t('workflowSteps.updateContact.leaveAsIsLabel'),
+      description: t('workflowSteps.updateContact.leaveAsIsDescription'),
+    },
+    {
+      value: 'subscribe',
+      label: t('workflowSteps.updateContact.subscribeLabel'),
+      description: t('workflowSteps.updateContact.subscribeDescription'),
+    },
+    {
+      value: 'unsubscribe',
+      label: t('workflowSteps.updateContact.unsubscribeLabel'),
+      description: t('workflowSteps.updateContact.unsubscribeDescription'),
+    },
+  ];
   const initialUpdates =
     config.updates && typeof config.updates === 'object'
       ? (config.updates as Record<string, string | number | boolean>)
@@ -40,7 +54,7 @@ export function UpdateContactStepDialog({step, workflowId, open, onOpenChange, o
     const hasSubscriptionAction = subscriptionAction !== 'none';
 
     if (!hasUpdates && !hasSubscriptionAction) {
-      toast.error('Add at least one field to update or choose a subscription action');
+      toast.error(t('workflowSteps.updateContact.atLeastOneUpdateError'));
       return;
     }
 
@@ -69,13 +83,13 @@ export function UpdateContactStepDialog({step, workflowId, open, onOpenChange, o
       isSubmitting={isSubmitting}
     >
       <div className="space-y-2">
-        <Label>Subscription state</Label>
+        <Label>{t('workflowSteps.updateContact.subscriptionState')}</Label>
         <RadioGroup
           value={subscriptionAction}
           onValueChange={value => setSubscriptionAction(value as SubscriptionAction)}
           className="gap-2"
         >
-          {SUBSCRIPTION_OPTIONS.map(option => (
+          {subscriptionOptions.map(option => (
             <label
               key={option.value}
               htmlFor={`subscriptionAction-${option.value}`}

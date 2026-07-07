@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".yarn/releases/yarn-4.9.1.cjs", "workspace", "web", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "landing",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".yarn/releases/yarn-4.9.1.cjs", "workspace", "landing", "dev"],
+      "port": 4000
+    },
+    {
+      "name": "wiki",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".yarn/releases/yarn-4.9.1.cjs", "workspace", "wiki", "dev"],
+      "port": 1000
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".yarn/releases/yarn-4.9.1.cjs", "workspace", "api", "dev"],
+      "port": 8080
+    }
+  ]
+}

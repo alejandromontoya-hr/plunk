@@ -1,0 +1,146 @@
+{
+  "seoTitle": "Panel",
+  "greeting": {
+    "workingLate": "Trabajando hasta tarde",
+    "morning": "Buenos días",
+    "afternoon": "Buenas tardes",
+    "evening": "Buenas noches"
+  },
+  "time": {
+    "justNow": "ahora mismo",
+    "minutesAgo": "hace {count} min",
+    "hoursAgo": "hace {count} h",
+    "daysAgo": "hace {count} d"
+  },
+  "trend": {
+    "noDataYet": "Aún no hay datos",
+    "new": "Nuevo",
+    "noChange": "Sin cambios",
+    "vsPrevious": "frente a los 30 días anteriores"
+  },
+  "subtitle": {
+    "loading": "Poniéndonos al día con los últimos 30 días.",
+    "freshProject": "{project} está recién creado. Es hora de enviar el primer correo.",
+    "yourProject": "Su proyecto",
+    "contactsReadyOne": "{count} contacto listo. Es hora de enviar algo.",
+    "contactsReadyOther": "{count} contactos listos. Es hora de enviar algo.",
+    "sentOne": "{project} {count} correo en los últimos 30 días.",
+    "sentOther": "{project} {count} correos en los últimos 30 días.",
+    "projectSent": "{project} envió",
+    "youSent": "Usted envió",
+    "openRateExcellent": "La tasa de apertura está muy por encima del promedio.",
+    "openRateHealthy": "La tasa de apertura es saludable."
+  },
+  "live": {
+    "eventsOne": "{count} evento en los últimos 5 min",
+    "eventsOther": "{count} eventos en los últimos 5 min",
+    "quiet": "Sin actividad por ahora"
+  },
+  "activity": {
+    "sent": "Enviado",
+    "delivered": "Entregado",
+    "opened": "Abierto",
+    "clicked": "Clic",
+    "bounced": "Rebotado",
+    "complaint": "Queja",
+    "event": "Evento",
+    "campaign": "Campaña",
+    "scheduled": "Programado",
+    "workflow": "Flujo de trabajo"
+  },
+  "banners": {
+    "projectDisabled": {
+      "title": "Proyecto deshabilitado: modo de solo lectura",
+      "description": "Este proyecto se ha deshabilitado y ahora está en modo de solo lectura. Puede ver sus datos, pero no puede crear, actualizar ni eliminar nada.",
+      "contactSupport": "Comuníquese con soporte para obtener más detalles y reactivar su proyecto.",
+      "viewDetails": "Ver detalles"
+    },
+    "emailVerification": {
+      "title": "Verifique su dirección de correo electrónico",
+      "description": "Verifique su dirección de correo electrónico para desbloquear todas las funciones. Revise su bandeja de entrada para encontrar el enlace de verificación.",
+      "resend": "Reenviar correo de verificación",
+      "sending": "Enviando...",
+      "sentSuccess": "¡Correo de verificación enviado! Revise su bandeja de entrada.",
+      "sentError": "No se pudo enviar el correo de verificación. Inténtelo de nuevo."
+    },
+    "upgrade": {
+      "title": "Mejore su plan para quitar la marca de Sagy",
+      "description": "Actualmente sus correos incluyen la marca de Sagy. Mejore a una suscripción para quitarla.",
+      "upgradeNow": "Mejorar ahora"
+    }
+  },
+  "stats": {
+    "totalContacts": "Total de contactos",
+    "emailsSent": "Correos enviados",
+    "openRate": "Tasa de apertura"
+  },
+  "deliverability": {
+    "title": "Capacidad de entrega",
+    "lastSevenDays": "Últimos 7 días",
+    "allTime": "Histórico",
+    "healthy": "Saludable",
+    "watch": "Atención",
+    "critical": "Crítico",
+    "delivered": "entregados",
+    "noEmailsSent": "Aún no se han enviado correos",
+    "bounce": "Rebote",
+    "complaint": "Queja"
+  },
+  "recentActivity": {
+    "title": "Actividad reciente",
+    "description": "Feed en vivo de lo que sucede en su proyecto",
+    "viewAll": "Ver todo",
+    "emptyTitle": "Aún no ha pasado nada",
+    "emptyDescription": "Envíe su primer correo o active un evento y lo verá aparecer aquí en tiempo real."
+  },
+  "apiKeys": {
+    "title": "Claves de API",
+    "description": "Use estas claves para integrarse con Sagy",
+    "publicKey": "Clave pública",
+    "publicKeyDescription": "Use esta clave para integraciones del lado del cliente",
+    "secretKey": "Clave secreta",
+    "secretKeyDescription": "Mantenga esta clave segura y nunca la exponga públicamente",
+    "noProject": "Ningún proyecto seleccionado"
+  },
+  "quickStart": {
+    "title": "Inicio rápido",
+    "subtitle": "Comience con Sagy en minutos",
+    "projectSetUp": "Su proyecto está configurado",
+    "fullySetUp": "Su proyecto está completamente configurado",
+    "allSet": "¡Todo listo!",
+    "allSetDescription": "Dominio verificado, contactos importados y campañas en marcha. Todo está configurado correctamente.",
+    "needHelp": "¿Necesita ayuda?",
+    "joinDiscord": "Unirse a Discord",
+    "copied": "¡Copiado!",
+    "emailSupport": "Soporte por correo",
+    "domain": {
+      "title": "Verifique su dominio",
+      "description": "Esencial para la entrega de correos y para evitar el spam",
+      "linkText": "Añadir dominio"
+    },
+    "contacts": {
+      "title": "Añada sus primeros contactos",
+      "description": "Importe su lista de suscriptores para empezar a enviar correos",
+      "linkText": "Añadir contactos"
+    },
+    "campaign": {
+      "title": "Envíe su primera campaña",
+      "description": "Cree y envíe su primera campaña de correo",
+      "linkText": "Crear campaña"
+    },
+    "workflows": {
+      "title": "Configure la automatización",
+      "description": "Cree flujos de trabajo automatizados para captar a su audiencia",
+      "linkText": "Crear flujo"
+    },
+    "subscription": {
+      "title": "Mejore su plan",
+      "description": "Quite la marca de Sagy y desbloquee más funciones",
+      "linkText": "Mejorar"
+    },
+    "reengagement": {
+      "title": "Reconecte con su audiencia",
+      "description": "Han pasado {days} días desde su última campaña"
+    }
+  }
+}

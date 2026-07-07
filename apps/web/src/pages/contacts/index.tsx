@@ -43,18 +43,21 @@ import {
   type FacetedFilterOption,
 } from '../../components/data-table';
 import {KeyValueEditor} from '../../components/KeyValueEditor';
+import {ImportContactsWizard} from '../../components/ImportContactsWizard';
+import {AddToSegmentDialog} from '../../components/AddToSegmentDialog';
+import {BulkSetFieldDialog} from '../../components/BulkSetFieldDialog';
 import {network} from '../../lib/network';
+import {useTranslation, type TranslateFn} from '../../lib/i18n';
 import {formatRelativeTime} from '../../lib/dateUtils';
 import {useColumnVisibility} from '../../lib/hooks/useColumnVisibility';
 import {usePersistentState} from '../../lib/hooks/usePersistentState';
 import {
   AlertTriangle,
   Check,
-  CheckCircle,
   ChevronLeft,
   ChevronRight,
   Edit,
-  FileUp,
+  Layers,
   Loader2,
   Mail,
   MailCheck,
@@ -62,10 +65,10 @@ import {
   Minus,
   Plus,
   Search,
+  Tag,
   Trash2,
   Upload,
   X,
-  XCircle,
 } from 'lucide-react';
 import {NextSeo} from 'next-seo';
 import Link from 'next/link';
@@ -79,13 +82,6 @@ type StatusFilter = 'ALL' | 'subscribed' | 'unsubscribed';
 const VIEW_STORAGE_KEY = 'plunk:contacts:view';
 const COLUMNS_STORAGE_KEY = 'plunk:contacts:columns';
 
-// Fixed-value options for the Status faceted filter (table header) and the
-// card-view toolbar dropdown. Single source of truth for both.
-const STATUS_OPTIONS: FacetedFilterOption[] = [
-  {value: 'subscribed', label: 'Subscribed'},
-  {value: 'unsubscribed', label: 'Unsubscribed'},
-];
-
 // select + email + actions are locked-visible (see lockedColumnIds). `updatedAt`
 // starts hidden so the Columns menu has a meaningful toggle out of the box.
 const DEFAULT_COLUMN_VISIBILITY: VisibilityState = {
@@ -98,6 +94,16 @@ const DEFAULT_COLUMN_VISIBILITY: VisibilityState = {
 };
 
 export default function ContactsPage() {
+  const {t} = useTranslation();
+  // Fixed-value options for the Status faceted filter (table header) and the
+  // card-view toolbar dropdown. Single source of truth for both.
+  const STATUS_OPTIONS: FacetedFilterOption[] = useMemo(
+    () => [
+      {value: 'subscribed', label: t('contacts.status.subscribed')},
+      {value: 'unsubscribed', label: t('contacts.status.unsubscribed')},
+    ],
+    [t],
+  );
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [cursorHistory, setCursorHistory] = useState<(string | undefined)[]>([undefined]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -118,6 +124,8 @@ export default function ContactsPage() {
   const [excludedContacts, setExcludedContacts] = useState<Set<string>>(new Set());
   const [showBulkActionsDialog, setShowBulkActionsDialog] = useState(false);
   const [bulkOperation, setBulkOperation] = useState<'subscribe' | 'unsubscribe' | 'delete' | null>(null);
+  const [showAddToSegmentDialog, setShowAddToSegmentDialog] = useState(false);
+  const [showSetFieldDialog, setShowSetFieldDialog] = useState(false);
   const pageSize = 50;
 
   // Backend is authoritative for sorting + status filtering
@@ -282,6 +290,19 @@ export default function ContactsPage() {
     setExcludedContacts(new Set());
   };
 
+  // Toggle a single contact's subscription straight from the Status badge, so the
+  // user can remove (or restore) the subscribed state inline without opening the
+  // contact or using the bulk bar.
+  const handleToggleSubscribed = async (contact: Contact) => {
+    try {
+      await network.fetch('PATCH', `/contacts/${contact.id}`, {subscribed: !contact.subscribed} as never);
+      toast.success(t('contacts.toast.updated'));
+      void mutate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('contacts.toast.updateFailed'));
+    }
+  };
+
   const promptDelete = (contactId: string) => {
     setContactToDelete(contactId);
     setShowDeleteDialog(true);
@@ -292,10 +313,10 @@ export default function ContactsPage() {
 
     try {
       await network.fetch('DELETE', `/contacts/${contactToDelete}`);
-      toast.success('Contact deleted successfully');
+      toast.success(t('contacts.toast.deleted'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete contact');
+      toast.error(error instanceof Error ? error.message : t('contacts.toast.deleteFailed'));
     } finally {
       setContactToDelete(null);
     }
@@ -323,17 +344,17 @@ export default function ContactsPage() {
         id: 'select',
         enableSorting: false,
         enableHiding: false, // Selection column is locked-visible.
-        meta: {label: 'Select', headClassName: 'w-10', cellClassName: 'w-10'} satisfies DataTableColumnMeta,
+        meta: {label: t('contacts.columns.select'), headClassName: 'w-10', cellClassName: 'w-10'} satisfies DataTableColumnMeta,
         header: () => (
           <Checkbox
-            aria-label="Select all contacts on this page"
+            aria-label={t('contacts.selectAllOnPage')}
             checked={allOnPageSelected ? true : contacts.some(c => isContactSelected(c.id)) ? 'indeterminate' : false}
             onCheckedChange={handleSelectAll}
           />
         ),
         cell: ({row}) => (
           <Checkbox
-            aria-label={`Select ${row.original.email}`}
+            aria-label={t('contacts.selectContact', {email: row.original.email})}
             checked={isContactSelected(row.original.id)}
             onClick={e => e.stopPropagation()}
             onCheckedChange={() => handleSelectContact(row.original.id)}
@@ -344,8 +365,8 @@ export default function ContactsPage() {
         id: 'email',
         accessorKey: 'email',
         enableHiding: false, // Email column is locked-visible.
-        meta: {label: 'Email'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Email</DataTableColumnHeader>,
+        meta: {label: t('contacts.columns.email')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('contacts.columns.email')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <div className="flex items-center gap-2">
             {row.original.subscribed ? (
@@ -366,13 +387,13 @@ export default function ContactsPage() {
         id: 'status',
         accessorKey: 'subscribed',
         enableSorting: false, // Status is faceted-filtered, not sorted.
-        meta: {label: 'Status'} satisfies DataTableColumnMeta,
+        meta: {label: t('contacts.columns.status')} satisfies DataTableColumnMeta,
         header: ({column}) => (
           <DataTableColumnHeader
             column={column}
             filter={
               <DataTableFacetedFilter
-                title="Status"
+                title={t('contacts.statusFilterTitle')}
                 multiple={false}
                 options={STATUS_OPTIONS}
                 selected={statusFilter === 'ALL' ? [] : [statusFilter]}
@@ -380,21 +401,31 @@ export default function ContactsPage() {
               />
             }
           >
-            Status
+            {t('contacts.columns.status')}
           </DataTableColumnHeader>
         ),
         cell: ({row}) => (
-          <Badge variant={row.original.subscribed ? 'success' : 'destructive'}>
-            {row.original.subscribed ? 'Subscribed' : 'Unsubscribed'}
-          </Badge>
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              void handleToggleSubscribed(row.original);
+            }}
+            title={t('contacts.status.toggleHint')}
+            className="rounded-full transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
+          >
+            <Badge variant={row.original.subscribed ? 'success' : 'destructive'} className="cursor-pointer">
+              {row.original.subscribed ? t('contacts.status.subscribed') : t('contacts.status.unsubscribed')}
+            </Badge>
+          </button>
         ),
       },
       {
         id: 'createdAt',
         accessorKey: 'createdAt',
         sortDescFirst: true, // First click surfaces the newest contacts.
-        meta: {label: 'Created'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Created</DataTableColumnHeader>,
+        meta: {label: t('contacts.columns.created')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('contacts.columns.created')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <div className="group relative inline-block cursor-help text-sm text-neutral-500 whitespace-nowrap">
             {formatRelativeTime(row.original.createdAt)}
@@ -408,8 +439,8 @@ export default function ContactsPage() {
         id: 'updatedAt',
         accessorKey: 'updatedAt',
         enableSorting: false, // No backend sort field for updatedAt.
-        meta: {label: 'Updated'} satisfies DataTableColumnMeta,
-        header: ({column}) => <DataTableColumnHeader column={column}>Updated</DataTableColumnHeader>,
+        meta: {label: t('contacts.columns.updated')} satisfies DataTableColumnMeta,
+        header: ({column}) => <DataTableColumnHeader column={column}>{t('contacts.columns.updated')}</DataTableColumnHeader>,
         cell: ({row}) => (
           <span className="text-sm text-neutral-500 whitespace-nowrap">
             {formatRelativeTime(row.original.updatedAt)}
@@ -420,20 +451,20 @@ export default function ContactsPage() {
         id: 'actions',
         enableSorting: false,
         enableHiding: false, // Actions column is locked-visible.
-        meta: {label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right'} satisfies DataTableColumnMeta,
-        header: () => <span className="flex justify-end">Actions</span>,
+        meta: {label: t('contacts.columns.actions'), headClassName: 'text-right', cellClassName: 'text-right'} satisfies DataTableColumnMeta,
+        header: () => <span className="flex justify-end">{t('contacts.columns.actions')}</span>,
         cell: ({row}) => (
           <div className="flex items-center justify-end gap-1">
-            <Button asChild variant="ghost" size="sm" title="Edit contact">
-              <Link href={`/contacts/${row.original.id}`} aria-label="Edit contact">
+            <Button asChild variant="ghost" size="sm" title={t('contacts.editContact')}>
+              <Link href={`/contacts/${row.original.id}`} aria-label={t('contacts.editContact')}>
                 <Edit className="h-4 w-4" />
               </Link>
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              title="Delete contact"
-              aria-label="Delete contact"
+              title={t('contacts.deleteContact')}
+              aria-label={t('contacts.deleteContact')}
               onClick={() => promptDelete(row.original.id)}
             >
               <Trash2 className="h-4 w-4" />
@@ -463,28 +494,32 @@ export default function ContactsPage() {
 
   return (
     <>
-      <NextSeo title="Contacts" />
+      <NextSeo title={t('contacts.title')} />
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Contacts</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('contacts.title')}</h1>
               <p className="text-neutral-500 mt-2 text-sm sm:text-base">
-                Manage your email subscribers and their data.{' '}
-                {totalCount > 0 ? `${totalCount.toLocaleString()} ${hasActiveFilters ? 'matching' : 'total'}` : ''}
+                {t('contacts.subtitle')}{' '}
+                {totalCount > 0
+                  ? hasActiveFilters
+                    ? t('contacts.countMatching', {count: totalCount.toLocaleString()})
+                    : t('contacts.countTotal', {count: totalCount.toLocaleString()})
+                  : ''}
               </p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowImportDialog(true)} className="flex-1 sm:flex-none">
                 <Upload className="h-4 w-4" />
-                <span className="hidden sm:inline">Import CSV</span>
-                <span className="sm:hidden">Import</span>
+                <span className="hidden sm:inline">{t('contacts.importCsv')}</span>
+                <span className="sm:hidden">{t('contacts.importShort')}</span>
               </Button>
               <Button onClick={() => setShowCreateDialog(true)} className="flex-1 sm:flex-none">
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Contact</span>
-                <span className="sm:hidden">Add</span>
+                <span className="hidden sm:inline">{t('contacts.addContact')}</span>
+                <span className="sm:hidden">{t('common.add')}</span>
               </Button>
             </div>
           </div>
@@ -501,7 +536,7 @@ export default function ContactsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
               <Input
                 type="text"
-                placeholder="Search by email..."
+                placeholder={t('contacts.searchPlaceholder')}
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 className="pl-10 pr-10 h-8 text-xs"
@@ -509,7 +544,7 @@ export default function ContactsPage() {
               {searchInput && (
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t('contacts.clearSearch')}
                   onClick={() => {
                     setSearchInput('');
                     setSearch('');
@@ -524,7 +559,7 @@ export default function ContactsPage() {
             <div className="flex items-center gap-2 shrink-0">
               {view === 'card' && (
                 <DataTableFilter
-                  title="Status"
+                  title={t('contacts.statusFilterTitle')}
                   multiple={false}
                   options={STATUS_OPTIONS}
                   selected={statusFilter === 'ALL' ? [] : [statusFilter]}
@@ -545,7 +580,8 @@ export default function ContactsPage() {
           {effectiveSelectionCount > 0 && (
             <BulkActionBar
               selectedCount={effectiveSelectionCount}
-              itemNoun="contact"
+              itemNoun={t('contacts.itemNoun')}
+              selectionLabel={t('contacts.selectedCount', {count: effectiveSelectionCount.toLocaleString()})}
               onClear={clearSelection}
               note={
                 !selectAllMatching && allOnPageSelected && totalCount > contacts.length ? (
@@ -554,21 +590,22 @@ export default function ContactsPage() {
                     onClick={handleSelectAllMatching}
                     className="text-sm font-medium text-neutral-600 underline-offset-4 transition-colors hover:text-neutral-900 hover:underline focus-visible:outline-none focus-visible:underline focus-visible:text-neutral-900 whitespace-nowrap rounded-sm tabular-nums"
                   >
-                    Select all {totalCount.toLocaleString()}
-                    {hasActiveFilters ? ' matching' : ''}
+                    {hasActiveFilters
+                      ? t('contacts.selectAllMatchingFiltered', {count: totalCount.toLocaleString()})
+                      : t('contacts.selectAllMatching', {count: totalCount.toLocaleString()})}
                   </button>
                 ) : selectAllMatching ? (
-                  <span className="text-sm text-neutral-500 whitespace-nowrap">All matching selected</span>
+                  <span className="text-sm text-neutral-500 whitespace-nowrap">{t('contacts.allMatchingSelected')}</span>
                 ) : null
               }
             >
-              <Button variant="outline" size="sm" onClick={() => handleBulkAction('subscribe')}>
-                <MailCheck className="h-4 w-4" />
-                Subscribe
+              <Button variant="outline" size="sm" onClick={() => setShowAddToSegmentDialog(true)}>
+                <Layers className="h-4 w-4" />
+                {t('contacts.addToSegment.title')}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleBulkAction('unsubscribe')}>
-                <MailX className="h-4 w-4" />
-                Unsubscribe
+              <Button variant="outline" size="sm" onClick={() => setShowSetFieldDialog(true)}>
+                <Tag className="h-4 w-4" />
+                {t('contacts.setField.title')}
               </Button>
               <Button
                 variant="outline"
@@ -577,7 +614,7 @@ export default function ContactsPage() {
                 className="text-neutral-700 transition-colors hover:bg-red-50 hover:text-red-700 hover:border-red-200"
               >
                 <Trash2 className="h-4 w-4" />
-                Delete
+                {t('contacts.bulk.delete')}
               </Button>
             </BulkActionBar>
           )}
@@ -598,17 +635,17 @@ export default function ContactsPage() {
                   {hasActiveFilters ? (
                     // Items exist, but the active search/status filters matched
                     // none — offer a one-click recovery.
-                    <NoResultsState icon={Mail} itemNoun="contacts" onClear={clearFilters} />
+                    <NoResultsState icon={Mail} itemNoun={t('contacts.noResultsNoun')} onClear={clearFilters} />
                   ) : (
                     // Genuinely empty project — first-run state.
                     <EmptyState
                       icon={Mail}
-                      title="No contacts yet"
-                      description="Add contacts to start tracking engagement."
+                      title={t('contacts.empty.title')}
+                      description={t('contacts.empty.description')}
                       action={
                         <Button onClick={() => setShowCreateDialog(true)}>
                           <Plus className="h-4 w-4" />
-                          Add Contact
+                          {t('contacts.addContact')}
                         </Button>
                       }
                     />
@@ -647,30 +684,37 @@ export default function ContactsPage() {
                                 )}
                                 <span className="truncate">{contact.email}</span>
                               </Link>
-                              <Badge variant={contact.subscribed ? 'success' : 'destructive'} className="shrink-0">
-                                {contact.subscribed ? 'Subscribed' : 'Unsubscribed'}
-                              </Badge>
+                              <button
+                                type="button"
+                                onClick={() => void handleToggleSubscribed(contact)}
+                                title={t('contacts.status.toggleHint')}
+                                className="shrink-0 rounded-full transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
+                              >
+                                <Badge variant={contact.subscribed ? 'success' : 'destructive'} className="cursor-pointer">
+                                  {contact.subscribed ? t('contacts.status.subscribed') : t('contacts.status.unsubscribed')}
+                                </Badge>
+                              </button>
                             </div>
                             <div className="mt-3 flex items-center justify-between">
                               <div className="group relative inline-block cursor-help">
                                 <span className="text-xs text-neutral-400">
-                                  Added {formatRelativeTime(contact.createdAt)}
+                                  {t('contacts.addedRelative', {time: formatRelativeTime(contact.createdAt)})}
                                 </span>
                                 <div className="hidden group-hover:block absolute z-10 w-48 p-2 bg-neutral-900 text-white text-xs rounded shadow-md bottom-full left-0 mb-1 whitespace-nowrap">
                                   {dayjs(contact.createdAt).format('DD MMMM YYYY, hh:mm')}
                                 </div>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Button asChild variant="ghost" size="sm" title="Edit contact">
-                                  <Link href={`/contacts/${contact.id}`} aria-label="Edit contact">
+                                <Button asChild variant="ghost" size="sm" title={t('contacts.editContact')}>
+                                  <Link href={`/contacts/${contact.id}`} aria-label={t('contacts.editContact')}>
                                     <Edit className="h-4 w-4" />
                                   </Link>
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  title="Delete contact"
-                                  aria-label="Delete contact"
+                                  title={t('contacts.deleteContact')}
+                                  aria-label={t('contacts.deleteContact')}
                                   onClick={() => promptDelete(contact.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -687,9 +731,16 @@ export default function ContactsPage() {
                 {(currentPage > 0 || data?.hasMore) && (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
                     <p className="text-sm text-neutral-500 tabular-nums">
-                      Showing {(currentPage * pageSize + 1).toLocaleString()} to{' '}
-                      {(currentPage * pageSize + contacts.length).toLocaleString()}
-                      {totalCount > 0 ? ` of ${totalCount.toLocaleString()}` : ''}
+                      {totalCount > 0
+                        ? t('contacts.pagination.showingOf', {
+                            from: (currentPage * pageSize + 1).toLocaleString(),
+                            to: (currentPage * pageSize + contacts.length).toLocaleString(),
+                            total: totalCount.toLocaleString(),
+                          })
+                        : t('contacts.pagination.showing', {
+                            from: (currentPage * pageSize + 1).toLocaleString(),
+                            to: (currentPage * pageSize + contacts.length).toLocaleString(),
+                          })}
                     </p>
                     <div className="flex items-center gap-2 justify-center sm:justify-end">
                       <Button
@@ -699,7 +750,7 @@ export default function ContactsPage() {
                         disabled={currentPage === 0 || isLoading}
                       >
                         <ChevronLeft className="h-4 w-4" />
-                        <span className="hidden sm:inline">Previous</span>
+                        <span className="hidden sm:inline">{t('common.previous')}</span>
                       </Button>
                       <Button
                         variant="outline"
@@ -707,7 +758,7 @@ export default function ContactsPage() {
                         onClick={handleNextPage}
                         disabled={!data?.hasMore || isLoading}
                       >
-                        <span className="hidden sm:inline">Next</span>
+                        <span className="hidden sm:inline">{t('common.next')}</span>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -726,9 +777,16 @@ export default function ContactsPage() {
                 {(currentPage > 0 || data?.hasMore) && (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
                     <p className="text-sm text-neutral-500 tabular-nums">
-                      Showing {(currentPage * pageSize + 1).toLocaleString()} to{' '}
-                      {(currentPage * pageSize + contacts.length).toLocaleString()}
-                      {totalCount > 0 ? ` of ${totalCount.toLocaleString()}` : ''}
+                      {totalCount > 0
+                        ? t('contacts.pagination.showingOf', {
+                            from: (currentPage * pageSize + 1).toLocaleString(),
+                            to: (currentPage * pageSize + contacts.length).toLocaleString(),
+                            total: totalCount.toLocaleString(),
+                          })
+                        : t('contacts.pagination.showing', {
+                            from: (currentPage * pageSize + 1).toLocaleString(),
+                            to: (currentPage * pageSize + contacts.length).toLocaleString(),
+                          })}
                     </p>
                     <div className="flex items-center gap-2 justify-center sm:justify-end">
                       <Button
@@ -738,7 +796,7 @@ export default function ContactsPage() {
                         disabled={currentPage === 0 || isLoading}
                       >
                         <ChevronLeft className="h-4 w-4" />
-                        <span className="hidden sm:inline">Previous</span>
+                        <span className="hidden sm:inline">{t('common.previous')}</span>
                       </Button>
                       <Button
                         variant="outline"
@@ -746,7 +804,7 @@ export default function ContactsPage() {
                         onClick={handleNextPage}
                         disabled={!data?.hasMore || isLoading}
                       >
-                        <span className="hidden sm:inline">Next</span>
+                        <span className="hidden sm:inline">{t('common.next')}</span>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -761,7 +819,7 @@ export default function ContactsPage() {
         <CreateContactDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onSuccess={() => mutate()} />
 
         {/* Import Contacts Dialog */}
-        <ImportContactsDialog open={showImportDialog} onOpenChange={setShowImportDialog} onSuccess={() => mutate()} />
+        <ImportContactsWizard open={showImportDialog} onOpenChange={setShowImportDialog} onSuccess={() => mutate()} />
 
         {/* Bulk Actions Dialog */}
         <BulkActionsDialog
@@ -789,14 +847,60 @@ export default function ContactsPage() {
           }}
         />
 
+        {/* Add to Segment Dialog */}
+        <AddToSegmentDialog
+          open={showAddToSegmentDialog}
+          onOpenChange={setShowAddToSegmentDialog}
+          selector={
+            selectAllMatching
+              ? {
+                  mode: 'query',
+                  filter: {
+                    ...(search ? {search} : {}),
+                    ...(statusFilter !== 'ALL' ? {subscribed: statusFilter === 'subscribed'} : {}),
+                  },
+                  excludeIds: Array.from(excludedContacts),
+                }
+              : {mode: 'ids', contactIds: Array.from(selectedContacts)}
+          }
+          targetCount={effectiveSelectionCount}
+          onSuccess={() => {
+            mutate();
+            clearSelection();
+          }}
+        />
+
+        {/* Assign custom field in bulk */}
+        <BulkSetFieldDialog
+          open={showSetFieldDialog}
+          onOpenChange={setShowSetFieldDialog}
+          selector={
+            selectAllMatching
+              ? {
+                  mode: 'query',
+                  filter: {
+                    ...(search ? {search} : {}),
+                    ...(statusFilter !== 'ALL' ? {subscribed: statusFilter === 'subscribed'} : {}),
+                  },
+                  excludeIds: Array.from(excludedContacts),
+                }
+              : {mode: 'ids', contactIds: Array.from(selectedContacts)}
+          }
+          targetCount={effectiveSelectionCount}
+          onSuccess={() => {
+            mutate();
+            clearSelection();
+          }}
+        />
+
         {/* Delete Confirmation Dialog */}
         <ConfirmDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           onConfirm={handleDelete}
-          title="Delete Contact"
-          description="Are you sure you want to delete this contact? This action cannot be undone."
-          confirmText="Delete"
+          title={t('contacts.deleteDialog.title')}
+          description={t('contacts.deleteDialog.description')}
+          confirmText={t('common.delete')}
           variant="destructive"
         />
       </DashboardLayout>
@@ -811,6 +915,7 @@ interface CreateContactDialogProps {
 }
 
 function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialogProps) {
+  const {t} = useTranslation();
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(true);
   const [customData, setCustomData] = useState<Record<string, string | number | boolean> | null>(null);
@@ -831,9 +936,9 @@ function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialo
 
       // Show appropriate message based on whether contact was new or updated
       if (response._meta?.isUpdate) {
-        toast.success(`Contact ${response.email} already existed and was updated with new data`);
+        toast.success(t('contacts.toast.createdUpdated', {email: response.email}));
       } else {
-        toast.success('Contact created successfully');
+        toast.success(t('contacts.toast.created'));
       }
 
       setEmail('');
@@ -842,7 +947,7 @@ function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialo
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save contact');
+      toast.error(error instanceof Error ? error.message : t('contacts.toast.saveFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -852,28 +957,28 @@ function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Contact</DialogTitle>
+          <DialogTitle>{t('contacts.createDialog.title')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email Address *</Label>
+            <Label htmlFor="email">{t('contacts.createDialog.emailLabel')}</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              placeholder="contact@example.com"
+              placeholder={t('contacts.createDialog.emailPlaceholder')}
             />
           </div>
 
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label htmlFor="subscribed" className="font-medium cursor-pointer">
-                Subscribed
+                {t('contacts.createDialog.subscribedLabel')}
               </Label>
               <p className="text-xs text-neutral-500 mt-0.5">
-                Receive emails from campaigns and workflows.
+                {t('contacts.createDialog.subscribedHelp')}
               </p>
             </div>
             <Switch id="subscribed" checked={subscribed} onCheckedChange={setSubscribed} />
@@ -883,332 +988,15 @@ function CreateContactDialog({open, onOpenChange, onSuccess}: CreateContactDialo
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating...' : 'Create Contact'}
+              {isSubmitting ? t('contacts.createDialog.submitting') : t('contacts.createDialog.submit')}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-interface ImportContactsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-}
-
-interface ImportResult {
-  totalRows: number;
-  successCount: number;
-  createdCount: number;
-  updatedCount: number;
-  failureCount: number;
-  errors: Array<{row: number; email: string; error: string}>;
-}
-
-function ImportContactsDialog({open, onOpenChange, onSuccess}: ImportContactsDialogProps) {
-  const [file, setFile] = useState<File | null>(null);
-  const [, setJobId] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'completed' | 'failed'>('idle');
-  const [result, setResult] = useState<ImportResult | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [showCloseConfirmDialog, setShowCloseConfirmDialog] = useState(false);
-
-  // Helper function to truncate long file names from the middle
-  const truncateFileName = (fileName: string, maxLength: number = 30) => {
-    if (fileName.length <= maxLength) return fileName;
-
-    const extension = fileName.substring(fileName.lastIndexOf('.'));
-    const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
-    const charsToShow = maxLength - extension.length - 3; // 3 for "..."
-    const frontChars = Math.ceil(charsToShow / 2);
-    const backChars = Math.floor(charsToShow / 2);
-
-    return `${nameWithoutExt.substring(0, frontChars)}...${nameWithoutExt.substring(nameWithoutExt.length - backChars)}${extension}`;
-  };
-
-  // Clean up polling on unmount or dialog close
-  useEffect(() => {
-    if (!open) {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-      // Reset state when dialog closes
-      setTimeout(() => {
-        setFile(null);
-        setJobId(null);
-        setProgress(0);
-        setStatus('idle');
-        setResult(null);
-        setErrorMessage(null);
-      }, 300);
-    }
-  }, [open]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      // Validate file type
-      if (!selectedFile.name.endsWith('.csv')) {
-        toast.error('Please select a CSV file');
-        return;
-      }
-
-      // Validate file size (5MB max)
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
-        return;
-      }
-
-      setFile(selectedFile);
-      setStatus('idle');
-    }
-  };
-
-  const pollJobStatus = async (jobId: string) => {
-    try {
-      const response = await network.fetch<{
-        id: string;
-        state: string;
-        progress: number;
-        result: ImportResult | null;
-        failedReason?: string;
-      }>('GET', `/contacts/import/${jobId}`);
-
-      setProgress(response.progress || 0);
-
-      if (response.state === 'completed') {
-        setStatus('completed');
-        setResult(response.result);
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
-
-        // Show success message
-        if (response.result) {
-          const {createdCount, updatedCount, failureCount} = response.result;
-          const parts = [];
-          if (createdCount > 0) parts.push(`${createdCount} created`);
-          if (updatedCount > 0) parts.push(`${updatedCount} updated`);
-          if (failureCount > 0) parts.push(`${failureCount} failed`);
-
-          toast.success(`Import completed: ${parts.join(', ')}`);
-        }
-
-        onSuccess();
-      } else if (response.state === 'failed') {
-        setStatus('failed');
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
-        // Store and show the specific error message if available, otherwise show generic error
-        const errorMsg = response.failedReason || 'Import failed. Please check your CSV file and try again.';
-        setErrorMessage(errorMsg);
-        toast.error(errorMsg);
-      } else if (response.state === 'active') {
-        setStatus('processing');
-      }
-    } catch (error) {
-      console.error('Failed to poll job status:', error);
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-      setStatus('failed');
-      toast.error('Failed to check import status');
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
-      toast.error('Please select a file to upload');
-      return;
-    }
-
-    setIsUploading(true);
-    setStatus('uploading');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const data = await network.upload<{jobId: string; message: string}>('POST', '/contacts/import', formData);
-
-      setJobId(data.jobId);
-      setStatus('processing');
-
-      // Start polling for job status
-      pollIntervalRef.current = setInterval(() => {
-        void pollJobStatus(data.jobId);
-      }, 1000); // Poll every second
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to upload file';
-      setErrorMessage(errorMsg);
-      toast.error(errorMsg);
-      setStatus('failed');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleClose = () => {
-    if (status === 'processing') {
-      setShowCloseConfirmDialog(true);
-      return;
-    }
-    onOpenChange(false);
-  };
-
-  const confirmClose = () => {
-    onOpenChange(false);
-  };
-
-  return (
-    <>
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Import Contacts from CSV</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Instructions */}
-            <div className="text-sm text-neutral-500 space-y-1">
-              <p>Required column: <code className="text-neutral-700 bg-neutral-100 px-1 py-0.5 rounded text-xs">email</code>. Optional: <code className="text-neutral-700 bg-neutral-100 px-1 py-0.5 rounded text-xs">subscribed</code> (true/false) and any custom fields. Max 5MB.</p>
-            </div>
-
-            {/* File Upload */}
-            {status === 'idle' || status === 'failed' ? (
-              <div>
-                <Label htmlFor="csv-file">Select CSV File</Label>
-                <div className="mt-2">
-                  <input
-                    ref={fileInputRef}
-                    id="csv-file"
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => fileInputRef.current?.click()}
-                    type="button"
-                  >
-                    <FileUp className="h-4 w-4 mr-2" />
-                    {file ? truncateFileName(file.name) : 'Choose CSV File'}
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
-            {/* Progress */}
-            {(status === 'uploading' || status === 'processing') && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neutral-600">
-                    {status === 'uploading' ? 'Uploading file...' : 'Processing contacts...'}
-                  </span>
-                  <span className="text-neutral-900 font-medium">{progress}%</span>
-                </div>
-                <div className="w-full bg-neutral-200 rounded-full h-1.5">
-                  <div
-                    className="bg-neutral-900 h-1.5 rounded-full transition-all duration-300"
-                    style={{width: `${progress}%`}}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Results */}
-            {status === 'completed' && result && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-1.5 text-sm text-neutral-600">
-                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  <span>
-                    <span className="font-medium text-neutral-900">{result.totalRows}</span> processed —{' '}
-                    <span className="text-neutral-900">{result.createdCount}</span> created,{' '}
-                    <span className="text-neutral-900">{result.updatedCount}</span> updated
-                    {result.failureCount > 0 && (
-                      <>, <span className="text-red-600">{result.failureCount}</span> failed</>
-                    )}
-                  </span>
-                </div>
-
-                {/* Error Details */}
-                {result.errors && result.errors.length > 0 && (
-                  <div className="max-h-40 overflow-y-auto border border-neutral-200 rounded-md">
-                    <div className="space-y-0 text-xs text-neutral-600">
-                      {result.errors.slice(0, 10).map((error, idx) => (
-                        <div key={idx} className="flex gap-3 px-3 py-2 border-b border-neutral-100 last:border-0">
-                          <span className="font-mono text-neutral-400 flex-shrink-0">Row {error.row}</span>
-                          <span className="text-red-600">{error.email || 'N/A'} — {error.error}</span>
-                        </div>
-                      ))}
-                      {result.errors.length > 10 && (
-                        <div className="px-3 py-2 text-neutral-500">
-                          +{result.errors.length - 10} more errors
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {status === 'failed' && (
-              <div className="flex items-start gap-2 text-sm">
-                <XCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-red-600">{errorMessage || 'Please check your CSV file and try again.'}</p>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            {status === 'idle' || status === 'failed' ? (
-              <>
-                <Button type="button" variant="outline" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button type="button" onClick={handleUpload} disabled={!file || isUploading}>
-                  {isUploading ? 'Uploading...' : 'Import Contacts'}
-                </Button>
-              </>
-            ) : status === 'completed' ? (
-              <Button type="button" onClick={handleClose}>
-                Close
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" onClick={handleClose}>
-                Close
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog
-        open={showCloseConfirmDialog}
-        onOpenChange={setShowCloseConfirmDialog}
-        onConfirm={confirmClose}
-        title="Close Import"
-        description="Import is still in progress. Are you sure you want to close?"
-        confirmText="Close Anyway"
-        variant="destructive"
-      />
-    </>
   );
 }
 
@@ -1238,6 +1026,7 @@ interface BulkActionResult {
 }
 
 function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount, onSuccess}: BulkActionsDialogProps) {
+  const {t} = useTranslation();
   const [, setJobId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -1285,7 +1074,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
         }
 
         if (response.result) {
-          toast.success(buildToastSummary(response.result));
+          toast.success(buildToastSummary(response.result, t));
         }
 
         onSuccess();
@@ -1354,7 +1143,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
     onOpenChange(false);
   };
 
-  const copy = getOperationCopy(operation);
+  const copy = getOperationCopy(operation, t);
 
   const isQueueing = status === 'processing' && progress === 0;
   const dialogTitle =
@@ -1386,7 +1175,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
                 <p className="text-sm text-neutral-700 leading-relaxed">
                   {copy.confirmVerb}{' '}
                   <span className="font-medium text-neutral-900 tabular-nums">
-                    {targetCount.toLocaleString()} contact{targetCount !== 1 ? 's' : ''}
+                    {targetCount.toLocaleString()} {targetCount === 1 ? t('contacts.itemNoun') : t('contacts.noResultsNoun')}
                   </span>
                   ?
                   {copy.skipNote && <span className="text-neutral-500"> {copy.skipNote}</span>}
@@ -1395,14 +1184,13 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
                   <div className="flex items-start gap-2.5 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
                     <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={2.25} />
                     <p className="leading-relaxed">
-                      <span className="font-medium">This action cannot be undone.</span> Contacts and their event history will be permanently removed.
+                      <span className="font-medium">{t('contacts.bulkDialog.deleteWarningStrong')}</span>{' '}
+                      {t('contacts.bulkDialog.deleteWarning')}
                     </p>
                   </div>
                 )}
                 {selector.mode === 'query' && (
-                  <p className="text-xs text-neutral-500 leading-relaxed">
-                    Contacts are evaluated when the job runs — any added in the meantime may also be included.
-                  </p>
+                  <p className="text-xs text-neutral-500 leading-relaxed">{t('contacts.bulkDialog.queryNote')}</p>
                 )}
               </div>
             )}
@@ -1414,8 +1202,10 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
                     {isQueueing && <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-400" />}
                     <span>
                       {isQueueing
-                        ? 'Queued — starting up…'
-                        : `${copy.processingLabel} ${targetCount.toLocaleString()} contact${targetCount !== 1 ? 's' : ''}`}
+                        ? t('contacts.bulkDialog.queued')
+                        : `${copy.processingLabel} ${targetCount.toLocaleString()} ${
+                            targetCount === 1 ? t('contacts.itemNoun') : t('contacts.noResultsNoun')
+                          }`}
                     </span>
                   </span>
                   <span
@@ -1444,7 +1234,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
             {status === 'failed' && (
               <div className="flex items-start gap-2.5 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 motion-safe:animate-in motion-safe:fade-in-50 motion-safe:duration-200">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.25} />
-                <p className="leading-relaxed">{errorMessage || 'Something went wrong. Please try again.'}</p>
+                <p className="leading-relaxed">{errorMessage || t('contacts.bulkDialog.failedGeneric')}</p>
               </div>
             )}
           </div>
@@ -1453,7 +1243,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
             {status === 'idle' ? (
               <>
                 <Button type="button" variant="outline" onClick={handleClose}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   type="button"
@@ -1461,16 +1251,16 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
                   disabled={isProcessing}
                   variant={operation === 'delete' ? 'destructive' : 'default'}
                 >
-                  {isProcessing ? 'Starting…' : copy.confirmButton}
+                  {isProcessing ? t('contacts.bulkDialog.starting') : copy.confirmButton}
                 </Button>
               </>
             ) : status === 'failed' ? (
               <>
                 <Button type="button" variant="outline" onClick={handleClose}>
-                  Close
+                  {t('common.close')}
                 </Button>
                 <Button type="button" onClick={handleRetry} variant={operation === 'delete' ? 'destructive' : 'default'}>
-                  Try again
+                  {t('common.tryAgain')}
                 </Button>
               </>
             ) : (
@@ -1479,7 +1269,7 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
                 onClick={handleClose}
                 variant={status === 'completed' ? 'default' : 'outline'}
               >
-                {status === 'completed' ? 'Done' : 'Hide'}
+                {status === 'completed' ? t('contacts.bulkDialog.done') : t('contacts.bulkDialog.hide')}
               </Button>
             )}
           </DialogFooter>
@@ -1490,9 +1280,9 @@ function BulkActionsDialog({open, onOpenChange, operation, selector, targetCount
         open={showCloseConfirmDialog}
         onOpenChange={setShowCloseConfirmDialog}
         onConfirm={confirmClose}
-        title="Hide this dialog?"
-        description="The job will keep running in the background. You won't see the result here, but the contacts will still be updated."
-        confirmText="Hide"
+        title={t('contacts.bulkDialog.closeConfirm.title')}
+        description={t('contacts.bulkDialog.closeConfirm.description')}
+        confirmText={t('contacts.bulkDialog.closeConfirm.confirmText')}
         variant="default"
       />
     </>
@@ -1517,81 +1307,58 @@ interface OperationCopy {
   skipNote: string | null;
 }
 
-function getOperationCopy(operation: 'subscribe' | 'unsubscribe' | 'delete' | null): OperationCopy {
-  switch (operation) {
-    case 'subscribe':
-      return {
-        title: 'Subscribe contacts',
-        progressTitle: 'Subscribing…',
-        completedTitle: 'Subscribed',
-        failedTitle: "Couldn't subscribe contacts",
-        confirmVerb: 'Subscribe',
-        confirmButton: 'Subscribe',
-        processingLabel: 'Subscribing',
-        changedVerb: 'subscribed',
-        summaryNoun: 'subscribed',
-        alreadyState: 'already subscribed',
-        skipNote: 'Already-subscribed contacts will be skipped.',
-      };
-    case 'unsubscribe':
-      return {
-        title: 'Unsubscribe contacts',
-        progressTitle: 'Unsubscribing…',
-        completedTitle: 'Unsubscribed',
-        failedTitle: "Couldn't unsubscribe contacts",
-        confirmVerb: 'Unsubscribe',
-        confirmButton: 'Unsubscribe',
-        processingLabel: 'Unsubscribing',
-        changedVerb: 'unsubscribed',
-        summaryNoun: 'unsubscribed',
-        alreadyState: 'already unsubscribed',
-        skipNote: 'Already-unsubscribed contacts will be skipped.',
-      };
-    case 'delete':
-      return {
-        title: 'Delete contacts',
-        progressTitle: 'Deleting…',
-        completedTitle: 'Deleted',
-        failedTitle: "Couldn't delete contacts",
-        confirmVerb: 'Permanently delete',
-        confirmButton: 'Delete',
-        processingLabel: 'Deleting',
-        changedVerb: 'deleted',
-        summaryNoun: 'removed',
-        alreadyState: null,
-        skipNote: null,
-      };
-    default:
-      return {
-        title: 'Process contacts',
-        progressTitle: 'Processing…',
-        completedTitle: 'Done',
-        failedTitle: 'Operation failed',
-        confirmVerb: 'Process',
-        confirmButton: 'Process',
-        processingLabel: 'Processing',
-        changedVerb: 'processed',
-        summaryNoun: 'processed',
-        alreadyState: null,
-        skipNote: null,
-      };
+function getOperationCopy(operation: 'subscribe' | 'unsubscribe' | 'delete' | null, t: TranslateFn): OperationCopy {
+  if (operation === 'subscribe' || operation === 'unsubscribe' || operation === 'delete') {
+    const base = `contacts.operations.${operation}`;
+    // subscribe/unsubscribe can leave contacts unchanged (already in the target
+    // state); delete cannot, so it has no "already"/"skip" copy.
+    const hasAlready = operation !== 'delete';
+    return {
+      title: t(`${base}.title`),
+      progressTitle: t(`${base}.progressTitle`),
+      completedTitle: t(`${base}.completedTitle`),
+      failedTitle: t(`${base}.failedTitle`),
+      confirmVerb: t(`${base}.confirmVerb`),
+      confirmButton: t(`${base}.confirmButton`),
+      processingLabel: t(`${base}.processingLabel`),
+      changedVerb: t(`${base}.changedVerb`),
+      summaryNoun: t(`${base}.summaryNoun`),
+      alreadyState: hasAlready ? t(`${base}.alreadyState`) : null,
+      skipNote: hasAlready ? t(`${base}.skipNote`) : null,
+    };
   }
+  return {
+    title: t('common.loading'),
+    progressTitle: t('common.loading'),
+    completedTitle: t('common.success'),
+    failedTitle: t('common.error'),
+    confirmVerb: t('common.confirm'),
+    confirmButton: t('common.confirm'),
+    processingLabel: t('common.loading'),
+    changedVerb: '',
+    summaryNoun: '',
+    alreadyState: null,
+    skipNote: null,
+  };
 }
 
-function buildToastSummary(result: BulkActionResult): string {
-  const copy = getOperationCopy(result.operation);
+function buildToastSummary(result: BulkActionResult, t: TranslateFn): string {
+  const copy = getOperationCopy(result.operation, t);
   const parts: string[] = [];
   if (result.successCount > 0) parts.push(`${result.successCount.toLocaleString()} ${copy.changedVerb}`);
   if (result.unchangedCount > 0 && copy.alreadyState) {
     parts.push(`${result.unchangedCount.toLocaleString()} ${copy.alreadyState}`);
   }
-  if (result.failureCount > 0) parts.push(`${result.failureCount.toLocaleString()} failed`);
-  if (parts.length === 0) return 'No contacts to update';
+  if (result.failureCount > 0) {
+    parts.push(`${result.failureCount.toLocaleString()} ${t('contacts.bulkDialog.failedCount')}`);
+  }
+  if (parts.length === 0) return t('contacts.bulkDialog.noContactsToUpdate');
   return parts.join(' · ');
 }
 
 function BulkResultSummary({result}: {result: BulkActionResult}) {
-  const copy = getOperationCopy(result.operation);
+  const {t} = useTranslation();
+  const copy = getOperationCopy(result.operation, t);
   const {successCount, unchangedCount, failureCount} = result;
   const noChanges = successCount === 0 && failureCount === 0 && unchangedCount > 0;
   const total = successCount + unchangedCount + failureCount;
@@ -1617,7 +1384,7 @@ function BulkResultSummary({result}: {result: BulkActionResult}) {
     }
   }
   if (failureCount > 0) {
-    rows.push({key: 'failed', label: 'Failed', count: failureCount, tone: 'danger'});
+    rows.push({key: 'failed', label: t('contacts.bulkDialog.failedRow'), count: failureCount, tone: 'danger'});
   }
 
   return (
@@ -1677,7 +1444,7 @@ function BulkResultSummary({result}: {result: BulkActionResult}) {
 
       {total > 1 && rows.length > 1 && (
         <div className="px-4 flex items-baseline justify-between text-xs text-neutral-500">
-          <span>Total processed</span>
+          <span>{t('contacts.bulkDialog.totalProcessed')}</span>
           <span className="tabular-nums font-medium text-neutral-700">{total.toLocaleString()}</span>
         </div>
       )}
@@ -1685,7 +1452,7 @@ function BulkResultSummary({result}: {result: BulkActionResult}) {
       {result.errors && result.errors.length > 0 && (
         <details className="group">
           <summary className="cursor-pointer text-xs text-neutral-500 hover:text-neutral-700 select-none px-4">
-            Show error details ({result.errors.length.toLocaleString()})
+            {t('contacts.bulkDialog.showErrorDetails', {count: result.errors.length.toLocaleString()})}
           </summary>
           <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-neutral-200 divide-y divide-neutral-100 text-xs">
             {result.errors.slice(0, 10).map((error, idx) => (
@@ -1695,7 +1462,7 @@ function BulkResultSummary({result}: {result: BulkActionResult}) {
             ))}
             {result.errors.length > 10 && (
               <div className="px-3 py-2 text-neutral-500">
-                +{(result.errors.length - 10).toLocaleString()} more
+                {t('contacts.bulkDialog.moreErrors', {count: (result.errors.length - 10).toLocaleString()})}
               </div>
             )}
           </div>

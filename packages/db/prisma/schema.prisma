@@ -69,10 +69,11 @@ model Project {
   segments    Segment[]
   workflows   Workflow[]
   campaigns   Campaign[]
-  emails      Email[]
-  events      Event[]
-  domains     Domain[]
-  apiRequests ApiRequest[]
+  emails         Email[]
+  events         Event[]
+  domains        Domain[]
+  apiRequests    ApiRequest[]
+  contactImports ContactImport[]
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -231,6 +232,15 @@ model Segment {
   // Track membership changes (enables segment entry/exit events)
   trackMembership Boolean @default(false)
 
+  // Internal snapshot segments (materialized selections used to send a campaign to
+  // a hand-picked subset of another segment) are hidden from the normal segment list.
+  internal Boolean @default(false)
+
+  // Snapshot origin: the segment this selection was captured from (null for normal segments).
+  sourceSegment   Segment?  @relation("SegmentSnapshots", fields: [sourceSegmentId], references: [id], onDelete: SetNull)
+  sourceSegmentId String?
+  snapshots       Segment[] @relation("SegmentSnapshots")
+
   // Stats (computed)
   memberCount Int @default(0)
 
@@ -246,6 +256,7 @@ model Segment {
   updatedAt DateTime @updatedAt
 
   @@index([projectId])
+  @@index([projectId, internal]) // list query filters out internal snapshots
   @@index([condition(ops: JsonbOps)], type: Gin) // GIN index for segment condition queries
   @@map("segments")
 }
@@ -271,6 +282,82 @@ model SegmentMembership {
   @@index([contactId, exitedAt])
   @@index([enteredAt])
   @@map("segment_memberships")
+}
+
+// ============================================
+// CONTACT IMPORTS (CSV/XLSX with preview, column mapping and undo)
+// ============================================
+
+model ContactImport {
+  id String @id @default(uuid())
+
+  // Source file
+  filename String
+  fileType ImportFileType
+  // Base64 of the uploaded file, kept only between the preview (analyze) and
+  // confirm steps. Cleared once the import has been processed so we don't store
+  // large blobs long-term. Stale PREVIEW rows are purged by a cleanup cron.
+  rawData String?
+
+  // Configuration chosen by the user in the wizard
+  mode    ImportMode @default(UPSERT)
+  // Column → field mapping, e.g.
+  // { "Email": { "field": "email" }, "Plan": { "field": "data", "key": "plan" }, "Notes": { "field": "ignore" } }
+  mapping Json?
+  // Fixed custom fields applied to every imported row, e.g. [{ "key": "sector", "value": "Energía" }].
+  constants Json?
+
+  // Lifecycle
+  status ImportStatus @default(PREVIEW)
+
+  // Results (filled in by the import job)
+  totalRows    Int   @default(0)
+  createdCount Int   @default(0)
+  updatedCount Int   @default(0)
+  skippedCount Int   @default(0)
+  failureCount Int   @default(0)
+  errors       Json? // [{ row: number, email: string, error: string }]
+
+  // Undo support. false when the import affected too many rows to snapshot.
+  undoable Boolean @default(true)
+
+  // Relations
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  changes ContactImportChange[]
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  undoneAt    DateTime?
+
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("contact_imports")
+}
+
+model ContactImportChange {
+  id String @id @default(uuid())
+
+  import   ContactImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  importId String
+
+  // Affected contact and the action taken during the import
+  contactId String
+  email     String
+  action    ImportChangeAction
+
+  // Snapshot of the contact BEFORE the import, used to roll back on undo.
+  // Null for CREATED rows (undo simply deletes the created contact).
+  previousData       Json?
+  previousSubscribed Boolean?
+
+  createdAt DateTime @default(now())
+
+  @@index([importId])
+  @@map("contact_import_changes")
 }
 
 // ============================================
@@ -766,6 +853,31 @@ enum StepExecutionStatus {
 enum SegmentType {
   DYNAMIC // Filter-based segment evaluated against contacts at query time
   STATIC // Manually curated list of contacts managed via memberships
+}
+
+enum ImportFileType {
+  CSV
+  XLSX
+}
+
+enum ImportMode {
+  CREATE // Only create new contacts, skip rows whose email already exists
+  UPDATE // Only update existing contacts, skip rows with a new email
+  UPSERT // Create new and update existing (both)
+}
+
+enum ImportStatus {
+  PREVIEW // Analyzed and awaiting confirmation
+  PROCESSING // Import job is running
+  COMPLETED // Import finished
+  FAILED // Import errored
+  UNDOING // Undo job is running
+  UNDONE // Import has been rolled back
+}
+
+enum ImportChangeAction {
+  CREATED
+  UPDATED
 }
 
 enum EmailSourceType {

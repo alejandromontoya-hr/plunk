@@ -12,6 +12,7 @@ import {
 } from '@plunk/ui';
 import {DashboardLayout} from '../../components/DashboardLayout';
 import {ActivityFeed} from '../../components/ActivityFeed';
+import {useTranslation} from '../../lib/i18n';
 import {Eye, MousePointerClick, Send, Zap} from 'lucide-react';
 import {NextSeo} from 'next-seo';
 import {useQueryState, parseAsString} from 'nuqs';
@@ -28,6 +29,7 @@ interface ActivityStats {
 }
 
 export default function ActivityPage() {
+  const {t} = useTranslation();
   const [typeFilter, setTypeFilter] = useQueryState('type', parseAsString.withDefault('ALL'));
   const [dateRange, setDateRange] = useQueryState('days', parseAsString.withDefault('30'));
 
@@ -38,34 +40,34 @@ export default function ActivityPage() {
 
   const statsCards = [
     {
-      name: 'Events Triggered',
+      name: t('activity.stats.eventsTriggered'),
       value: stats?.totalEvents?.toLocaleString() || '0',
       icon: Zap,
-      description: 'Last 30 days',
+      description: t('activity.stats.last30Days'),
       color: 'text-neutral-600',
       bgColor: 'bg-neutral-100',
     },
     {
-      name: 'Emails Sent',
+      name: t('activity.stats.emailsSent'),
       value: stats?.totalEmailsSent?.toLocaleString() || '0',
       icon: Send,
-      description: 'Last 30 days',
+      description: t('activity.stats.last30Days'),
       color: 'text-neutral-600',
       bgColor: 'bg-neutral-100',
     },
     {
-      name: 'Open Rate',
+      name: t('activity.stats.openRate'),
       value: stats?.openRate ? `${stats.openRate.toFixed(1)}%` : '0%',
       icon: Eye,
-      description: `${stats?.totalEmailsOpened?.toLocaleString() || '0'} opens`,
+      description: t('activity.stats.opens', {count: stats?.totalEmailsOpened?.toLocaleString() || '0'}),
       color: 'text-neutral-600',
       bgColor: 'bg-neutral-100',
     },
     {
-      name: 'Click Rate',
+      name: t('activity.stats.clickRate'),
       value: stats?.clickRate ? `${stats.clickRate.toFixed(1)}%` : '0%',
       icon: MousePointerClick,
-      description: `${stats?.totalEmailsClicked?.toLocaleString() || '0'} clicks`,
+      description: t('activity.stats.clicks', {count: stats?.totalEmailsClicked?.toLocaleString() || '0'}),
       color: 'text-neutral-600',
       bgColor: 'bg-neutral-100',
     },
@@ -73,15 +75,13 @@ export default function ActivityPage() {
 
   return (
     <>
-      <NextSeo title="Activity" />
+      <NextSeo title={t('activity.title')} />
       <DashboardLayout>
         <div className="space-y-6">
           {/* Header */}
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Activity</h1>
-            <p className="text-neutral-500 mt-2 text-sm sm:text-base">
-              Real-time overview of events, emails, and workflow executions across your project.
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">{t('activity.title')}</h1>
+            <p className="text-neutral-500 mt-2 text-sm sm:text-base">{t('activity.subtitle')}</p>
           </div>
 
           {/* Stats Grid */}
@@ -114,35 +114,35 @@ export default function ActivityPage() {
                 <div className="flex-1">
                   <Select value={typeFilter} onValueChange={setTypeFilter}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All Activity Types" />
+                      <SelectValue placeholder={t('activity.filters.allActivityTypes')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ALL">All Activity Types</SelectItem>
-                      <SelectItem value="event.triggered">Events</SelectItem>
+                      <SelectItem value="ALL">{t('activity.filters.allActivityTypes')}</SelectItem>
+                      <SelectItem value="event.triggered">{t('activity.filters.events')}</SelectItem>
                       <SelectItem value="email.sent,email.delivered,email.received,email.opened,email.clicked,email.bounced,email.complaint">
-                        Emails
+                        {t('activity.filters.emails')}
                       </SelectItem>
-                      <SelectItem value="email.sent">Emails Sent</SelectItem>
-                      <SelectItem value="email.delivered">Emails Delivered</SelectItem>
-                      <SelectItem value="email.received">Emails Received</SelectItem>
-                      <SelectItem value="email.opened">Emails Opened</SelectItem>
-                      <SelectItem value="email.clicked">Emails Clicked</SelectItem>
-                      <SelectItem value="email.bounced">Emails Bounced</SelectItem>
-                      <SelectItem value="email.complaint">Email Complaints</SelectItem>
-                      <SelectItem value="workflow.started,workflow.completed">Workflows</SelectItem>
+                      <SelectItem value="email.sent">{t('activity.filters.emailsSent')}</SelectItem>
+                      <SelectItem value="email.delivered">{t('activity.filters.emailsDelivered')}</SelectItem>
+                      <SelectItem value="email.received">{t('activity.filters.emailsReceived')}</SelectItem>
+                      <SelectItem value="email.opened">{t('activity.filters.emailsOpened')}</SelectItem>
+                      <SelectItem value="email.clicked">{t('activity.filters.emailsClicked')}</SelectItem>
+                      <SelectItem value="email.bounced">{t('activity.filters.emailsBounced')}</SelectItem>
+                      <SelectItem value="email.complaint">{t('activity.filters.emailComplaints')}</SelectItem>
+                      <SelectItem value="workflow.started,workflow.completed">{t('activity.filters.workflows')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex-1">
                   <Select value={dateRange} onValueChange={setDateRange}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Last 30 days" />
+                      <SelectValue placeholder={t('activity.filters.last30Days')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Last 24 hours</SelectItem>
-                      <SelectItem value="7">Last 7 days</SelectItem>
-                      <SelectItem value="30">Last 30 days</SelectItem>
-                      <SelectItem value="90">Last 90 days</SelectItem>
+                      <SelectItem value="1">{t('activity.filters.last24Hours')}</SelectItem>
+                      <SelectItem value="7">{t('activity.filters.last7Days')}</SelectItem>
+                      <SelectItem value="30">{t('activity.filters.last30Days')}</SelectItem>
+                      <SelectItem value="90">{t('activity.filters.last90Days')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -153,11 +153,8 @@ export default function ActivityPage() {
           {/* Activity Feed */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>
-                Live feed of all activities happening across your project. Updates automatically as new activities
-                occur.
-              </CardDescription>
+              <CardTitle>{t('activity.feed.title')}</CardTitle>
+              <CardDescription>{t('activity.feed.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ActivityFeed

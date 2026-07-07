@@ -832,6 +832,32 @@ export class ContactService {
   }
 
   /**
+   * Bulk-overwrite a single custom field on Contact.data for the given contacts.
+   * Uses jsonb_set so only that key is written and the rest of `data` is preserved;
+   * a set-based UPDATE keeps this cheap for large batches. Always overwrites.
+   * `updated` = rows written.
+   */
+  public static async bulkSetData(
+    projectId: string,
+    contactIds: string[],
+    field: string,
+    value: string,
+  ): Promise<{updated: number}> {
+    if (contactIds.length === 0 || !field) {
+      return {updated: 0};
+    }
+
+    const updated = await prisma.$executeRaw`
+      UPDATE "contacts"
+      SET "data" = jsonb_set(COALESCE("data", '{}'::jsonb), ARRAY[${field}]::text[], to_jsonb(${value}::text), true),
+          "updatedAt" = NOW()
+      WHERE "projectId" = ${projectId} AND "id" = ANY(${contactIds}::text[])
+    `;
+
+    return {updated};
+  }
+
+  /**
    * Helper: Check if a field is used in a filter condition (recursive)
    */
   private static fieldUsedInCondition(field: string, condition: FilterCondition | null): boolean {

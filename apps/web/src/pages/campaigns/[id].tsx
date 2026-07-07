@@ -62,6 +62,7 @@ import {toast} from 'sonner';
 import useSWR from 'swr';
 import {NextSeo} from 'next-seo';
 import {useActiveProject} from '../../lib/contexts/ActiveProjectProvider';
+import {useTranslation} from '../../lib/i18n';
 
 interface CampaignStats {
   totalRecipients: number;
@@ -77,6 +78,7 @@ interface CampaignStats {
 }
 
 export default function CampaignDetailsPage() {
+  const {t} = useTranslation();
   const router = useRouter();
   const {id} = router.query;
   const {activeProject} = useActiveProject();
@@ -120,6 +122,17 @@ export default function CampaignDetailsPage() {
     | {type: 'delete'};
 
   const [dialog, setDialog] = useState<CampaignDialog>({type: 'none'});
+  const [intentHandled, setIntentHandled] = useState(false);
+
+  // Arriving from the segment results view with "Programar envío" opens the
+  // schedule dialog straight away (audience is already preset to the selection).
+  useEffect(() => {
+    if (intentHandled || !router.isReady) return;
+    if (router.query.intent === 'schedule' && campaign?.data.status === CampaignStatus.DRAFT) {
+      setDialog({type: 'schedule'});
+      setIntentHandled(true);
+    }
+  }, [router.isReady, router.query.intent, campaign?.data.status, intentHandled]);
 
   // Automatically initialize edit fields when campaign is loaded and is a draft
   const isEditMode = campaign?.data.status === CampaignStatus.DRAFT;
@@ -127,36 +140,36 @@ export default function CampaignDetailsPage() {
   const handleCancel = async () => {
     try {
       await network.fetch('POST', `/campaigns/${id}/cancel`);
-      toast.success('Campaign cancelled successfully');
+      toast.success(t('campaigns.toast.cancelled'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to cancel campaign');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.cancelFailed'));
     }
   };
 
   const handleDelete = async () => {
     try {
       await network.fetch('DELETE', `/campaigns/${id}`);
-      toast.success('Campaign deleted successfully');
+      toast.success(t('campaigns.toast.deleted'));
       void router.push('/campaigns');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete campaign');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.deleteFailed'));
     }
   };
 
   const handleSend = async () => {
     try {
       await network.fetch<void>('POST', `/campaigns/${id}/send`);
-      toast.success('Campaign is being sent!');
+      toast.success(t('campaigns.toast.sending'));
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send campaign');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.sendFailed'));
     }
   };
 
   const handleSchedule = async () => {
     if (!scheduledDateTime) {
-      toast.error('Please select a date and time');
+      toast.error(t('campaigns.toast.selectDateTime'));
       return;
     }
 
@@ -165,7 +178,7 @@ export default function CampaignDetailsPage() {
     const now = new Date();
 
     if (scheduledDate.getTime() <= now.getTime()) {
-      toast.error('Scheduled time must be in the future');
+      toast.error(t('campaigns.toast.futureTime'));
       return;
     }
 
@@ -177,19 +190,19 @@ export default function CampaignDetailsPage() {
 
       // Show confirmation with user's local time
       const localTimeString = formatFullDateTime(scheduledDate);
-      toast.success(`Campaign scheduled for ${localTimeString}`);
+      toast.success(t('campaigns.toast.scheduled', {time: localTimeString}));
       setDialog({type: 'none'});
       setScheduledDateTime('');
       setSelectedPreset(null);
       void mutate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to schedule campaign');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.scheduleFailed'));
     }
   };
 
   const handleSendTestEmail = async () => {
     if (!testEmailAddress) {
-      toast.error('Please select a project member');
+      toast.error(t('campaigns.toast.selectMember'));
       return;
     }
 
@@ -200,11 +213,11 @@ export default function CampaignDetailsPage() {
         email: testEmailAddress,
       } as any);
 
-      toast.success(`Test email sent to ${testEmailAddress}`);
+      toast.success(t('campaigns.toast.testSent', {email: testEmailAddress}));
       setDialog({type: 'none'});
       setTestEmailAddress('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send test email');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.testFailed'));
     } finally {
       setDialog(d => (d.type === 'testEmail' ? {type: 'testEmail', sending: false} : d));
     }
@@ -249,7 +262,7 @@ export default function CampaignDetailsPage() {
         });
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update campaign');
+      toast.error(error instanceof Error ? error.message : t('campaigns.toast.updateFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -302,11 +315,11 @@ export default function CampaignDetailsPage() {
       CampaignStatus,
       {variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string}
     > = {
-      DRAFT: {variant: 'secondary', label: 'Draft'},
-      SCHEDULED: {variant: 'default', label: 'Scheduled'},
-      SENDING: {variant: 'default', label: 'Sending'},
-      SENT: {variant: 'default', label: 'Sent'},
-      CANCELLED: {variant: 'destructive', label: 'Cancelled'},
+      DRAFT: {variant: 'secondary', label: t('campaigns.status.DRAFT')},
+      SCHEDULED: {variant: 'default', label: t('campaigns.status.SCHEDULED')},
+      SENDING: {variant: 'default', label: t('campaigns.status.SENDING')},
+      SENT: {variant: 'default', label: t('campaigns.status.SENT')},
+      CANCELLED: {variant: 'destructive', label: t('campaigns.status.CANCELLED')},
     };
 
     const config = variants[status];
@@ -328,7 +341,7 @@ export default function CampaignDetailsPage() {
       <DashboardLayout>
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-neutral-500">Campaign not found</p>
+            <p className="text-neutral-500">{t('campaigns.detail.notFound')}</p>
           </CardContent>
         </Card>
       </DashboardLayout>
@@ -357,20 +370,20 @@ export default function CampaignDetailsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 truncate">{c.name}</h1>
-                  <Badge variant="secondary">Draft</Badge>
+                  <Badge variant="secondary">{t('campaigns.status.DRAFT')}</Badge>
                 </div>
                 <p className="text-neutral-500 mt-1 text-sm sm:text-base">
-                  Make changes to your campaign before sending
+                  {t('campaigns.detail.editSubtitle')}
                 </p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex-1">
                 {!hasChanges && !isSubmitting && (
-                  <span className="text-xs sm:text-sm text-neutral-500">All changes saved</span>
+                  <span className="text-xs sm:text-sm text-neutral-500">{t('campaigns.detail.allChangesSaved')}</span>
                 )}
                 {hasChanges && !isSubmitting && (
-                  <span className="text-xs sm:text-sm text-amber-600">Unsaved changes</span>
+                  <span className="text-xs sm:text-sm text-amber-600">{t('campaigns.detail.unsavedChanges')}</span>
                 )}
               </div>
               <div className="flex gap-2">
@@ -381,7 +394,7 @@ export default function CampaignDetailsPage() {
                   className="flex-1 sm:flex-none"
                 >
                   <Trash2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Delete</span>
+                  <span className="hidden sm:inline">{t('campaigns.detail.delete')}</span>
                 </Button>
                 <Button
                   type="submit"
@@ -390,14 +403,14 @@ export default function CampaignDetailsPage() {
                   className="flex-1 sm:flex-none"
                 >
                   <Save className="h-4 w-4" />
-                  <span className="hidden sm:inline">{isSubmitting ? 'Saving...' : 'Save'}</span>
-                  <span className="sm:hidden">Save</span>
+                  <span className="hidden sm:inline">{isSubmitting ? t('campaigns.detail.saving') : t('campaigns.detail.save')}</span>
+                  <span className="sm:hidden">{t('campaigns.detail.save')}</span>
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button type="button" className="flex-1 sm:flex-none">
                       <Send className="h-4 w-4" />
-                      <span className="hidden sm:inline">Send</span>
+                      <span className="hidden sm:inline">{t('campaigns.detail.send')}</span>
                       <ChevronDown className="h-4 w-4 sm:ml-1" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -406,9 +419,9 @@ export default function CampaignDetailsPage() {
                       <div className="flex items-start gap-3">
                         <TestTube className="h-4 w-4 mt-0.5 text-neutral-700" />
                         <div className="flex flex-col gap-0.5 flex-1">
-                          <span className="font-medium text-sm">Send Test Email</span>
+                          <span className="font-medium text-sm">{t('campaigns.detail.sendTestEmail')}</span>
                           <span className="text-xs text-neutral-500 leading-snug">
-                            Preview in your inbox before sending
+                            {t('campaigns.detail.sendTestEmailDescription')}
                           </span>
                         </div>
                       </div>
@@ -417,9 +430,9 @@ export default function CampaignDetailsPage() {
                       <div className="flex items-start gap-3">
                         <Send className="h-4 w-4 mt-0.5 text-neutral-700" />
                         <div className="flex flex-col gap-0.5 flex-1">
-                          <span className="font-medium text-sm">Send Now</span>
+                          <span className="font-medium text-sm">{t('campaigns.detail.sendNow')}</span>
                           <span className="text-xs text-neutral-500 leading-snug">
-                            Send immediately to all recipients
+                            {t('campaigns.detail.sendNowDescription')}
                           </span>
                         </div>
                       </div>
@@ -428,8 +441,8 @@ export default function CampaignDetailsPage() {
                       <div className="flex items-start gap-3">
                         <Calendar className="h-4 w-4 mt-0.5 text-neutral-700" />
                         <div className="flex flex-col gap-0.5 flex-1">
-                          <span className="font-medium text-sm">Schedule for Later</span>
-                          <span className="text-xs text-neutral-500 leading-snug">Choose a specific date and time</span>
+                          <span className="font-medium text-sm">{t('campaigns.detail.scheduleForLater')}</span>
+                          <span className="text-xs text-neutral-500 leading-snug">{t('campaigns.detail.scheduleForLaterDescription')}</span>
                         </div>
                       </div>
                     </DropdownMenuItem>
@@ -444,14 +457,14 @@ export default function CampaignDetailsPage() {
           <Card>
             <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
               <div>
-                <CardTitle>Audience</CardTitle>
-                <CardDescription>Who will receive this campaign when you send</CardDescription>
+                <CardTitle>{t('campaigns.audience.title')}</CardTitle>
+                <CardDescription>{t('campaigns.audience.descriptionEdit')}</CardDescription>
               </div>
               {draftRecipientCount > 0 && (
                 <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 shrink-0">
                   <Users className="h-4 w-4 text-neutral-500" />
                   <span className="text-sm font-semibold text-neutral-900 tabular-nums">
-                    {draftRecipientCount.toLocaleString()} {draftRecipientCount === 1 ? 'recipient' : 'recipients'}
+                    {draftRecipientCount.toLocaleString()} {draftRecipientCount === 1 ? t('campaigns.audience.recipient') : t('campaigns.audience.recipients')}
                   </span>
                 </div>
               )}
@@ -460,7 +473,7 @@ export default function CampaignDetailsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="audienceType">
-                    Audience Type <span className="text-red-500">*</span>
+                    {t('campaigns.audience.typeLabel')} <span className="text-red-500">*</span>
                   </Label>
                   <Select
                     value={editedCampaign.audienceType ?? c.audienceType}
@@ -473,18 +486,18 @@ export default function CampaignDetailsPage() {
                     }}
                   >
                     <SelectTrigger id="audienceType">
-                      <SelectValue placeholder="Select audience type" />
+                      <SelectValue placeholder={t('campaigns.audience.typePlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItemWithDescription
                         value={CampaignAudienceType.ALL}
-                        title={(editedCampaign.type ?? c.type) === TemplateType.TRANSACTIONAL ? 'All Contacts' : 'All Subscribed Contacts'}
-                        description={(editedCampaign.type ?? c.type) === TemplateType.TRANSACTIONAL ? 'Send to all contacts regardless of subscription status' : "Send to everyone who hasn't unsubscribed"}
+                        title={(editedCampaign.type ?? c.type) === TemplateType.TRANSACTIONAL ? t('campaigns.audience.allContacts') : t('campaigns.audience.allSubscribedContacts')}
+                        description={(editedCampaign.type ?? c.type) === TemplateType.TRANSACTIONAL ? t('campaigns.audience.allContactsDescription') : t('campaigns.audience.allSubscribedDescription')}
                       />
                       <SelectItemWithDescription
                         value={CampaignAudienceType.SEGMENT}
-                        title="Specific Segment"
-                        description="Target a defined group of contacts"
+                        title={t('campaigns.audience.specificSegment')}
+                        description={t('campaigns.audience.specificSegmentDescription')}
                       />
                     </SelectContent>
                   </Select>
@@ -493,7 +506,7 @@ export default function CampaignDetailsPage() {
                 {(editedCampaign.audienceType ?? c.audienceType) === CampaignAudienceType.SEGMENT && (
                   <div className="space-y-2">
                     <Label htmlFor="segment">
-                      Select Segment <span className="text-red-500">*</span>
+                      {t('campaigns.audience.selectSegmentLabel')} <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={editedCampaign.segmentId ?? c.segmentId ?? undefined}
@@ -507,7 +520,7 @@ export default function CampaignDetailsPage() {
                     >
                       <SelectTrigger id="segment">
                         <SelectValue
-                          placeholder={segments && segments.length > 0 ? 'Choose a segment' : 'No segments available'}
+                          placeholder={segments && segments.length > 0 ? t('campaigns.audience.selectSegmentPlaceholder') : t('campaigns.audience.noSegmentsPlaceholder')}
                         />
                       </SelectTrigger>
                       <SelectContent>
@@ -518,16 +531,16 @@ export default function CampaignDetailsPage() {
                               key={segment.id}
                               value={segment.id}
                               title={segment.name}
-                              description={`${segment.memberCount.toLocaleString()} contacts`}
+                              description={t('campaigns.audience.segmentContacts', {count: segment.memberCount.toLocaleString()})}
                             />
                           ))}
                       </SelectContent>
                     </Select>
                     {segments && segments.length === 0 && (
                       <p className="text-sm text-neutral-500">
-                        No segments found.{' '}
+                        {t('campaigns.audience.noSegmentsFound')}{' '}
                         <Link href="/segments/new" className="underline">
-                          Create one first
+                          {t('campaigns.audience.createOneFirst')}
                         </Link>
                       </p>
                     )}
@@ -537,16 +550,15 @@ export default function CampaignDetailsPage() {
 
               {editedCampaign.audienceType === CampaignAudienceType.FILTERED && (
                 <p className="text-sm text-neutral-500">
-                  Filtered audiences are configured with advanced filter conditions
+                  {t('campaigns.audience.filteredDescription')}
                 </p>
               )}
 
               {draftRecipientCount > 0 && (
                 <p className="text-xs text-neutral-500">
-                  Recalculated at send time. Final count may differ if contacts{' '}
                   {(editedCampaign.type ?? c.type) === TemplateType.TRANSACTIONAL
-                    ? 'are added or removed, or segment membership changes.'
-                    : 'subscribe, unsubscribe, or segment membership changes.'
+                    ? t('campaigns.audience.recalcTransactional')
+                    : t('campaigns.audience.recalcMarketing')
                   }
                 </p>
               )}
@@ -558,17 +570,17 @@ export default function CampaignDetailsPage() {
             {/* Basic Information */}
             <Card>
               <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>Name and describe your campaign</CardDescription>
+                <CardTitle>{t('campaigns.basicInfo.title')}</CardTitle>
+                <CardDescription>{t('campaigns.basicInfo.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">
-                    Campaign Name <span className="text-red-500">*</span>
+                    {t('campaigns.basicInfo.nameLabel')} <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="name"
-                    placeholder="e.g., Spring Sale Announcement"
+                    placeholder={t('campaigns.basicInfo.namePlaceholder')}
                     value={editedCampaign.name || ''}
                     onChange={e => setEditedCampaign({...editedCampaign, name: e.target.value})}
                     required
@@ -576,10 +588,10 @@ export default function CampaignDetailsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">{t('campaigns.basicInfo.descriptionLabel')}</Label>
                   <Input
                     id="description"
-                    placeholder="Internal notes about this campaign"
+                    placeholder={t('campaigns.basicInfo.descriptionPlaceholder')}
                     value={editedCampaign.description || ''}
                     onChange={e => setEditedCampaign({...editedCampaign, description: e.target.value})}
                   />
@@ -590,15 +602,15 @@ export default function CampaignDetailsPage() {
             {/* Campaign Type */}
             <Card>
               <CardHeader>
-                <CardTitle>Campaign Type</CardTitle>
-                <CardDescription>Choose how this campaign should be treated</CardDescription>
+                <CardTitle>{t('campaigns.campaignType.title')}</CardTitle>
+                <CardDescription>{t('campaigns.campaignType.description')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-2">
                   {([
-                    {value: TemplateType.MARKETING, label: 'Marketing', description: 'Subscribed contacts, includes unsubscribe link'},
-                    {value: TemplateType.TRANSACTIONAL, label: 'Transactional', description: 'All contacts, no subscription check or footer'},
-                    {value: TemplateType.HEADLESS, label: 'Headless', description: 'Subscribed contacts, no Plunk footer'},
+                    {value: TemplateType.MARKETING, label: t('campaigns.campaignType.marketing'), description: t('campaigns.campaignType.marketingDescription')},
+                    {value: TemplateType.TRANSACTIONAL, label: t('campaigns.campaignType.transactional'), description: t('campaigns.campaignType.transactionalDescription')},
+                    {value: TemplateType.HEADLESS, label: t('campaigns.campaignType.headless'), description: t('campaigns.campaignType.headlessDescription')},
                   ] as const).map(({value, label, description}) => (
                     <button
                       key={value}
@@ -620,11 +632,11 @@ export default function CampaignDetailsPage() {
                   <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 overflow-hidden">
                     <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-100/60 px-3 py-2">
                       <TriangleAlert className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                      <p className="text-xs font-semibold text-amber-900">No unsubscribe link detected</p>
+                      <p className="text-xs font-semibold text-amber-900">{t('campaigns.campaignType.noUnsubscribeTitle')}</p>
                     </div>
                     <div className="px-3 py-2.5 space-y-2">
                       <p className="text-xs text-amber-800 leading-relaxed">
-                        You are responsible for providing recipients a way to opt out. Use the Plunk variables below to build your own footer.
+                        {t('campaigns.campaignType.noUnsubscribeBody')}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         <code className="inline-flex items-center rounded bg-amber-100 border border-amber-200 px-1.5 py-0.5 font-mono text-[11px] text-amber-900">
@@ -644,8 +656,8 @@ export default function CampaignDetailsPage() {
           {/* Email Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>Email Settings</CardTitle>
-              <CardDescription>Configure sender information and subject</CardDescription>
+              <CardTitle>{t('campaigns.emailSettings.title')}</CardTitle>
+              <CardDescription>{t('campaigns.emailSettings.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <EmailSettings
@@ -660,11 +672,11 @@ export default function CampaignDetailsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="subject">
-                  Email Subject <span className="text-red-500">*</span>
+                  {t('campaigns.emailSettings.subjectLabel')} <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="subject"
-                  placeholder="e.g., Introducing our Spring Sale!"
+                  placeholder={t('campaigns.emailSettings.subjectPlaceholder')}
                   value={editedCampaign.subject || ''}
                   onChange={e => setEditedCampaign({...editedCampaign, subject: e.target.value})}
                   required
@@ -676,8 +688,8 @@ export default function CampaignDetailsPage() {
           {/* Email Content */}
           <Card className="overflow-visible">
             <CardHeader>
-              <CardTitle>Email Content</CardTitle>
-              <CardDescription>Design your email message</CardDescription>
+              <CardTitle>{t('campaigns.emailContent.title')}</CardTitle>
+              <CardDescription>{t('campaigns.emailContent.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               <EmailEditor
@@ -694,17 +706,17 @@ export default function CampaignDetailsPage() {
           <Dialog open={dialog.type === 'testEmail'} onOpenChange={open => !open && setDialog({type: 'none'})}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Send a preview</DialogTitle>
+                <DialogTitle>{t('campaigns.testDialog.title')}</DialogTitle>
                 <DialogDescription>
-                  Get a copy of this campaign in your inbox before sending it for real.
+                  {t('campaigns.testDialog.description')}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-2">
-                <Label htmlFor="testEmail">Send to</Label>
+                <Label htmlFor="testEmail">{t('campaigns.testDialog.sendToLabel')}</Label>
                 <Select value={testEmailAddress} onValueChange={setTestEmailAddress}>
                   <SelectTrigger id="testEmail">
-                    <SelectValue placeholder="Choose a teammate" />
+                    <SelectValue placeholder={t('campaigns.testDialog.sendToPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {projectMembers?.data.map(member => (
@@ -718,14 +730,14 @@ export default function CampaignDetailsPage() {
 
               {/* Preview of how the email will arrive */}
               <div className="space-y-2">
-                <Label className="text-neutral-500">Will arrive as</Label>
+                <Label className="text-neutral-500">{t('campaigns.testDialog.willArriveLabel')}</Label>
                 <div className="rounded-lg border border-neutral-200 bg-neutral-50 divide-y divide-neutral-200 text-sm">
                   <div className="grid grid-cols-[64px_1fr] gap-3 px-3 py-2.5">
-                    <span className="text-neutral-500">From</span>
+                    <span className="text-neutral-500">{t('campaigns.testDialog.from')}</span>
                     <span className="text-neutral-900 truncate">{editedCampaign.from || c.from}</span>
                   </div>
                   <div className="grid grid-cols-[64px_1fr] gap-3 px-3 py-2.5">
-                    <span className="text-neutral-500">Subject</span>
+                    <span className="text-neutral-500">{t('campaigns.testDialog.subject')}</span>
                     <span className="text-neutral-900 truncate">
                       <span className="font-medium">[TEST]</span> {editedCampaign.subject || c.subject}
                     </span>
@@ -734,7 +746,7 @@ export default function CampaignDetailsPage() {
               </div>
 
               <p className="text-xs text-neutral-500 leading-relaxed">
-                Variables like {'{{firstName}}'} aren{"'"}t replaced in previews. You{"'"}ll see them as written.
+                {t('campaigns.testDialog.variablesNote')}
               </p>
 
               <DialogFooter>
@@ -746,7 +758,7 @@ export default function CampaignDetailsPage() {
                     setTestEmailAddress('');
                   }}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   type="button"
@@ -754,7 +766,7 @@ export default function CampaignDetailsPage() {
                   disabled={(dialog.type === 'testEmail' && dialog.sending) || !testEmailAddress}
                 >
                   <TestTube className="h-4 w-4" />
-                  {dialog.type === 'testEmail' && dialog.sending ? 'Sending...' : 'Send preview'}
+                  {dialog.type === 'testEmail' && dialog.sending ? t('campaigns.testDialog.sending') : t('campaigns.testDialog.sendPreview')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -764,24 +776,24 @@ export default function CampaignDetailsPage() {
           <Dialog open={dialog.type === 'schedule'} onOpenChange={open => !open && setDialog({type: 'none'})}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Schedule for later</DialogTitle>
+                <DialogTitle>{t('campaigns.scheduleDialog.title')}</DialogTitle>
                 <DialogDescription>
-                  Pick a time and Plunk will send it for you. Times shown in {getUserTimezone()}.
+                  {t('campaigns.scheduleDialog.description', {timezone: getUserTimezone()})}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-5 py-2">
                 {/* Quick presets */}
                 <div className="space-y-2">
-                  <Label>Quick options</Label>
+                  <Label>{t('campaigns.scheduleDialog.quickOptions')}</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      {key: 'in1h', label: 'In 1 hour', getValue: schedulePresets.inOneHour},
-                      {key: 'in3h', label: 'In 3 hours', getValue: schedulePresets.inThreeHours},
-                      {key: 'tom9', label: 'Tomorrow, 9 AM', getValue: schedulePresets.tomorrowAt9AM},
-                      {key: 'tom2', label: 'Tomorrow, 2 PM', getValue: schedulePresets.tomorrowAt2PM},
-                      {key: 'nextMon', label: 'Next Monday', getValue: schedulePresets.nextMonday},
-                      {key: 'in1w', label: 'In 1 week', getValue: schedulePresets.inOneWeek},
+                      {key: 'in1h', label: t('campaigns.scheduleDialog.in1h'), getValue: schedulePresets.inOneHour},
+                      {key: 'in3h', label: t('campaigns.scheduleDialog.in3h'), getValue: schedulePresets.inThreeHours},
+                      {key: 'tom9', label: t('campaigns.scheduleDialog.tomorrow9'), getValue: schedulePresets.tomorrowAt9AM},
+                      {key: 'tom2', label: t('campaigns.scheduleDialog.tomorrow2'), getValue: schedulePresets.tomorrowAt2PM},
+                      {key: 'nextMon', label: t('campaigns.scheduleDialog.nextMonday'), getValue: schedulePresets.nextMonday},
+                      {key: 'in1w', label: t('campaigns.scheduleDialog.in1w'), getValue: schedulePresets.inOneWeek},
                     ].map(({key, label, getValue}) => {
                       const isActive = selectedPreset === key;
                       return (
@@ -807,7 +819,7 @@ export default function CampaignDetailsPage() {
 
                 {/* Custom Date/Time */}
                 <div className="space-y-2">
-                  <Label htmlFor="scheduledDateTime">Or pick an exact time</Label>
+                  <Label htmlFor="scheduledDateTime">{t('campaigns.scheduleDialog.exactTimeLabel')}</Label>
                   <Input
                     id="scheduledDateTime"
                     type="datetime-local"
@@ -826,7 +838,7 @@ export default function CampaignDetailsPage() {
                     <div className="px-4 py-3">
                       <div className="flex items-center gap-2 text-neutral-500">
                         <Calendar className="h-3.5 w-3.5" />
-                        <span className="text-xs font-medium uppercase tracking-wide">Sending on</span>
+                        <span className="text-xs font-medium uppercase tracking-wide">{t('campaigns.scheduleDialog.sendingOn')}</span>
                       </div>
                       <p className="mt-1 text-base font-semibold text-neutral-900">
                         {formatFullDateTime(new Date(scheduledDateTime))}
@@ -836,20 +848,20 @@ export default function CampaignDetailsPage() {
                       <div className="px-4 py-3">
                         <div className="flex items-center gap-2 text-neutral-500">
                           <Users className="h-3.5 w-3.5" />
-                          <span className="text-xs font-medium uppercase tracking-wide">To</span>
+                          <span className="text-xs font-medium uppercase tracking-wide">{t('campaigns.scheduleDialog.to')}</span>
                         </div>
                         <p className="mt-1 text-sm text-neutral-900">
                           <span className="font-semibold tabular-nums">{draftRecipientCount.toLocaleString()}</span>
                           <span className="text-neutral-600">
-                            {draftRecipientCount === 1 ? ' recipient in ' : ' recipients in '}
+                            {draftRecipientCount === 1 ? ` ${t('campaigns.scheduleDialog.recipientIn')} ` : ` ${t('campaigns.scheduleDialog.recipientsIn')} `}
                           </span>
                           {(editedCampaign.audienceType ?? c.audienceType) === CampaignAudienceType.ALL &&
                             ((editedCampaign.type ?? c.type) === TemplateType.TRANSACTIONAL
-                              ? 'all contacts'
-                              : 'all subscribed contacts')}
+                              ? t('campaigns.audience.allContactsLower')
+                              : t('campaigns.audience.allSubscribedLower'))}
                           {(editedCampaign.audienceType ?? c.audienceType) === CampaignAudienceType.SEGMENT &&
-                            (segments?.find(s => s.id === (editedCampaign.segmentId ?? c.segmentId))?.name ?? 'the selected segment')}
-                          {(editedCampaign.audienceType ?? c.audienceType) === CampaignAudienceType.FILTERED && 'filtered contacts'}
+                            (segments?.find(s => s.id === (editedCampaign.segmentId ?? c.segmentId))?.name ?? t('campaigns.audience.selectedSegment'))}
+                          {(editedCampaign.audienceType ?? c.audienceType) === CampaignAudienceType.FILTERED && t('campaigns.audience.filteredContactsLower')}
                         </p>
                       </div>
                     )}
@@ -858,7 +870,7 @@ export default function CampaignDetailsPage() {
               </div>
 
               <p className="text-xs text-neutral-500 leading-relaxed">
-                You can edit or cancel this campaign anytime before it sends.
+                {t('campaigns.scheduleDialog.editNote')}
               </p>
 
               <DialogFooter>
@@ -871,11 +883,11 @@ export default function CampaignDetailsPage() {
                     setSelectedPreset(null);
                   }}
                 >
-                  Not yet
+                  {t('campaigns.scheduleDialog.notYet')}
                 </Button>
                 <Button type="button" onClick={handleSchedule} disabled={!scheduledDateTime}>
                   <Calendar className="h-4 w-4" />
-                  Schedule send
+                  {t('campaigns.scheduleDialog.scheduleSend')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -888,8 +900,8 @@ export default function CampaignDetailsPage() {
         <Dialog open={dialog.type === 'send'} onOpenChange={open => !open && setDialog({type: 'none'})}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Ready to send?</DialogTitle>
-              <DialogDescription>Review the details below, then send when you{"'"}re ready.</DialogDescription>
+              <DialogTitle>{t('campaigns.sendDialog.title')}</DialogTitle>
+              <DialogDescription>{t('campaigns.sendDialog.description')}</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
@@ -897,7 +909,7 @@ export default function CampaignDetailsPage() {
               <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-5 py-6 text-center">
                 <div className="flex items-center justify-center gap-2 text-neutral-500">
                   <Users className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase tracking-wide">Recipients</span>
+                  <span className="text-xs font-medium uppercase tracking-wide">{t('campaigns.sendDialog.recipients')}</span>
                 </div>
                 <div className="mt-1.5 text-4xl font-bold text-neutral-900 tabular-nums">
                   {draftRecipientCount.toLocaleString()}
@@ -905,22 +917,22 @@ export default function CampaignDetailsPage() {
                 <div className="mt-1 text-xs text-neutral-500">
                   {(editedCampaign.audienceType ?? c.audienceType) === CampaignAudienceType.ALL &&
                     ((editedCampaign.type ?? c.type) === TemplateType.TRANSACTIONAL
-                      ? 'All contacts'
-                      : 'All subscribed contacts')}
+                      ? t('campaigns.audience.allContacts')
+                      : t('campaigns.audience.allSubscribedContacts'))}
                   {(editedCampaign.audienceType ?? c.audienceType) === CampaignAudienceType.SEGMENT &&
-                    (segments?.find(s => s.id === (editedCampaign.segmentId ?? c.segmentId))?.name ?? 'Selected segment')}
-                  {(editedCampaign.audienceType ?? c.audienceType) === CampaignAudienceType.FILTERED && 'Filtered contacts'}
+                    (segments?.find(s => s.id === (editedCampaign.segmentId ?? c.segmentId))?.name ?? t('campaigns.audience.selectedSegmentTitle'))}
+                  {(editedCampaign.audienceType ?? c.audienceType) === CampaignAudienceType.FILTERED && t('campaigns.audience.filteredContacts')}
                 </div>
               </div>
 
               {/* Compact summary */}
               <div className="rounded-lg border border-neutral-200 divide-y divide-neutral-200 text-sm">
                 <div className="grid grid-cols-[80px_1fr] gap-3 px-3 py-2.5">
-                  <span className="text-neutral-500">From</span>
+                  <span className="text-neutral-500">{t('campaigns.sendDialog.from')}</span>
                   <span className="text-neutral-900 truncate">{editedCampaign.from || c.from}</span>
                 </div>
                 <div className="grid grid-cols-[80px_1fr] gap-3 px-3 py-2.5">
-                  <span className="text-neutral-500">Subject</span>
+                  <span className="text-neutral-500">{t('campaigns.sendDialog.subject')}</span>
                   <span className="text-neutral-900 truncate">{editedCampaign.subject || c.subject}</span>
                 </div>
               </div>
@@ -929,18 +941,20 @@ export default function CampaignDetailsPage() {
               <div className="flex items-start gap-2 rounded-lg bg-neutral-50 px-3 py-2.5">
                 <Info className="h-4 w-4 text-neutral-500 mt-0.5 shrink-0" />
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  Sending takes a few minutes. You can cancel the campaign at any time while it{"'"}s still sending.
+                  {t('campaigns.sendDialog.reassurance')}
                 </p>
               </div>
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialog({type: 'none'})}>
-                Not yet
+                {t('campaigns.sendDialog.notYet')}
               </Button>
               <Button onClick={async () => { await handleSend(); setDialog({type: 'none'}); }}>
                 <Send className="h-4 w-4" />
-                Send to {draftRecipientCount.toLocaleString()} {draftRecipientCount === 1 ? 'contact' : 'contacts'}
+                {draftRecipientCount === 1
+                  ? t('campaigns.sendDialog.sendTo', {count: draftRecipientCount.toLocaleString()})
+                  : t('campaigns.sendDialog.sendToPlural', {count: draftRecipientCount.toLocaleString()})}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -950,9 +964,9 @@ export default function CampaignDetailsPage() {
           open={dialog.type === 'delete'}
           onOpenChange={open => !open && setDialog({type: 'none'})}
           onConfirm={handleDelete}
-          title="Delete Campaign"
-          description="Are you sure you want to delete this draft campaign? This action cannot be undone."
-          confirmText="Delete Campaign"
+          title={t('campaigns.dialogs.deleteTitle')}
+          description={t('campaigns.dialogs.deleteDescription')}
+          confirmText={t('campaigns.dialogs.deleteConfirm')}
           variant="destructive"
         />
       </DashboardLayout>
@@ -984,8 +998,8 @@ export default function CampaignDetailsPage() {
             <div className="flex justify-end">
               <Button variant="destructive" onClick={() => setDialog({type: 'cancel'})} className="w-full sm:w-auto">
                 <XCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">Cancel Campaign</span>
-                <span className="sm:hidden">Cancel</span>
+                <span className="hidden sm:inline">{t('campaigns.detail.cancelCampaign')}</span>
+                <span className="sm:hidden">{t('campaigns.detail.cancelShort')}</span>
               </Button>
             </div>
           )}
@@ -998,16 +1012,16 @@ export default function CampaignDetailsPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-neutral-900 text-lg">Sending in progress</h3>
+                    <h3 className="font-semibold text-neutral-900 text-lg">{t('campaigns.stats.sendingInProgress')}</h3>
                     <p className="text-sm text-neutral-500 mt-1">
-                      {s.sentCount.toLocaleString()} of {s.totalRecipients.toLocaleString()} emails sent
+                      {t('campaigns.stats.emailsSent', {sent: s.sentCount.toLocaleString(), total: s.totalRecipients.toLocaleString()})}
                     </p>
                   </div>
                   <div className="text-right">
                     <div className="text-3xl font-bold text-neutral-900">
                       {((s.sentCount / s.totalRecipients) * 100).toFixed(0)}%
                     </div>
-                    <p className="text-xs text-neutral-500 mt-1">Complete</p>
+                    <p className="text-xs text-neutral-500 mt-1">{t('campaigns.stats.complete')}</p>
                   </div>
                 </div>
                 <div className="w-full bg-neutral-100 rounded-full h-2">
@@ -1016,7 +1030,7 @@ export default function CampaignDetailsPage() {
                     style={{width: `${(s.sentCount / s.totalRecipients) * 100}%`}}
                   />
                 </div>
-                <p className="text-xs text-neutral-400">This page updates automatically every 5 seconds</p>
+                <p className="text-xs text-neutral-400">{t('campaigns.stats.autoUpdate')}</p>
               </div>
             </CardContent>
           </Card>
@@ -1027,50 +1041,50 @@ export default function CampaignDetailsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-neutral-500">Total Recipients</CardTitle>
+                <CardTitle className="text-sm font-medium text-neutral-500">{t('campaigns.stats.totalRecipients')}</CardTitle>
                 <Users className="h-4 w-4 text-neutral-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-neutral-900">{s.totalRecipients.toLocaleString()}</div>
                 <p className="text-xs text-neutral-500 mt-2">
-                  {s.sentCount.toLocaleString()} sent ({((s.sentCount / s.totalRecipients) * 100).toFixed(1)}%)
+                  {t('campaigns.stats.sentPercent', {sent: s.sentCount.toLocaleString(), percent: ((s.sentCount / s.totalRecipients) * 100).toFixed(1)})}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-neutral-500">Delivery Rate</CardTitle>
+                <CardTitle className="text-sm font-medium text-neutral-500">{t('campaigns.stats.deliveryRate')}</CardTitle>
                 <Mail className="h-4 w-4 text-neutral-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-neutral-900">{s.deliveryRate.toFixed(1)}%</div>
                 <p className="text-xs text-neutral-500 mt-2">
-                  {s.deliveredCount.toLocaleString()} delivered
-                  {s.bouncedCount > 0 && `, ${s.bouncedCount} bounced`}
+                  {t('campaigns.stats.delivered', {count: s.deliveredCount.toLocaleString()})}
+                  {s.bouncedCount > 0 && t('campaigns.stats.bounced', {count: s.bouncedCount})}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-neutral-500">Open Rate</CardTitle>
+                <CardTitle className="text-sm font-medium text-neutral-500">{t('campaigns.stats.openRate')}</CardTitle>
                 <TrendingUp className="h-4 w-4 text-neutral-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-neutral-900">{s.openRate.toFixed(1)}%</div>
-                <p className="text-xs text-neutral-500 mt-2">{s.openedCount.toLocaleString()} opened</p>
+                <p className="text-xs text-neutral-500 mt-2">{t('campaigns.stats.opened', {count: s.openedCount.toLocaleString()})}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-neutral-500">Click Rate</CardTitle>
+                <CardTitle className="text-sm font-medium text-neutral-500">{t('campaigns.stats.clickRate')}</CardTitle>
                 <MousePointer className="h-4 w-4 text-neutral-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-neutral-900">{s.clickRate.toFixed(1)}%</div>
-                <p className="text-xs text-neutral-500 mt-2">{s.clickedCount.toLocaleString()} clicked</p>
+                <p className="text-xs text-neutral-500 mt-2">{t('campaigns.stats.clicked', {count: s.clickedCount.toLocaleString()})}</p>
               </CardContent>
             </Card>
           </div>
@@ -1081,26 +1095,26 @@ export default function CampaignDetailsPage() {
           {/* Email Content - Takes 2 columns */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Email Preview</CardTitle>
-              <CardDescription>How your email will appear to recipients</CardDescription>
+              <CardTitle>{t('campaigns.preview.title')}</CardTitle>
+              <CardDescription>{t('campaigns.preview.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Email Header Info */}
               <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 space-y-2">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs text-neutral-500 uppercase tracking-wide font-medium">Subject</p>
+                    <p className="text-xs text-neutral-500 uppercase tracking-wide font-medium">{t('campaigns.preview.subject')}</p>
                     <p className="text-base font-semibold text-neutral-900 mt-1">{c.subject}</p>
                   </div>
                 </div>
                 <div className="flex gap-6 pt-2 border-t border-neutral-200">
                   <div>
-                    <p className="text-xs text-neutral-500">From</p>
+                    <p className="text-xs text-neutral-500">{t('campaigns.preview.from')}</p>
                     <p className="text-sm text-neutral-900 mt-0.5">{c.from}</p>
                   </div>
                   {c.replyTo && (
                     <div>
-                      <p className="text-xs text-neutral-500">Reply-To</p>
+                      <p className="text-xs text-neutral-500">{t('campaigns.preview.replyTo')}</p>
                       <p className="text-sm text-neutral-900 mt-0.5">{c.replyTo}</p>
                     </div>
                   )}
@@ -1109,7 +1123,7 @@ export default function CampaignDetailsPage() {
 
               {/* Email Body Preview */}
               <div>
-                <p className="text-sm font-medium text-neutral-700 mb-3">Message Content</p>
+                <p className="text-sm font-medium text-neutral-700 mb-3">{t('campaigns.preview.messageContent')}</p>
                 <div className="border-2 border-neutral-200 rounded-lg overflow-hidden bg-white">
                   <div className="p-6 max-h-96 overflow-y-auto">
                     <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(c.body)}} />
@@ -1122,26 +1136,26 @@ export default function CampaignDetailsPage() {
           {/* Campaign Details */}
           <Card>
             <CardHeader>
-              <CardTitle>Campaign Info</CardTitle>
-              <CardDescription>Configuration and metadata</CardDescription>
+              <CardTitle>{t('campaigns.info.title')}</CardTitle>
+              <CardDescription>{t('campaigns.info.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Audience */}
               <div className="pb-3 border-b border-neutral-100">
-                <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2">Audience</p>
+                <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2">{t('campaigns.info.audience')}</p>
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-neutral-400" />
                   <div>
                     <p className="text-sm font-medium text-neutral-900">
-                      {c.audienceType === CampaignAudienceType.ALL && 'All Subscribed Contacts'}
+                      {c.audienceType === CampaignAudienceType.ALL && t('campaigns.audience.allSubscribedContacts')}
                       {c.audienceType === CampaignAudienceType.SEGMENT &&
-                        (segments?.find(s => s.id === c.segmentId)?.name || 'Selected Segment')}
-                      {c.audienceType === CampaignAudienceType.FILTERED && 'Filtered Contacts'}
+                        (segments?.find(s => s.id === c.segmentId)?.name || t('campaigns.audience.selectedSegmentTitle'))}
+                      {c.audienceType === CampaignAudienceType.FILTERED && t('campaigns.audience.filteredContacts')}
                     </p>
                     {c.audienceType === CampaignAudienceType.SEGMENT &&
                       segments?.find(s => s.id === c.segmentId)?.memberCount && (
                         <p className="text-xs text-neutral-500">
-                          {segments.find(s => s.id === c.segmentId)!.memberCount.toLocaleString()} contacts
+                          {t('campaigns.info.segmentContacts', {count: segments.find(s => s.id === c.segmentId)!.memberCount.toLocaleString()})}
                         </p>
                       )}
                   </div>
@@ -1151,7 +1165,7 @@ export default function CampaignDetailsPage() {
               {/* Scheduling Info */}
               {c.scheduledFor && (
                 <div className="pb-3 border-b border-neutral-100">
-                  <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2">Scheduled For</p>
+                  <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2">{t('campaigns.info.scheduledFor')}</p>
                   <div className="flex items-start gap-2">
                     <Calendar className="h-4 w-4 text-neutral-400 mt-0.5" />
                     <div className="space-y-2">
@@ -1160,11 +1174,11 @@ export default function CampaignDetailsPage() {
                           {formatFullDateTime(new Date(c.scheduledFor))}
                         </p>
                         <p className="text-xs text-neutral-500 mt-1">
-                          UTC: {formatUTCDateTime(new Date(c.scheduledFor))}
+                          {t('campaigns.info.utc', {time: formatUTCDateTime(new Date(c.scheduledFor))})}
                         </p>
                       </div>
                       {c.status === CampaignStatus.SCHEDULED && (
-                        <p className="text-xs text-neutral-500">Recipient count will be recalculated at send time</p>
+                        <p className="text-xs text-neutral-500">{t('campaigns.info.recalcNote')}</p>
                       )}
                     </div>
                   </div>
@@ -1174,7 +1188,7 @@ export default function CampaignDetailsPage() {
               {/* Sent At */}
               {c.sentAt && (
                 <div className="pb-3 border-b border-neutral-100">
-                  <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2">Sent On</p>
+                  <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2">{t('campaigns.info.sentOn')}</p>
                   <div className="flex items-center gap-2">
                     <Send className="h-4 w-4 text-neutral-400" />
                     <p className="text-sm font-medium text-neutral-900">{formatFullDateTime(new Date(c.sentAt))}</p>
@@ -1190,9 +1204,9 @@ export default function CampaignDetailsPage() {
         open={dialog.type === 'cancel'}
         onOpenChange={open => !open && setDialog({type: 'none'})}
         onConfirm={handleCancel}
-        title="Cancel Campaign"
-        description="Are you sure you want to cancel this campaign?"
-        confirmText="Cancel Campaign"
+        title={t('campaigns.dialogs.cancelTitle')}
+        description={t('campaigns.dialogs.cancelDescription')}
+        confirmText={t('campaigns.dialogs.cancelConfirm')}
         variant="destructive"
       />
     </DashboardLayout>

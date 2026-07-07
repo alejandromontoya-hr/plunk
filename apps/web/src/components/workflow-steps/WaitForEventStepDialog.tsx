@@ -3,6 +3,8 @@ import {useState} from 'react';
 import {toast} from 'sonner';
 import useSWR from 'swr';
 
+import {useTranslation} from '../../lib/i18n';
+
 import {type EditStepDialogProps, getStepConfig, StepDialogShell, useStepUpdate} from './shared';
 
 type TimeUnit = 'minutes' | 'hours' | 'days';
@@ -38,7 +40,14 @@ function deriveTimeoutAmountUnit(timeoutSeconds: number): {amount: string; unit:
 }
 
 export function WaitForEventStepDialog({step, workflowId, open, onOpenChange, onSuccess}: EditStepDialogProps) {
+  const {t} = useTranslation();
   const config = getStepConfig(step);
+
+  const unitLabels: Record<TimeUnit, string> = {
+    minutes: t('workflowSteps.waitForEvent.unitMinutes'),
+    hours:   t('workflowSteps.waitForEvent.unitHours'),
+    days:    t('workflowSteps.waitForEvent.unitDays'),
+  };
 
   const initialTimeout = deriveTimeoutAmountUnit(Number(config.timeout) || 86400);
   const initialUnit: TimeUnit = isTimeUnit(initialTimeout.unit) ? initialTimeout.unit : 'days';
@@ -59,13 +68,18 @@ export function WaitForEventStepDialog({step, workflowId, open, onOpenChange, on
     e.preventDefault();
 
     if (!eventName) {
-      toast.error('Event name is required');
+      toast.error(t('workflowSteps.waitForEvent.eventNameRequired'));
       return;
     }
 
     const amount = parseInt(timeoutAmount, 10);
     if (amount > MAX_BY_UNIT[timeoutUnit]) {
-      toast.error(`Timeout cannot exceed 365 days (${MAX_BY_UNIT[timeoutUnit]} ${timeoutUnit})`);
+      toast.error(
+        t('workflowSteps.waitForEvent.timeoutMaxError', {
+          max: MAX_BY_UNIT[timeoutUnit],
+          unit: unitLabels[timeoutUnit].toLowerCase(),
+        }),
+      );
       return;
     }
 
@@ -99,7 +113,7 @@ export function WaitForEventStepDialog({step, workflowId, open, onOpenChange, on
     >
       <div className="space-y-4">
         <div>
-          <Label htmlFor="editEventName">Event Name</Label>
+          <Label htmlFor="editEventName">{t('workflowSteps.waitForEvent.eventName')}</Label>
           <div className="relative">
             <Input
               id="editEventName"
@@ -114,7 +128,7 @@ export function WaitForEventStepDialog({step, workflowId, open, onOpenChange, on
                 setTimeout(() => setEventPopoverOpen(false), 150);
               }}
               required
-              placeholder="e.g., email.clicked, user.upgraded"
+              placeholder={t('workflowSteps.waitForEvent.eventNamePlaceholder')}
               className="mt-1.5"
               autoComplete="off"
             />
@@ -144,7 +158,7 @@ export function WaitForEventStepDialog({step, workflowId, open, onOpenChange, on
                             setEventPopoverOpen(false);
                           }}
                         >
-                          Use &ldquo;{eventName.trim()}&rdquo;
+                          {t('workflowSteps.waitForEvent.useCustom', {value: eventName.trim()})}
                         </CommandItem>
                       )}
                     </CommandGroup>
@@ -156,7 +170,7 @@ export function WaitForEventStepDialog({step, workflowId, open, onOpenChange, on
         </div>
 
         <div>
-          <Label htmlFor="editEventTimeoutAmount">Timeout (optional)</Label>
+          <Label htmlFor="editEventTimeoutAmount">{t('workflowSteps.waitForEvent.timeout')}</Label>
           <div className="flex gap-2 mt-1.5">
             <Input
               id="editEventTimeoutAmount"
@@ -173,13 +187,13 @@ export function WaitForEventStepDialog({step, workflowId, open, onOpenChange, on
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="minutes">Minutes</SelectItem>
-                <SelectItem value="hours">Hours</SelectItem>
-                <SelectItem value="days">Days</SelectItem>
+                <SelectItem value="minutes">{t('workflowSteps.waitForEvent.unitMinutes')}</SelectItem>
+                <SelectItem value="hours">{t('workflowSteps.waitForEvent.unitHours')}</SelectItem>
+                <SelectItem value="days">{t('workflowSteps.waitForEvent.unitDays')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <p className="text-xs text-neutral-500 mt-1.5">If not received, the workflow continues after this time</p>
+          <p className="text-xs text-neutral-500 mt-1.5">{t('workflowSteps.waitForEvent.timeoutHelp')}</p>
         </div>
       </div>
     </StepDialogShell>
